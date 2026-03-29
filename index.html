@@ -4,236 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SRD Steering Committee Portal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
-            --sidebar-w: 260px;
-            --top-h: 64px;
-            --bg-main: #f4f7fa;
-            --navy: #0f172a;
-            --accent: #2563eb;
-            --border: #e2e8f0;
-            --card-min: 320px;
+            --sidebar-w: 260px; --sidebar-min: 80px; --top-h: 64px;
+            --bg-main: #f4f7fa; --navy: #0f172a; --accent: #2563eb;
+            --border: #e2e8f0; --pdf-red: #d93025;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg-main); color: #1e293b; display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-        body {
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-main);
-            color: #1e293b;
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-
-        /* Sidebar - Fixed Height */
-        .sidebar {
-            width: var(--sidebar-w);
-            background: var(--navy);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        .sidebar-brand {
-            height: var(--top-h);
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-w); background: var(--navy); color: white; display: flex; flex-direction: column; flex-shrink: 0; transition: 0.3s; overflow: hidden; z-index: 10; }
+        .sidebar.minimized { width: var(--sidebar-min); }
+        .sidebar-brand { height: var(--top-h); display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 700; white-space: nowrap; }
         .nav-list { padding: 20px 0; flex-grow: 1; }
-        
-        .nav-btn {
-            width: 100%;
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 14px;
-            text-align: left;
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
-        }
+        .nav-btn { width: 100%; padding: 14px 24px; display: flex; align-items: center; gap: 16px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; transition: 0.2s; border-left: 3px solid transparent; white-space: nowrap; }
+        .nav-btn.active { background: rgba(37, 99, 235, 0.1); color: white; border-left-color: var(--accent); }
+        .sidebar.minimized .nav-text { display: none; }
 
-        .nav-btn:hover { background: rgba(255,255,255,0.05); color: white; }
-        .nav-btn.active {
-            background: rgba(37, 99, 235, 0.1);
-            color: white;
-            border-left-color: var(--accent);
-            font-weight: 600;
-        }
+        /* Workspace */
+        .wrapper { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
+        .top-nav { height: var(--top-h); background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; flex-shrink: 0; }
+        .scroll-container { flex-grow: 1; padding: 32px; overflow-y: auto; }
 
-        /* Main Area - Auto Adjusting */
-        .wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0; /* Prevents flex items from overflowing */
-        }
+        /* Full Status Dashboard */
+        .stats-bar { display: none; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .stat-card .val { display: block; font-size: 20px; font-weight: 800; color: var(--navy); }
+        .stat-card .lbl { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 600; margin-top: 4px; white-space: nowrap; }
 
-        .top-nav {
-            height: var(--top-h);
-            background: white;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 32px;
-            justify-content: space-between;
-        }
+        /* Tracker Actions */
+        .actions-row { display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .search-input { padding: 8px 12px 8px 35px; border: 1px solid var(--border); border-radius: 8px; width: 300px; font-size: 13px; }
+        .btn-pdf { background: var(--pdf-red); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; }
+        .btn-pdf:hover { opacity: 0.9; }
 
-        .scroll-container {
-            flex-grow: 1;
-            padding: 32px;
-            overflow-y: auto;
-            scroll-behavior: smooth;
-        }
-
-        /* Responsive Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
-            gap: 24px;
-            max-width: 1600px; /* Limits stretching on ultra-wide */
-        }
-
-        .card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            border-color: var(--accent);
-        }
-
-        .icon-box {
-            width: 48px;
-            height: 48px;
-            background: #f1f5f9;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-
-        /* Table Auto-Resize */
-        .table-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            width: 100%;
-        }
-
-        table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        th { background: #f8fafc; padding: 12px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; border-bottom: 1px solid var(--border); }
-        td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
-
-        input, select, textarea {
-            padding: 8px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            width: 100%;
-            font-size: 13px;
-        }
+        /* Grid & Table */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+        .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: 0.2s; }
+        .card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .table-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th { background: #f8fafc; padding: 12px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 20px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+        .asset-bold { font-weight: 700; color: #0f172a; }
+        textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; resize: none; overflow: hidden; min-height: 38px; }
 
         .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.3s ease; }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Modal Overlay */
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(4px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: white;
-            width: 100%;
-            max-width: 420px;
-            padding: 32px;
-            border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-        }
-
-        .btn-submit {
-            background: var(--accent);
-            color: white;
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            margin-top: 20px;
-            cursor: pointer;
-        }
+        .view.active { display: block; }
+        .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: white; width: 400px; padding: 32px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="sidebar-brand">SRD PORTAL</div>
-        <div class="nav-list">
-            <button class="nav-btn active" onclick="nav('inventory', this, 'Inventory & Assets')">📦 Inventory & Assets</button>
-            <button class="nav-btn" onclick="nav('planning', this, 'Planning & Commercial')">📊 Planning & Commercial</button>
-            <button class="nav-btn" onclick="nav('tracker', this, 'PRF Tracker')">📋 PRF Tracker</button>
+    <aside id="main-sidebar" class="sidebar">
+        <div class="sidebar-brand">
+            <button onclick="toggleSidebar()" style="background:none; border:none; cursor:pointer; color:white; font-size:20px; margin-right:15px;">☰</button>
+            <span class="nav-text">SRD PORTAL</span>
         </div>
-        <div style="padding: 20px; font-size: 11px; color: #475569;">Desktop v3.0 Optimized</div>
+        <div class="nav-list">
+            <button class="nav-btn active" onclick="nav('inventory', this, 'Inventory & Assets')">
+                <span class="nav-icon">📦</span><span class="nav-text">Inventory & Assets</span>
+            </button>
+            <button class="nav-btn" onclick="nav('planning', this, 'Planning & Commercial')">
+                <span class="nav-icon">📊</span><span class="nav-text">Planning & Commercial</span>
+            </button>
+            <button class="nav-btn" onclick="nav('tracker', this, 'PRF Tracker')">
+                <span class="nav-icon">📋</span><span class="nav-text">PRF Tracker</span>
+            </button>
+        </div>
     </aside>
 
     <div class="wrapper">
-        <header class="top-nav">
-            <h2 id="current-title" style="font-size: 18px;">Inventory & Assets</h2>
-        </header>
-
+        <header class="top-nav"><h2 id="current-title">Inventory & Assets</h2></header>
         <main class="scroll-container">
-            <div id="v-inventory" class="view active">
-                <div id="grid-inv" class="grid"></div>
+            
+            <div id="stats-summary" class="stats-bar">
+                <div class="stat-card" style="border-top: 3px solid #64748b;"><span class="val" id="count-all">0</span><span class="lbl">Total</span></div>
+                <div class="stat-card" style="border-top: 3px solid #2563eb;"><span class="val" id="count-submitted">0</span><span class="lbl">Submitted</span></div>
+                <div class="stat-card" style="border-top: 3px solid #7c3aed;"><span class="val" id="count-po">0</span><span class="lbl">PO Raised</span></div>
+                <div class="stat-card" style="border-top: 3px solid #0891b2;"><span class="val" id="count-pending">0</span><span class="lbl">Deliv. Pend.</span></div>
+                <div class="stat-card" style="border-top: 3px solid #10b981;"><span class="val" id="count-part">0</span><span class="lbl">Part Recv.</span></div>
+                <div class="stat-card" style="border-top: 3px solid #059669;"><span class="val" id="count-allrec">0</span><span class="lbl">All Recv.</span></div>
+                <div class="stat-card" style="border-top: 3px solid #f59e0b;"><span class="val" id="count-hold">0</span><span class="lbl">On-Hold</span></div>
+                <div class="stat-card" style="border-top: 3px solid #dc2626;"><span class="val" id="count-cancel">0</span><span class="lbl">Cancelled</span></div>
             </div>
 
-            <div id="v-planning" class="view">
-                <div id="grid-plan" class="grid"></div>
+            <div id="tracker-actions" class="actions-row">
+                <div style="position:relative;">
+                    <span style="position:absolute; left:12px; top:8px; color:#94a3b8">🔍</span>
+                    <input type="text" id="log-search" class="search-input" placeholder="Search PRF or Vessel..." onkeyup="filterLogs()">
+                </div>
+                <button class="btn-pdf" onclick="generatePDF()">📄 Download PDF Report</button>
             </div>
 
+            <div id="v-inventory" class="view active"><div id="grid-inv" class="grid"></div></div>
+            <div id="v-planning" class="view"><div id="grid-plan" class="grid"></div></div>
             <div id="v-tracker" class="view">
                 <div class="table-card">
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 110px;">Submitted</th>
-                                <th style="width: 130px;">PRF #</th>
-                                <th style="width: 200px;">Asset / Vessel</th>
-                                <th style="width: 180px;">Status</th>
-                                <th style="width: 150px;">ETA</th>
-                                <th>Remarks</th>
+                                <th style="width: 100px;">Date</th><th style="width: 120px;">PRF #</th>
+                                <th style="width: 200px;">Asset / Vessel</th><th style="width: 180px;">Status</th>
+                                <th style="width: 140px;">ETA</th><th>Remarks</th>
                             </tr>
                         </thead>
                         <tbody id="log-body"></tbody>
@@ -245,23 +123,16 @@
 
     <div id="modal-prf" class="overlay">
         <div class="modal">
-            <h3 style="margin-bottom: 24px;">Log New PRF</h3>
-            <div style="margin-bottom: 16px;">
-                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px;">PRF Number</label>
-                <input type="text" id="in-prf" placeholder="Enter PRF #">
-            </div>
-            <div style="margin-bottom: 16px;">
-                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px;">Asset / Vessel Name</label>
-                <input type="text" id="in-asset" placeholder="Enter Name">
-            </div>
-            <button class="btn-submit" onclick="executePRF()">Submit & Open Form</button>
-            <button onclick="closePrf()" style="width:100%; background:none; border:none; margin-top:12px; color:#64748b; cursor:pointer; font-size:13px;">Cancel</button>
+            <h3 style="margin-bottom: 20px;">Log New PRF</h3>
+            <input type="text" id="in-prf" placeholder="PRF Number" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:6px;">
+            <input type="text" id="in-asset" placeholder="Vessel Name" style="width:100%; padding:10px; margin-bottom:20px; border:1px solid #ddd; border-radius:6px;">
+            <button onclick="executePRF()" style="width:100%; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">Proceed</button>
+            <button onclick="closePrf()" style="width:100%; background:none; border:none; margin-top:10px; color:#64748b; cursor:pointer;">Cancel</button>
         </div>
     </div>
 
     <script>
         const PRF_LINK = "https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u&route=shorturl";
-        
         const tools = [
             { name: 'Submit MRN', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzMxS1lCRzlRUFlOMk9JOENXWFU0Sk0wMC4u&route=shorturl', icon: '📝' },
             { name: 'Submit PRF', cat: 'inventory', url: 'ACTION_PRF', icon: '📁' },
@@ -271,27 +142,17 @@
             { name: 'Submit SRN', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UOVY2TFFXSlhXRlRIT0pJSk1TOTNKWlJBRS4u&route=shorturl', icon: '📋' }
         ];
 
-        let logs = JSON.parse(localStorage.getItem('sc_logs_v3')) || [];
+        let logs = JSON.parse(localStorage.getItem('sc_logs_v7')) || [];
 
         function render() {
-            const iG = document.getElementById('grid-inv');
-            const pG = document.getElementById('grid-plan');
+            const iG = document.getElementById('grid-inv'), pG = document.getElementById('grid-plan');
             iG.innerHTML = ''; pG.innerHTML = '';
-
             tools.forEach(t => {
                 const action = t.url === 'ACTION_PRF' ? `onclick="openPrf()"` : `onclick="window.open('${t.url}', '_blank')"`;
-                const html = `
-                    <div ${action} class="card">
-                        <div class="icon-box">${t.icon}</div>
-                        <div>
-                            <div style="font-weight:600; font-size:15px;">${t.name}</div>
-                            <div style="font-size:12px; color:#64748b;">System Tool</div>
-                        </div>
-                    </div>`;
-                if(t.cat === 'inventory') iG.innerHTML += html;
-                else pG.innerHTML += html;
+                const html = `<div ${action} class="card"><div class="icon-box" style="font-size:24px; padding:10px; background:#f1f5f9; border-radius:8px;">${t.icon}</div><div style="font-weight:600">${t.name}</div></div>`;
+                t.cat === 'inventory' ? iG.innerHTML += html : pG.innerHTML += html;
             });
-            renderLogs();
+            updateDashboard(); renderLogs();
         }
 
         function nav(v, btn, title) {
@@ -300,56 +161,76 @@
             document.getElementById('v-' + v).classList.add('active');
             document.getElementById('current-title').innerText = title;
             btn.classList.add('active');
+            const isT = (v === 'tracker');
+            document.getElementById('stats-summary').style.display = isT ? 'grid' : 'none';
+            document.getElementById('tracker-actions').style.display = isT ? 'flex' : 'none';
         }
 
+        function toggleSidebar() { document.getElementById('main-sidebar').classList.toggle('minimized'); }
         function openPrf() { document.getElementById('modal-prf').style.display = 'flex'; }
         function closePrf() { document.getElementById('modal-prf').style.display = 'none'; }
 
         function executePRF() {
-            const p = document.getElementById('in-prf').value;
-            const a = document.getElementById('in-asset').value;
-            if(!p || !a) return alert("Fill required fields");
-
-            const date = new Date().toLocaleDateString('en-GB');
-            logs.unshift({ date, prf: p, asset: a, status: 'Submitted', eta: '', remarks: '' });
-            localStorage.setItem('sc_logs_v3', JSON.stringify(logs));
-            
-            closePrf();
-            renderLogs();
-            window.open(PRF_LINK, '_blank');
-            document.getElementById('in-prf').value = '';
-            document.getElementById('in-asset').value = '';
+            const p = document.getElementById('in-prf').value, a = document.getElementById('in-asset').value;
+            if(!p || !a) return alert("Required fields missing");
+            logs.unshift({ date: new Date().toLocaleDateString('en-GB'), prf: p, asset: a, status: 'Submitted', eta: '', remarks: '' });
+            localStorage.setItem('sc_logs_v7', JSON.stringify(logs));
+            closePrf(); render(); window.open(PRF_LINK, '_blank');
         }
 
-        function renderLogs() {
-            const b = document.getElementById('log-body');
-            b.innerHTML = '';
-            logs.forEach((l, i) => {
-                b.innerHTML += `
-                    <tr>
-                        <td>${l.date}</td>
-                        <td style="font-weight:700">${l.prf}</td>
-                        <td>${l.asset}</td>
-                        <td>
-                            <select onchange="up(${i}, 'status', this.value)">
-                                <option ${l.status==='Submitted'?'selected':''}>Submitted</option>
-                                <option ${l.status==='PO Raised'?'selected':''}>PO Raised</option>
-                                <option ${l.status==='Delivery Pending'?'selected':''}>Delivery Pending</option>
-                                <option ${l.status==='Part received'?'selected':''}>Part received</option>
-                                <option ${l.status==='All received'?'selected':''}>All received</option>
-                                <option ${l.status==='On-hold'?'selected':''}>On-hold</option>
-                                <option ${l.status==='Cancelled'?'selected':''}>Cancelled</option>
-                            </select>
-                        </td>
-                        <td><input type="date" value="${l.eta}" onchange="up(${i}, 'eta', this.value)"></td>
-                        <td><textarea onchange="up(${i}, 'remarks', this.value)" rows="1">${l.remarks}</textarea></td>
-                    </tr>`;
+        function updateDashboard() {
+            const getCount = (s) => logs.filter(l => l.status === s).length;
+            document.getElementById('count-all').innerText = logs.length;
+            document.getElementById('count-submitted').innerText = getCount('Submitted');
+            document.getElementById('count-po').innerText = getCount('PO Raised');
+            document.getElementById('count-pending').innerText = getCount('Delivery Pending');
+            document.getElementById('count-part').innerText = getCount('Part received');
+            document.getElementById('count-allrec').innerText = getCount('All received');
+            document.getElementById('count-hold').innerText = getCount('On-hold');
+            document.getElementById('count-cancel').innerText = getCount('Cancelled');
+        }
+
+        function renderLogs(data = logs) {
+            const b = document.getElementById('log-body'); b.innerHTML = '';
+            data.forEach((l, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${l.date}</td><td style="font-weight:700">${l.prf}</td><td class="asset-bold">${l.asset}</td>
+                    <td><select onchange="up(${i}, 'status', this.value)">
+                        <option ${l.status==='Submitted'?'selected':''}>Submitted</option>
+                        <option ${l.status==='PO Raised'?'selected':''}>PO Raised</option>
+                        <option ${l.status==='Delivery Pending'?'selected':''}>Delivery Pending</option>
+                        <option ${l.status==='Part received'?'selected':''}>Part received</option>
+                        <option ${l.status==='All received'?'selected':''}>All received</option>
+                        <option ${l.status==='On-hold'?'selected':''}>On-hold</option>
+                        <option ${l.status==='Cancelled'?'selected':''}>Cancelled</option>
+                    </select></td>
+                    <td><input type="date" value="${l.eta}" onchange="up(${i}, 'eta', this.value)"></td>
+                    <td><textarea oninput="autoGrow(this)" onchange="up(${i}, 'remarks', this.value)">${l.remarks}</textarea></td>`;
+                b.appendChild(tr);
+                autoGrow(tr.querySelector('textarea'));
             });
         }
 
-        function up(i, f, v) {
-            logs[i][f] = v;
-            localStorage.setItem('sc_logs_v3', JSON.stringify(logs));
+        function autoGrow(el) { el.style.height = "5px"; el.style.height = (el.scrollHeight) + "px"; }
+        function up(i, f, v) { logs[i][f] = v; localStorage.setItem('sc_logs_v7', JSON.stringify(logs)); updateDashboard(); }
+        function filterLogs() { const v = document.getElementById('log-search').value.toLowerCase(); renderLogs(logs.filter(l => l.prf.toLowerCase().includes(v) || l.asset.toLowerCase().includes(v))); }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            doc.setFontSize(18); doc.text("PRF Comprehensive Status Report", 14, 20);
+            doc.setFontSize(10); doc.text(`Date: ${new Date().toLocaleString()}`, 14, 28);
+            
+            const tableData = logs.map(l => [l.date, l.prf, l.asset, l.status, l.eta || 'N/A', l.remarks]);
+            doc.autoTable({
+                startY: 35,
+                head: [['Date', 'PRF Number', 'Asset / Vessel', 'Status', 'ETA', 'Remarks']],
+                body: tableData, theme: 'grid',
+                headStyles: { fillColor: [15, 23, 42] },
+                styles: { fontSize: 8 },
+                columnStyles: { 5: { cellWidth: 80 } }
+            });
+            doc.save(`PRF_Full_Report_${new Date().toLocaleDateString()}.pdf`);
         }
 
         render();
