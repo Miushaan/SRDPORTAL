@@ -1,688 +1,364 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Couple Income & Expense Tracker — Clean & Responsive</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-:root{
-  --bg:#f7fafc; --card:#ffffff; --muted:#6b7280;
-  --green:#16a34a; --red:#ef4444; --blue:#2563eb;
-  --shadow:0 10px 30px rgba(16,24,40,0.08);
-  --radius:12px;
-}
-*{box-sizing:border-box}
-body{
-  margin:0; font-family:Inter,system-ui,Arial; background:var(--bg);
-  color:#0f1724; padding:28px; display:flex; justify-content:center;
-}
-.app{ width:1100px; max-width:100%; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRD Steering Committee Desktop</title>
+    <style>
+        :root {
+            --sidebar-bg: #101c2c;
+            --main-bg: #f0f2f5;
+            --accent: #0078d4;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --text-main: #1a1a1a;
+            --text-muted: #5e5e5e;
+            --glass-border: rgba(255, 255, 255, 0.4);
+        }
 
-/* header */
-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
-h1{ margin:0; font-size:18px; font-weight:700; letter-spacing:0.2px; }
+        * { box-sizing: border-box; }
 
-/* screens */
-.screen{ display:none; opacity:0; transform:translateY(6px); transition:opacity .26s, transform .26s; }
-.screen.active{ display:block; opacity:1; transform:translateY(0); }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--main-bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-.card{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
 
-/* HOME */
-.home-hero{ height:560px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; text-align:center; }
-.home-hero h2{ margin:0; font-size:26px; }
-.home-hero p{ margin:0; color:var(--muted); }
+        .sidebar-header {
+            padding: 0 25px 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
 
-/* pill add button */
-.pill-wrap{ display:flex; gap:12px; align-items:center; justify-content:center; margin-top:18px; }
-.pill{
-  display:flex; width:380px; max-width:92%; height:110px; border-radius:60px; overflow:hidden;
-  box-shadow:0 18px 50px rgba(16,24,40,0.12); cursor:pointer; transition: transform .18s;
-}
-.pill:hover{ transform:scale(1.03) rotate(-0.8deg); }
-.pill .half{ flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#fff; font-weight:700; font-size:20px; padding:10px; }
-.pill .half small{ font-weight:600; font-size:12px; margin-top:6px; opacity:0.95; }
-.pill .income{ background:linear-gradient(180deg,var(--green), #10b981); }
-.pill .expense{ background:linear-gradient(180deg,var(--red), #f87171); }
-.pill .divider{ width:2px; background:rgba(255,255,255,0.12); }
+        .sidebar-header h1 {
+            font-size: 1.2rem;
+            margin: 0;
+            letter-spacing: 1px;
+            color: #fff;
+        }
 
-/* small controls */
-.controls{ display:flex; gap:8px; align-items:center; }
-.icon-btn{ background:var(--card); border-radius:10px; padding:8px 12px; box-shadow:var(--shadow); cursor:pointer; border:none; }
+        .sidebar-header p {
+            font-size: 0.7rem;
+            margin: 5px 0 0;
+            opacity: 0.6;
+            text-transform: uppercase;
+        }
 
-/* ENTRY LAYOUT */
-.entry-layout{ display:grid; grid-template-columns:380px 1fr; gap:16px; align-items:start; }
-@media (max-width:980px){ .entry-layout{ grid-template-columns:1fr } .pill{ height:92px } }
+        .nav-item {
+            padding: 14px 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            border-left: 4px solid transparent;
+            font-size: 0.95rem;
+            background: none;
+            border-top: none; border-right: none; border-bottom: none;
+            width: 100%;
+            text-align: left;
+        }
 
-/* summary */
-.summary p{ display:flex; justify-content:space-between; margin:8px 0; font-weight:700; }
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
 
-/* forms */
-.field{ margin-bottom:10px; }
-.label{ font-size:13px; color:var(--muted); display:block; margin-bottom:6px; font-weight:600; }
-input[type="text"], input[type="date"], input[type="number"], select {
-  width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6eef6; background:#fff;
-}
+        .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: var(--accent);
+        }
 
-/* table */
-table{ width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; }
-thead th{ background:#fbfdff; padding:12px; text-align:left; color:#334155; font-size:13px; }
-td, th{ padding:10px 12px; border-bottom:1px solid #f1f5f9; font-size:14px; }
-tr.income td{ background:linear-gradient(90deg, rgba(237,252,245,0.95), transparent); }
-tr.expense td{ background:linear-gradient(90deg, rgba(255,240,240,0.95), transparent); }
+        /* Main Workspace */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+        }
 
-/* settings */
-.settings-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.list{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-.item{ display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:8px; background:#fff; border:1px solid #eef6fb; }
+        .view-section {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
 
-/* modal */
-.modal-backdrop{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(6,8,12,0.45); z-index:999; }
-.modal{ width:520px; max-width:94%; background:#fff; padding:16px; border-radius:10px; box-shadow:0 30px 80px rgba(2,6,23,0.4); }
-.modal h3{ margin:0 0 8px 0; }
-.modal .row{ margin-top:10px; display:flex; gap:8px; }
+        .view-section.active { display: block; }
 
-/* responsive smaller pill for mobile if needed */
-@media (max-width:420px){
-  .pill{ width:320px; height:84px; border-radius:48px; }
-  .pill .half{ font-size:16px; }
-}
-.primary{ background:var(--blue); color:#fff; border:none; padding:10px 12px; border-radius:8px; cursor:pointer; }
-.secondary{ background:#f8fafc; border:1px solid #e6eef6; padding:10px 12px; border-radius:8px; cursor:pointer; }
-.muted{ color:var(--muted); font-size:13px; }
-.pill-note{ margin-top:10px; color:var(--muted); font-size:13px; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-/* print */
-@media print {
-  body *{ visibility:hidden; }
-  #printableReport, #printableReport *{ visibility:visible; }
-  #printableReport{ position:absolute; left:0; top:0; width:100% }
-}
-</style>
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-header h2 {
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        /* App Grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+        }
+
+        .app-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            text-decoration: none;
+            color: var(--text-main);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+            border-color: var(--accent);
+        }
+
+        .icon-box {
+            width: 56px;
+            height: 56px;
+            background: #fff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .app-info { flex: 1; }
+        .app-info .title { font-weight: 600; font-size: 1.1rem; margin-bottom: 4px; }
+        .app-info .desc { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Settings Overlay */
+        #settings-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .settings-modal {
+            background: white;
+            width: 800px;
+            max-height: 85vh;
+            border-radius: 16px;
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .admin-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-close { position: absolute; top: 20px; right: 20px; background: none; font-size: 20px; cursor: pointer; border:none; }
+
+    </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>Couple Income & Expense Tracker</h1>
-      <div class="controls">
-        <div id="topSummary" class="muted" style="display:none"></div>
-        <button id="goHome" class="icon-btn" style="display:none">🏠 Home</button>
-        <button id="gear" class="icon-btn" title="Settings">⚙️</button>
-      </div>
-    </header>
 
-    <!-- HOME -->
-    <main id="homeScreen" class="screen active">
-      <div class="card home-hero">
-        <div>
-          <h2>Welcome back 👋</h2>
-          <p class="muted">Quick add — left = Income, right = Expense</p>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>SRD PORTAL</h1>
+            <p>Steering Committee</p>
         </div>
+        
+        <button class="nav-item active" onclick="switchView('inventory', this)">
+            <span>📦</span> Inventory & Assets
+        </button>
+        <button class="nav-item" onclick="switchView('planning', this)">
+            <span>📊</span> Planning & Commercial
+        </button>
+        
+        <div style="margin-top: auto; padding: 20px;">
+            <button class="nav-item" style="border:none;" onclick="triggerAdmin()">
+                <span>⚙️</span> Administration
+            </button>
+        </div>
+    </aside>
 
-        <div class="pill-wrap">
-          <div class="pill" id="pillAdd">
-            <div class="half income" id="pillIncome">
-              Income
-              <small>+ Add money</small>
+    <main class="main-content">
+        <div id="view-inventory" class="view-section active">
+            <div class="page-header">
+                <h2>Inventory & Assets</h2>
             </div>
-            <div class="divider"></div>
-            <div class="half expense" id="pillExpense">
-              Expense
-              <small>- Add spend</small>
+            <div id="grid-inventory" class="app-grid"></div>
+        </div>
+
+        <div id="view-planning" class="view-section">
+            <div class="page-header">
+                <h2>Planning & Commercial</h2>
             </div>
-          </div>
+            <div id="grid-planning" class="app-grid"></div>
         </div>
-
-        <div class="pill-note muted">Tap a side to open the entry form preselected. Or use Settings (⚙️).</div>
-
-        <div style="margin-top:18px; display:flex; gap:10px; justify-content:center;">
-          <button id="openEntries" class="icon-btn">Open Entries & Dashboard</button>
-          <button id="openSettings" class="icon-btn">Settings</button>
-        </div>
-      </div>
     </main>
 
-    <!-- ENTRY -->
-    <section id="entryScreen" class="screen">
-      <div class="entry-layout">
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="card summary">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-size:13px;color:var(--muted)">Monthly Summary</div>
-                <div id="dashboardMonth" style="font-weight:700"></div>
-              </div>
-              <div style="display:flex;gap:8px">
-                <button id="printBtn" class="primary">Print</button>
-                <button id="exportBtn" class="secondary">Export CSV</button>
-                <label class="secondary" style="cursor:pointer;padding:10px;border-radius:8px">
-                  Import CSV <input id="importFile" type="file" accept=".csv" style="display:none"/>
-                </label>
-              </div>
-            </div>
+    <div id="settings-overlay">
+        <div class="settings-modal">
+            <button class="btn-close" onclick="closeAdmin()">✕</button>
+            <h2 style="margin-top:0">Portal Management</h2>
+            <p style="color:var(--text-muted)">Configure active links and categorize workspace tools.</p>
+            
+            <div id="admin-list" style="margin-top:20px"></div>
 
-            <p style="margin-top:12px">Total Income <span id="totalIncome" style="float:right">0.00</span></p>
-            <p>Total Expense <span id="totalExpense" style="float:right">0.00</span></p>
-            <p>Saved <span id="savedAmount" style="float:right;color:var(--blue)">0.00</span></p>
-          </div>
-
-          <div class="card">
-            <h3 style="margin:0 0 12px 0">Add / Edit Entry</h3>
-            <form id="entryForm">
-              <div class="field">
-                <label class="label">Date</label>
-                <input type="date" id="date" required>
-              </div>
-              <div style="display:flex;gap:8px;margin-bottom:8px">
-                <div style="flex:1">
-                  <label class="label">Person</label>
-                  <select id="person"></select>
+            <div style="margin-top: 30px; background:#f0f7ff; padding:20px; border-radius:12px;">
+                <h4 style="margin-top:0">Add New Entry</h4>
+                <div class="admin-row" style="background:transparent; padding:0;">
+                    <input type="text" id="new-name" placeholder="Tool Name">
+                    <input type="text" id="new-url" placeholder="URL">
+                    <select id="new-cat">
+                        <option value="inventory">Inventory/Assets</option>
+                        <option value="planning">Planning/Commercial</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addItem()">Add</button>
                 </div>
-                <div style="flex:1">
-                  <label class="label">Type</label>
-                  <select id="type"><option>Income</option><option>Expense</option></select>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;margin-bottom:8px">
-                <div style="flex:1">
-                  <label class="label">Category</label>
-                  <select id="category"></select>
-                </div>
-                <div style="flex:1">
-                  <label class="label">Amount</label>
-                  <input type="number" id="amount" step="0.01" required>
-                </div>
-              </div>
-              <div class="field">
-                <label class="label">Description</label>
-                <input type="text" id="description" placeholder="Optional">
-              </div>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button type="submit" class="primary" id="saveEntry">Save</button>
-                <button type="button" class="secondary" id="clearForm">Clear</button>
-              </div>
-            </form>
-          </div>
-
-          <div class="card">
-            <h3 style="margin:0 0 8px 0">Filter & Reset</h3>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label style="flex:1">Filter by month
-                <input type="month" id="monthFilter" style="width:100%;margin-top:6px"/>
-              </label>
-              <button id="resetMonth" class="secondary" style="background:#fff7f7;border:1px solid #ffecec;color:var(--red)">Reset</button>
             </div>
-            <p class="muted" style="margin-top:8px">Reset removes all entries for the selected month (password required).</p>
-          </div>
+
+            <div style="margin-top:20px; text-align:right;">
+                <button class="btn btn-primary" onclick="saveData()">Save All Changes</button>
+            </div>
         </div>
-
-        <div>
-          <div class="card" style="margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <h3 style="margin:0">Dashboard</h3>
-              <div style="display:flex;gap:8px;align-items:center">
-                <div id="dashShort" class="muted"></div>
-                <button id="backHome" class="icon-btn">← Home</button>
-              </div>
-            </div>
-            <div style="margin-top:12px;height:240px">
-              <canvas id="chartCanvas" style="height:100%"></canvas>
-            </div>
-          </div>
-
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <h3 style="margin:0">Entries</h3>
-              <div class="muted">Tap Edit to modify</div>
-            </div>
-            <table id="entriesTable">
-              <thead><tr><th>Date</th><th>Person</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SETTINGS -->
-    <section id="settingsScreen" class="screen">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h2 style="margin:0">Settings</h2>
-          <div><button id="settingsBack" class="icon-btn">← Back</button></div>
-        </div>
-
-        <div class="settings-grid" style="margin-top:12px">
-          <div class="card">
-            <h3 style="margin-top:0">People</h3>
-            <div id="peopleList" class="list"></div>
-            <div style="display:flex;gap:8px;margin-top:10px">
-              <input id="newPerson" placeholder="New person">
-              <button id="addPerson" class="primary">Add</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3 style="margin-top:0">Categories</h3>
-            <div id="catList" class="list"></div>
-            <div style="display:flex;gap:8px;margin-top:10px">
-              <input id="newCat" placeholder="New category">
-              <button id="addCat" class="primary">Add</button>
-            </div>
-          </div>
-        </div>
-
-        <p class="muted" style="margin-top:12px">All settings changes require the password.</p>
-      </div>
-    </section>
-
-    <!-- modal -->
-    <div id="modalBackdrop" class="modal-backdrop">
-      <div class="modal" role="dialog" aria-modal="true">
-        <h3 id="modalTitle">Confirm</h3>
-        <div id="modalBody" style="margin-top:8px"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-          <button id="modalCancel" class="secondary">Cancel</button>
-          <button id="modalConfirm" class="primary">Confirm</button>
-        </div>
-      </div>
     </div>
 
-    <!-- printable container -->
-    <div id="printableReport" style="display:none"></div>
-  </div>
+    <script>
+        const initialData = [
+            { id: 1, name: 'Submit MRN', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzMxS1lCRzlRUFlOMk9JOENXWFU0Sk0wMC4u&route=shorturl', icon: '📝' },
+            { id: 2, name: 'Submit PRF', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u&route=shorturl', icon: '📁' },
+            { id: 3, name: 'i-MRN Sheet', cat: 'inventory', url: 'https://maldivetransportcontracting.sharepoint.com/:x:/s/EDDTeam/IQCAOvzeximvTZUKT2cqJdS0AaOsyFR4euCb2FXUfqxJBB4?e=7lvwfV', icon: '📈' },
+            { id: 4, name: 'Submit Report', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzhBOFcxMVBDWDJYWExJVkUzOUxRQlRWWi4u&route=shorturl', icon: '📊' },
+            { id: 5, name: 'Submit BOQ', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UREpVTFM5R0NRSDBTQzJJMVdPUjRQMzRXTi4u&route=shorturl', icon: '📐' },
+            { id: 6, name: 'Submit SRN', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UOVY2TFFXSlhXRlRIT0pJSk1TOTNKWlJBRS4u&route=shorturl', icon: '📋' }
+        ];
 
-<script>
-/* -----------------------
-   State & storage keys
-   ----------------------- */
-const PASSWORD = '12247';
-const KEYS = { entries:'ce_entries_final_v1', settings:'ce_settings_final_v1' };
-let state = {
-  entries: JSON.parse(localStorage.getItem(KEYS.entries) || '[]'),
-  settings: JSON.parse(localStorage.getItem(KEYS.settings) || 'null'),
-  editingId: null
-};
-if(!state.settings){
-  state.settings = { people:['Miu','Raya'], categories:['House','Transport','Personal','General'] };
-  localStorage.setItem(KEYS.settings, JSON.stringify(state.settings));
-}
+        let links = JSON.parse(localStorage.getItem('desktopLinks')) || initialData;
 
-/* DOM refs */
-const screens = { home: document.getElementById('homeScreen'), entry: document.getElementById('entryScreen'), settings: document.getElementById('settingsScreen') };
-const goHome = document.getElementById('goHome'), gear = document.getElementById('gear'), backHome = document.getElementById('backHome');
-const pillIncome = document.getElementById('pillIncome'), pillExpense = document.getElementById('pillExpense');
-const openEntries = document.getElementById('openEntries'), openSettings = document.getElementById('openSettings');
+        function renderUI() {
+            const iGrid = document.getElementById('grid-inventory');
+            const pGrid = document.getElementById('grid-planning');
+            iGrid.innerHTML = ''; pGrid.innerHTML = '';
 
-const personSel = document.getElementById('person'), catSel = document.getElementById('category'), dateInput = document.getElementById('date');
-const typeSel = document.getElementById('type'), amountInput = document.getElementById('amount'), descInput = document.getElementById('description');
-const entryForm = document.getElementById('entryForm'), clearForm = document.getElementById('clearForm');
-
-const monthFilter = document.getElementById('monthFilter'), resetMonth = document.getElementById('resetMonth');
-const entriesTbody = document.querySelector('#entriesTable tbody');
-
-const totalIncomeEl = document.getElementById('totalIncome'), totalExpenseEl = document.getElementById('totalExpense'), savedEl = document.getElementById('savedAmount');
-const dashboardMonth = document.getElementById('dashboardMonth'), dashShort = document.getElementById('dashShort'), topSummary = document.getElementById('topSummary');
-const peopleList = document.getElementById('peopleList'), catList = document.getElementById('catList');
-const newPerson = document.getElementById('newPerson'), addPerson = document.getElementById('addPerson');
-const newCat = document.getElementById('newCat'), addCat = document.getElementById('addCat');
-
-const exportBtn = document.getElementById('exportBtn'), importFile = document.getElementById('importFile'), printBtn = document.getElementById('printBtn');
-const modalBackdrop = document.getElementById('modalBackdrop'), modalTitle = document.getElementById('modalTitle'), modalBody = document.getElementById('modalBody');
-const modalCancel = document.getElementById('modalCancel'), modalConfirm = document.getElementById('modalConfirm');
-
-const chartCtx = document.getElementById('chartCanvas').getContext('2d');
-let chart = null;
-
-/* -----------------------
-   Utilities
-   ----------------------- */
-function uid(){ return 'id_' + Math.random().toString(36).slice(2,9); }
-function saveAll(){ localStorage.setItem(KEYS.entries, JSON.stringify(state.entries)); localStorage.setItem(KEYS.settings, JSON.stringify(state.settings)); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function monthISO(){ return new Date().toISOString().slice(0,7); }
-function showScreen(name){
-  Object.values(screens).forEach(s => s.classList.remove('active'));
-  screens[name].classList.add('active');
-  goHome.style.display = (name==='home') ? 'none' : 'inline-flex';
-  topSummary.style.display = (name!=='home') ? 'inline-block' : 'none';
-  dashShort.textContent = (name==='entry') ? dashboardMonth.textContent : '';
-}
-
-/* modal with optional password field */
-let modalResolve = null;
-function openModal({ title='Confirm', body='', requirePassword=false, confirmText='Confirm', showCancel=true } = {}){
-  modalTitle.textContent = title;
-  modalBody.innerHTML = '';
-  if(requirePassword){
-    modalBody.innerHTML = `<div style="margin-bottom:8px">${body}</div><div style="display:flex;gap:8px;align-items:center">Password: <input id="modalPwd" type="password" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6eef6"/></div>`;
-  } else {
-    modalBody.innerHTML = `<div>${body}</div>`;
-  }
-  modalConfirm.textContent = confirmText;
-  modalCancel.style.display = showCancel ? 'inline-block' : 'none';
-  modalBackdrop.style.display = 'flex';
-  return new Promise(resolve => modalResolve = resolve);
-}
-modalCancel.addEventListener('click', ()=> { closeModal({ok:false}); });
-modalConfirm.addEventListener('click', ()=> {
-  const pwd = document.getElementById('modalPwd');
-  if(pwd){
-    if(pwd.value === PASSWORD) closeModal({ok:true});
-    else alert('Incorrect password');
-  } else closeModal({ok:true});
-});
-function closeModal(result){ modalBackdrop.style.display = 'none'; if(modalResolve) modalResolve(result); modalResolve = null; }
-
-/* -----------------------
-   Populate settings UI
-   ----------------------- */
-function populateSettingsUI(){
-  personSel.innerHTML = '';
-  peopleList.innerHTML = '';
-  state.settings.people.forEach((p, i) => {
-    const opt = document.createElement('option'); opt.value = p; opt.textContent = p; personSel.appendChild(opt);
-    const div = document.createElement('div'); div.className = 'item'; div.innerHTML = `<div>${p}</div><div><button data-idx="${i}" class="delPerson">Delete</button></div>`;
-    peopleList.appendChild(div);
-  });
-
-  catSel.innerHTML = '';
-  catList.innerHTML = '';
-  state.settings.categories.forEach((c, i) => {
-    const opt = document.createElement('option'); opt.value = c; opt.textContent = c; catSel.appendChild(opt);
-    const div = document.createElement('div'); div.className = 'item'; div.innerHTML = `<div>${c}</div><div><button data-idx="${i}" class="delCat">Delete</button></div>`;
-    catList.appendChild(div);
-  });
-}
-
-/* -----------------------
-   Entries rendering & chart
-   ----------------------- */
-function getFiltered(){
-  const mon = monthFilter.value;
-  let list = state.entries.slice().sort((a,b)=> new Date(a.date) - new Date(b.date));
-  if(mon) list = list.filter(e => e.date && e.date.startsWith(mon));
-  return list;
-}
-function renderEntries(){
-  const list = getFiltered();
-  entriesTbody.innerHTML = '';
-  let inc = 0, exp = 0;
-  list.forEach(e => {
-    const tr = document.createElement('tr');
-    tr.className = e.type === 'Income' ? 'income' : 'expense';
-    tr.innerHTML = `<td>${e.date}</td><td>${e.person}</td><td>${e.type}</td><td>${e.category}</td><td>${e.description||''}</td><td style="text-align:right">${Number(e.amount).toFixed(2)}</td><td><button class="edit" data-id="${e.id}">Edit</button> <button class="del" data-id="${e.id}">Delete</button></td>`;
-    entriesTbody.appendChild(tr);
-    if(e.type==='Income') inc += Number(e.amount||0); else exp += Number(e.amount||0);
-  });
-  totalIncomeEl.textContent = inc.toFixed(2);
-  totalExpenseEl.textContent = exp.toFixed(2);
-  const saved = inc - exp;
-  savedEl.textContent = saved.toFixed(2);
-  savedEl.style.color = saved>=0 ? 'var(--blue)' : 'var(--red)';
-  dashboardMonth.textContent = monthFilter.value ? new Date(monthFilter.value+'-01').toLocaleString(undefined,{month:'long',year:'numeric'}) : new Date().toLocaleString(undefined,{month:'long',year:'numeric'});
-  topSummary.textContent = `Income: ${inc.toFixed(2)} · Expense: ${exp.toFixed(2)} · Saved: ${saved.toFixed(2)}`;
-  renderChart(inc, exp);
-
-  document.querySelectorAll('.edit').forEach(b => b.addEventListener('click', onEdit));
-  document.querySelectorAll('.del').forEach(b => b.addEventListener('click', onDelete));
-}
-function renderChart(income, expense){
-  if(chart) chart.destroy();
-  chart = new Chart(chartCtx, {
-    type:'bar',
-    data:{ labels:['Income','Expense','Saved'], datasets:[{ data:[income, expense, income-expense], backgroundColor:['#16a34a','#ef4444','#2563eb'] }]},
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
-  });
-}
-
-/* -----------------------
-   CRUD handlers
-   ----------------------- */
-function onEdit(e){
-  const id = e.currentTarget.dataset.id;
-  const item = state.entries.find(x=>x.id===id); if(!item) return;
-  state.editingId = id;
-  dateInput.value = item.date;
-  personSel.value = item.person;
-  typeSel.value = item.type;
-  catSel.value = item.category;
-  amountInput.value = Number(item.amount).toFixed(2);
-  descInput.value = item.description || '';
-  document.getElementById('saveEntry').textContent = 'Update';
-  showScreen('entry');
-}
-function onDelete(e){
-  const id = e.currentTarget.dataset.id;
-  openModal({ title:'Delete entry', body:'Delete this entry?', requirePassword:true, confirmText:'Delete' }).then(res=>{
-    if(res.ok){ state.entries = state.entries.filter(x=>x.id!==id); saveAll(); renderEntries(); }
-  });
-}
-entryForm.addEventListener('submit', (ev)=>{
-  ev.preventDefault();
-  const date = dateInput.value, person = personSel.value, type = typeSel.value, category = catSel.value;
-  const amount = Number(amountInput.value||0).toFixed(2), description = descInput.value;
-  if(!date || !amount){ alert('Date and amount required'); return; }
-  if(state.editingId){
-    const idx = state.entries.findIndex(x=>x.id===state.editingId);
-    if(idx>=0){ state.entries[idx] = { id: state.editingId, date, person, type, category, amount, description }; state.editingId = null; }
-    document.getElementById('saveEntry').textContent = 'Save';
-  } else {
-    state.entries.push({ id: uid(), date, person, type, category, amount, description });
-  }
-  saveAll(); entryForm.reset(); renderEntries();
-});
-clearForm.addEventListener('click', ()=>{ state.editingId=null; entryForm.reset(); document.getElementById('saveEntry').textContent='Save'; });
-
-/* -----------------------
-   Navigation & home quick-add
-   ----------------------- */
-pillIncome.addEventListener('click', ()=> openEntryWith('Income'));
-pillExpense.addEventListener('click', ()=> openEntryWith('Expense'));
-function openEntryWith(type){
-  showScreen('entry');
-  dateInput.value = todayISO();
-  typeSel.value = type;
-  monthFilter.value = monthISO();
-  populateSettingsUI();
-  renderEntries();
-  setTimeout(()=> window.scrollTo({ top:160, behavior:'smooth' }), 160);
-}
-openEntries.addEventListener('click', ()=> { showScreen('entry'); populateSettingsUI(); renderEntries(); });
-openSettings.addEventListener('click', ()=> { showScreen('settings'); populateSettingsUI(); });
-gear.addEventListener('click', ()=> { showScreen('settings'); populateSettingsUI(); });
-goHome.addEventListener('click', ()=> showScreen('home'));
-backHome.addEventListener('click', ()=> showScreen('home'));
-
-/* init month */
-(function(){ monthFilter.value = monthISO(); renderEntries(); showScreen('home'); })();
-monthFilter.addEventListener('change', renderEntries);
-
-/* -----------------------
-   Reset month (password protected)
-   ----------------------- */
-resetMonth.addEventListener('click', ()=> {
-  if(!monthFilter.value){ alert('Select month'); return; }
-  openModal({ title:'Reset Month', body:`This will delete all entries for ${monthFilter.value}. Proceed?`, requirePassword:true, confirmText:'Reset' }).then(res=>{
-    if(res.ok){ state.entries = state.entries.filter(e=> !e.date.startsWith(monthFilter.value)); saveAll(); renderEntries(); alert('Month reset'); }
-  });
-});
-
-/* -----------------------
-   Settings management (password modal)
-   ----------------------- */
-addPerson.addEventListener('click', ()=> {
-  const name = newPerson.value.trim(); if(!name){ alert('Enter a name'); return; }
-  openModal({ title:'Add Person', body:`Add "${name}"?`, requirePassword:true, confirmText:'Add' }).then(res=>{
-    if(res.ok){ if(state.settings.people.includes(name)){ alert('Exists'); return; } state.settings.people.push(name); saveAll(); newPerson.value=''; populateSettingsUI(); renderEntries(); }
-  });
-});
-addCat.addEventListener('click', ()=> {
-  const name = newCat.value.trim(); if(!name){ alert('Enter a category'); return; }
-  openModal({ title:'Add Category', body:`Add "${name}"?`, requirePassword:true, confirmText:'Add' }).then(res=>{
-    if(res.ok){ if(state.settings.categories.includes(name)){ alert('Exists'); return; } state.settings.categories.push(name); saveAll(); newCat.value=''; populateSettingsUI(); renderEntries(); }
-  });
-});
-peopleList.addEventListener('click', (ev)=> {
-  if(ev.target.matches('.delPerson')){
-    const idx = Number(ev.target.dataset.idx); const name = state.settings.people[idx];
-    openModal({ title:'Delete Person', body:`Delete "${name}"? Entries reassigned.`, requirePassword:true, confirmText:'Delete' }).then(res=>{
-      if(res.ok){
-        if(state.settings.people.length<=1){ alert('At least one person required'); return; }
-        state.settings.people.splice(idx,1); const fallback = state.settings.people[0];
-        state.entries = state.entries.map(en => en.person===name? {...en, person:fallback}:en);
-        saveAll(); populateSettingsUI(); renderEntries();
-      }
-    });
-  }
-});
-catList.addEventListener('click', (ev)=> {
-  if(ev.target.matches('.delCat')){
-    const idx = Number(ev.target.dataset.idx); const name = state.settings.categories[idx];
-    openModal({ title:'Delete Category', body:`Delete "${name}"? Entries reassigned.`, requirePassword:true, confirmText:'Delete' }).then(res=>{
-      if(res.ok){
-        state.settings.categories.splice(idx,1); const fallback = state.settings.categories[0] || 'General';
-        state.entries = state.entries.map(en => en.category===name? {...en, category:fallback}:en);
-        saveAll(); populateSettingsUI(); renderEntries();
-      }
-    });
-  }
-});
-
-/* -----------------------
-   Export / Import CSV
-   ----------------------- */
-exportBtn.addEventListener('click', ()=> {
-  if(!state.entries.length){ alert('No entries'); return; }
-  const rows = [['id','date','person','type','category','description','amount']];
-  state.entries.forEach(r => rows.push([r.id,r.date,r.person,r.type,r.category,(r.description||'').replace(/\n/g,' '),r.amount]));
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='entries.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-});
-importFile.addEventListener('change', (ev)=>{
-  const f = ev.target.files[0]; if(!f) return; const reader = new FileReader();
-  reader.onload = (e)=> {
-    try{
-      const parsed = parseCSV(e.target.result);
-      const headers = parsed[0].map(h=>h.toLowerCase().trim());
-      const required = ['date','person','type','category','amount']; const missing = required.filter(r=> !headers.includes(r));
-      if(missing.length){ alert('Missing: '+missing.join(', ')); return; }
-      openModal({ title:'Import CSV', body:`Import ${parsed.length-1} rows?`, requirePassword:true, confirmText:'Import' }).then(res=>{
-        if(res.ok){
-          const map = {}; headers.forEach((h,i)=> map[h]=i);
-          for(let i=1;i<parsed.length;i++){
-            const row = parsed[i]; if(row.length<1) continue;
-            const entry = { id: (row[map['id']]||'').trim() || uid(), date: (row[map['date']]||'').trim(), person: (row[map['person']]||'').trim(), type:(row[map['type']]||'').trim(), category:(row[map['category']]||'').trim(), description: map['description']? (row[map['description']]||'').trim() : '', amount:(row[map['amount']]||'').trim() };
-            if(!entry.date || !entry.amount) continue; state.entries.push(entry);
-          }
-          saveAll(); renderEntries(); alert('Import done');
+            links.forEach(link => {
+                const html = `
+                    <a href="${link.url}" class="app-card" target="_blank">
+                        <div class="icon-box">${link.icon || '📄'}</div>
+                        <div class="app-info">
+                            <div class="title">${link.name}</div>
+                            <div class="desc">Open in new tab</div>
+                        </div>
+                    </a>`;
+                if(link.cat === 'inventory') iGrid.innerHTML += html;
+                else pGrid.innerHTML += html;
+            });
         }
-      });
-    } catch(err){ alert('CSV parse failed: '+err.message); }
-  };
-  reader.readAsText(f); ev.target.value='';
-});
-function parseCSV(text){
-  const rows=[]; let cur=''; let row=[]; let inQ=false;
-  for(let i=0;i<text.length;i++){
-    const ch = text[i];
-    if(inQ){
-      if(ch === '"'){ if(text[i+1] === '"'){ cur += '"'; i++; } else inQ=false; } else cur += ch;
-    } else {
-      if(ch === '"'){ inQ=true; }
-      else if(ch === ','){ row.push(cur); cur=''; }
-      else if(ch === '\r'){ continue; }
-      else if(ch === '\n'){ row.push(cur); rows.push(row); cur=''; row=[]; }
-      else cur += ch;
-    }
-  }
-  if(cur !== '' || row.length) { row.push(cur); rows.push(row); }
-  return rows;
-}
 
-/* -----------------------
-   Print report
-   ----------------------- */
-printBtn.addEventListener('click', ()=> {
-  const mon = monthFilter.value || monthISO();
-  const list = state.entries.filter(e=> e.date && e.date.startsWith(mon)).sort((a,b)=> new Date(a.date)-new Date(b.date));
-  const inc = list.filter(e=> e.type==='Income').reduce((s,e)=> s+Number(e.amount),0);
-  const exp = list.filter(e=> e.type==='Expense').reduce((s,e)=> s+Number(e.amount),0);
-  const saved = inc - exp;
-  const html = `<div style="font-family:Inter,Arial;margin:24px"><h1>Report — ${ new Date(mon+'-01').toLocaleString(undefined,{month:'long',year:'numeric'}) }</h1><p>Income: ${inc.toFixed(2)} · Expense: ${exp.toFixed(2)} · Saved: ${saved.toFixed(2)}</p><table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:12px"><thead><tr style="background:#f3f6fb"><th>Date</th><th>Person</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead><tbody>${list.map(e=>`<tr><td>${e.date}</td><td>${e.person}</td><td>${e.type}</td><td>${e.category}</td><td>${e.description||''}</td><td style="text-align:right">${Number(e.amount).toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
-  const w = window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=> w.print(), 300);
-});
+        function switchView(id, btn) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('view-' + id).classList.add('active');
+            btn.classList.add('active');
+        }
 
-/* -----------------------
-   Initialization
-   ----------------------- */
-function init(){
-  populateSettingsUI(); renderEntries(); showScreen('home');
-}
-init();
+        function triggerAdmin() {
+            if(prompt("Admin Access PIN:") === "12247") {
+                document.getElementById('settings-overlay').style.display = 'flex';
+                renderAdminList();
+            }
+        }
 
-/* -----------------------
-   Settings populate & events (delegation)
-   ----------------------- */
-function populateSettingsUI(){
-  personSel.innerHTML = ''; peopleList.innerHTML = '';
-  state.settings.people.forEach((p,i)=> {
-    const opt = document.createElement('option'); opt.value=p; opt.textContent=p; personSel.appendChild(opt);
-    const div = document.createElement('div'); div.className='item'; div.innerHTML = `<div>${p}</div><div><button data-idx="${i}" class="delPerson">Delete</button></div>`; peopleList.appendChild(div);
-  });
-  catSel.innerHTML=''; catList.innerHTML='';
-  state.settings.categories.forEach((c,i)=> {
-    const opt = document.createElement('option'); opt.value=c; opt.textContent=c; catSel.appendChild(opt);
-    const div = document.createElement('div'); div.className='item'; div.innerHTML = `<div>${c}</div><div><button data-idx="${i}" class="delCat">Delete</button></div>`; catList.appendChild(div);
-  });
-}
-addPerson.addEventListener('click', ()=> {
-  const name = newPerson.value.trim(); if(!name){ alert('Enter'); return; }
-  openModal({ title:'Add Person', body:`Add "${name}"?`, requirePassword:true, confirmText:'Add' }).then(res=>{ if(res.ok){ if(state.settings.people.includes(name)){ alert('Exists'); return; } state.settings.people.push(name); saveAll(); newPerson.value=''; populateSettingsUI(); renderEntries(); }});
-});
-addCat.addEventListener('click', ()=> {
-  const name = newCat.value.trim(); if(!name){ alert('Enter'); return; }
-  openModal({ title:'Add Category', body:`Add "${name}"?`, requirePassword:true, confirmText:'Add' }).then(res=>{ if(res.ok){ if(state.settings.categories.includes(name)){ alert('Exists'); return; } state.settings.categories.push(name); saveAll(); newCat.value=''; populateSettingsUI(); renderEntries(); }});
-});
-peopleList.addEventListener('click', (ev)=> {
-  if(ev.target.matches('.delPerson')){ const idx = Number(ev.target.dataset.idx); const name = state.settings.people[idx];
-    openModal({ title:'Delete Person', body:`Delete "${name}"? Entries reassigned.`, requirePassword:true, confirmText:'Delete' }).then(res=>{ if(res.ok){ if(state.settings.people.length<=1){ alert('At least one required'); return; } state.settings.people.splice(idx,1); const fallback = state.settings.people[0]; state.entries = state.entries.map(en => en.person===name? {...en, person:fallback}:en); saveAll(); populateSettingsUI(); renderEntries(); }});
-  }
-});
-catList.addEventListener('click', (ev)=> {
-  if(ev.target.matches('.delCat')){ const idx = Number(ev.target.dataset.idx); const name = state.settings.categories[idx];
-    openModal({ title:'Delete Category', body:`Delete "${name}"? Entries reassigned.`, requirePassword:true, confirmText:'Delete' }).then(res=>{ if(res.ok){ state.settings.categories.splice(idx,1); const fallback = state.settings.categories[0] || 'General'; state.entries = state.entries.map(en => en.category===name? {...en, category:fallback}:en); saveAll(); populateSettingsUI(); renderEntries(); }});
-  }
-});
+        function closeAdmin() { document.getElementById('settings-overlay').style.display = 'none'; }
 
-/* -----------------------
-   Modal helper (used earlier)
-   ----------------------- */
-function openModal(opts){ return openModalWrapper(opts); }
-function openModalWrapper({ title='Confirm', body='', requirePassword=false, confirmText='Confirm', showCancel=true } = {}){
-  modalTitle.textContent = title; modalBody.innerHTML = '';
-  if(requirePassword){
-    modalBody.innerHTML = `<div style="margin-bottom:8px">${body}</div><div style="display:flex;gap:8px;align-items:center">Password: <input id="modalPwd" type="password" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6eef6"/></div>`;
-  } else { modalBody.innerHTML = `<div>${body}</div>`; }
-  modalConfirm.textContent = confirmText; modalCancel.style.display = showCancel ? 'inline-block' : 'none';
-  modalBackdrop.style.display = 'flex';
-  return new Promise(resolve => {
-    const onCancel = ()=> { cleanup(); resolve({ok:false}); };
-    const onConfirm = ()=> {
-      const pwd = document.getElementById('modalPwd'); if(pwd){ if(pwd.value === PASSWORD){ cleanup(); resolve({ok:true}); } else alert('Incorrect password'); } else { cleanup(); resolve({ok:true}); }
-    };
-    function cleanup(){ modalBackdrop.style.display='none'; modalCancel.removeEventListener('click', onCancel); modalConfirm.removeEventListener('click', onConfirm); }
-    modalCancel.addEventListener('click', onCancel); modalConfirm.addEventListener('click', onConfirm);
-  });
-}
+        function renderAdminList() {
+            const list = document.getElementById('admin-list');
+            list.innerHTML = '';
+            links.forEach((l, i) => {
+                list.innerHTML += `
+                    <div class="admin-row">
+                        <input type="text" value="${l.name}" id="adm-n-${i}">
+                        <input type="text" value="${l.url}" id="adm-u-${i}">
+                        <select id="adm-c-${i}">
+                            <option value="inventory" ${l.cat==='inventory'?'selected':''}>Inventory</option>
+                            <option value="planning" ${l.cat==='planning'?'selected':''}>Planning</option>
+                        </select>
+                        <button onclick="removeItem(${i})" style="color:red; background:none; border:none; cursor:pointer;">✕</button>
+                    </div>`;
+            });
+        }
 
-/* -----------------------
-   Keyboard shortcuts
-   ----------------------- */
-document.addEventListener('keydown', (e)=> { if(e.key==='h') showScreen('home'); if(e.key==='e') showScreen('entry'); if(e.key==='s') showScreen('settings'); });
+        function addItem() {
+            const n = document.getElementById('new-name').value;
+            const u = document.getElementById('new-url').value;
+            const c = document.getElementById('new-cat').value;
+            if(n && u) {
+                links.push({ name: n, url: u, cat: c, icon: '📄' });
+                renderAdminList();
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-url').value = '';
+            }
+        }
 
-</script>
+        function removeItem(i) { links.splice(i, 1); renderAdminList(); }
+
+        function saveData() {
+            links.forEach((l, i) => {
+                l.name = document.getElementById(`adm-n-${i}`).value;
+                l.url = document.getElementById(`adm-u-${i}`).value;
+                l.cat = document.getElementById(`adm-c-${i}`).value;
+            });
+            localStorage.setItem('desktopLinks', JSON.stringify(links));
+            renderUI();
+            closeAdmin();
+        }
+
+        renderUI();
+    </script>
 </body>
 </html>
