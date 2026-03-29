@@ -3,362 +3,356 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SRD Steering Committee Desktop</title>
+    <title>SRD Steering Committee Portal</title>
     <style>
         :root {
-            --sidebar-bg: #101c2c;
-            --main-bg: #f0f2f5;
-            --accent: #0078d4;
-            --card-bg: rgba(255, 255, 255, 0.9);
-            --text-main: #1a1a1a;
-            --text-muted: #5e5e5e;
-            --glass-border: rgba(255, 255, 255, 0.4);
+            --sidebar-w: 260px;
+            --top-h: 64px;
+            --bg-main: #f4f7fa;
+            --navy: #0f172a;
+            --accent: #2563eb;
+            --border: #e2e8f0;
+            --card-min: 320px;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--main-bg);
-            color: var(--text-main);
-            margin: 0;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-main);
+            color: #1e293b;
             display: flex;
             height: 100vh;
+            width: 100vw;
             overflow: hidden;
         }
 
-        /* Sidebar Navigation */
+        /* Sidebar - Fixed Height */
         .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
+            width: var(--sidebar-w);
+            background: var(--navy);
             color: white;
             display: flex;
             flex-direction: column;
-            padding: 20px 0;
             flex-shrink: 0;
         }
 
-        .sidebar-header {
-            padding: 0 25px 30px;
+        .sidebar-brand {
+            height: var(--top-h);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
-        .sidebar-header h1 {
-            font-size: 1.2rem;
-            margin: 0;
-            letter-spacing: 1px;
-            color: #fff;
-        }
-
-        .sidebar-header p {
-            font-size: 0.7rem;
-            margin: 5px 0 0;
-            opacity: 0.6;
-            text-transform: uppercase;
-        }
-
-        .nav-item {
-            padding: 14px 25px;
+        .nav-list { padding: 20px 0; flex-grow: 1; }
+        
+        .nav-btn {
+            width: 100%;
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             gap: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            border-left: 4px solid transparent;
-            font-size: 0.95rem;
             background: none;
-            border-top: none; border-right: none; border-bottom: none;
-            width: 100%;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
             text-align: left;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
         }
 
-        .nav-item:hover {
-            background: rgba(255,255,255,0.05);
-            color: white;
-        }
-
-        .nav-item.active {
-            background: rgba(255,255,255,0.1);
+        .nav-btn:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-btn.active {
+            background: rgba(37, 99, 235, 0.1);
             color: white;
             border-left-color: var(--accent);
-        }
-
-        /* Main Workspace */
-        .main-content {
-            flex-grow: 1;
-            padding: 40px;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .view-section {
-            display: none;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .view-section.active { display: block; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .page-header {
-            margin-bottom: 30px;
-        }
-
-        .page-header h2 {
-            font-size: 2rem;
-            margin: 0;
             font-weight: 600;
         }
 
-        /* App Grid */
-        .app-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 25px;
+        /* Main Area - Auto Adjusting */
+        .wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Prevents flex items from overflowing */
         }
 
-        .app-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 25px;
+        .top-nav {
+            height: var(--top-h);
+            background: white;
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 20px;
-            text-decoration: none;
-            color: var(--text-main);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+            padding: 0 32px;
+            justify-content: space-between;
         }
 
-        .app-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        .scroll-container {
+            flex-grow: 1;
+            padding: 32px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        /* Responsive Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
+            gap: 24px;
+            max-width: 1600px; /* Limits stretching on ultra-wide */
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
             border-color: var(--accent);
         }
 
         .icon-box {
-            width: 56px;
-            height: 56px;
-            background: #fff;
-            border-radius: 12px;
+            width: 48px;
+            height: 48px;
+            background: #f1f5f9;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            font-size: 20px;
+            flex-shrink: 0;
         }
 
-        .app-info { flex: 1; }
-        .app-info .title { font-weight: 600; font-size: 1.1rem; margin-bottom: 4px; }
-        .app-info .desc { font-size: 0.85rem; color: var(--text-muted); }
+        /* Table Auto-Resize */
+        .table-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            width: 100%;
+        }
 
-        /* Settings Overlay */
-        #settings-overlay {
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        th { background: #f8fafc; padding: 12px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; border-bottom: 1px solid var(--border); }
+        td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+
+        input, select, textarea {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            width: 100%;
+            font-size: 13px;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Modal Overlay */
+        .overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
         }
 
-        .settings-modal {
+        .modal {
             background: white;
-            width: 800px;
-            max-height: 85vh;
+            width: 100%;
+            max-width: 420px;
+            padding: 32px;
             border-radius: 16px;
-            padding: 40px;
-            overflow-y: auto;
-            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
 
-        .admin-row {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr auto;
-            gap: 10px;
-            margin-bottom: 10px;
-            background: #f9f9f9;
-            padding: 10px;
+        .btn-submit {
+            background: var(--accent);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
             border-radius: 8px;
+            font-weight: 600;
+            margin-top: 20px;
+            cursor: pointer;
         }
-
-        input, select {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-        }
-
-        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-close { position: absolute; top: 20px; right: 20px; background: none; font-size: 20px; cursor: pointer; border:none; }
-
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <h1>SRD PORTAL</h1>
-            <p>Steering Committee</p>
+        <div class="sidebar-brand">SRD PORTAL</div>
+        <div class="nav-list">
+            <button class="nav-btn active" onclick="nav('inventory', this, 'Inventory & Assets')">📦 Inventory & Assets</button>
+            <button class="nav-btn" onclick="nav('planning', this, 'Planning & Commercial')">📊 Planning & Commercial</button>
+            <button class="nav-btn" onclick="nav('tracker', this, 'PRF Tracker')">📋 PRF Tracker</button>
         </div>
-        
-        <button class="nav-item active" onclick="switchView('inventory', this)">
-            <span>📦</span> Inventory & Assets
-        </button>
-        <button class="nav-item" onclick="switchView('planning', this)">
-            <span>📊</span> Planning & Commercial
-        </button>
-        
-        <div style="margin-top: auto; padding: 20px;">
-            <button class="nav-item" style="border:none;" onclick="triggerAdmin()">
-                <span>⚙️</span> Administration
-            </button>
-        </div>
+        <div style="padding: 20px; font-size: 11px; color: #475569;">Desktop v3.0 Optimized</div>
     </aside>
 
-    <main class="main-content">
-        <div id="view-inventory" class="view-section active">
-            <div class="page-header">
-                <h2>Inventory & Assets</h2>
+    <div class="wrapper">
+        <header class="top-nav">
+            <h2 id="current-title" style="font-size: 18px;">Inventory & Assets</h2>
+        </header>
+
+        <main class="scroll-container">
+            <div id="v-inventory" class="view active">
+                <div id="grid-inv" class="grid"></div>
             </div>
-            <div id="grid-inventory" class="app-grid"></div>
-        </div>
 
-        <div id="view-planning" class="view-section">
-            <div class="page-header">
-                <h2>Planning & Commercial</h2>
+            <div id="v-planning" class="view">
+                <div id="grid-plan" class="grid"></div>
             </div>
-            <div id="grid-planning" class="app-grid"></div>
-        </div>
-    </main>
 
-    <div id="settings-overlay">
-        <div class="settings-modal">
-            <button class="btn-close" onclick="closeAdmin()">✕</button>
-            <h2 style="margin-top:0">Portal Management</h2>
-            <p style="color:var(--text-muted)">Configure active links and categorize workspace tools.</p>
-            
-            <div id="admin-list" style="margin-top:20px"></div>
-
-            <div style="margin-top: 30px; background:#f0f7ff; padding:20px; border-radius:12px;">
-                <h4 style="margin-top:0">Add New Entry</h4>
-                <div class="admin-row" style="background:transparent; padding:0;">
-                    <input type="text" id="new-name" placeholder="Tool Name">
-                    <input type="text" id="new-url" placeholder="URL">
-                    <select id="new-cat">
-                        <option value="inventory">Inventory/Assets</option>
-                        <option value="planning">Planning/Commercial</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="addItem()">Add</button>
+            <div id="v-tracker" class="view">
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 110px;">Submitted</th>
+                                <th style="width: 130px;">PRF #</th>
+                                <th style="width: 200px;">Asset / Vessel</th>
+                                <th style="width: 180px;">Status</th>
+                                <th style="width: 150px;">ETA</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-body"></tbody>
+                    </table>
                 </div>
             </div>
+        </main>
+    </div>
 
-            <div style="margin-top:20px; text-align:right;">
-                <button class="btn btn-primary" onclick="saveData()">Save All Changes</button>
+    <div id="modal-prf" class="overlay">
+        <div class="modal">
+            <h3 style="margin-bottom: 24px;">Log New PRF</h3>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px;">PRF Number</label>
+                <input type="text" id="in-prf" placeholder="Enter PRF #">
             </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px;">Asset / Vessel Name</label>
+                <input type="text" id="in-asset" placeholder="Enter Name">
+            </div>
+            <button class="btn-submit" onclick="executePRF()">Submit & Open Form</button>
+            <button onclick="closePrf()" style="width:100%; background:none; border:none; margin-top:12px; color:#64748b; cursor:pointer; font-size:13px;">Cancel</button>
         </div>
     </div>
 
     <script>
-        const initialData = [
-            { id: 1, name: 'Submit MRN', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzMxS1lCRzlRUFlOMk9JOENXWFU0Sk0wMC4u&route=shorturl', icon: '📝' },
-            { id: 2, name: 'Submit PRF', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u&route=shorturl', icon: '📁' },
-            { id: 3, name: 'i-MRN Sheet', cat: 'inventory', url: 'https://maldivetransportcontracting.sharepoint.com/:x:/s/EDDTeam/IQCAOvzeximvTZUKT2cqJdS0AaOsyFR4euCb2FXUfqxJBB4?e=7lvwfV', icon: '📈' },
-            { id: 4, name: 'Submit Report', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzhBOFcxMVBDWDJYWExJVkUzOUxRQlRWWi4u&route=shorturl', icon: '📊' },
-            { id: 5, name: 'Submit BOQ', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UREpVTFM5R0NRSDBTQzJJMVdPUjRQMzRXTi4u&route=shorturl', icon: '📐' },
-            { id: 6, name: 'Submit SRN', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UOVY2TFFXSlhXRlRIT0pJSk1TOTNKWlJBRS4u&route=shorturl', icon: '📋' }
+        const PRF_LINK = "https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u&route=shorturl";
+        
+        const tools = [
+            { name: 'Submit MRN', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzMxS1lCRzlRUFlOMk9JOENXWFU0Sk0wMC4u&route=shorturl', icon: '📝' },
+            { name: 'Submit PRF', cat: 'inventory', url: 'ACTION_PRF', icon: '📁' },
+            { name: 'i-MRN Sheet', cat: 'inventory', url: 'https://maldivetransportcontracting.sharepoint.com/:x:/s/EDDTeam/IQCAOvzeximvTZUKT2cqJdS0AaOsyFR4euCb2FXUfqxJBB4?e=7lvwfV', icon: '📈' },
+            { name: 'Submit Report', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzhBOFcxMVBDWDJYWExJVkUzOUxRQlRWWi4u&route=shorturl', icon: '📊' },
+            { name: 'Submit BOQ', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UREpVTFM5R0NRSDBTQzJJMVdPUjRQMzRXTi4u&route=shorturl', icon: '📐' },
+            { name: 'Submit SRN', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UOVY2TFFXSlhXRlRIT0pJSk1TOTNKWlJBRS4u&route=shorturl', icon: '📋' }
         ];
 
-        let links = JSON.parse(localStorage.getItem('desktopLinks')) || initialData;
+        let logs = JSON.parse(localStorage.getItem('sc_logs_v3')) || [];
 
-        function renderUI() {
-            const iGrid = document.getElementById('grid-inventory');
-            const pGrid = document.getElementById('grid-planning');
-            iGrid.innerHTML = ''; pGrid.innerHTML = '';
+        function render() {
+            const iG = document.getElementById('grid-inv');
+            const pG = document.getElementById('grid-plan');
+            iG.innerHTML = ''; pG.innerHTML = '';
 
-            links.forEach(link => {
+            tools.forEach(t => {
+                const action = t.url === 'ACTION_PRF' ? `onclick="openPrf()"` : `onclick="window.open('${t.url}', '_blank')"`;
                 const html = `
-                    <a href="${link.url}" class="app-card" target="_blank">
-                        <div class="icon-box">${link.icon || '📄'}</div>
-                        <div class="app-info">
-                            <div class="title">${link.name}</div>
-                            <div class="desc">Open in new tab</div>
+                    <div ${action} class="card">
+                        <div class="icon-box">${t.icon}</div>
+                        <div>
+                            <div style="font-weight:600; font-size:15px;">${t.name}</div>
+                            <div style="font-size:12px; color:#64748b;">System Tool</div>
                         </div>
-                    </a>`;
-                if(link.cat === 'inventory') iGrid.innerHTML += html;
-                else pGrid.innerHTML += html;
+                    </div>`;
+                if(t.cat === 'inventory') iG.innerHTML += html;
+                else pG.innerHTML += html;
             });
+            renderLogs();
         }
 
-        function switchView(id, btn) {
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('view-' + id).classList.add('active');
+        function nav(v, btn, title) {
+            document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+            document.getElementById('v-' + v).classList.add('active');
+            document.getElementById('current-title').innerText = title;
             btn.classList.add('active');
         }
 
-        function triggerAdmin() {
-            if(prompt("Admin Access PIN:") === "12247") {
-                document.getElementById('settings-overlay').style.display = 'flex';
-                renderAdminList();
-            }
+        function openPrf() { document.getElementById('modal-prf').style.display = 'flex'; }
+        function closePrf() { document.getElementById('modal-prf').style.display = 'none'; }
+
+        function executePRF() {
+            const p = document.getElementById('in-prf').value;
+            const a = document.getElementById('in-asset').value;
+            if(!p || !a) return alert("Fill required fields");
+
+            const date = new Date().toLocaleDateString('en-GB');
+            logs.unshift({ date, prf: p, asset: a, status: 'Submitted', eta: '', remarks: '' });
+            localStorage.setItem('sc_logs_v3', JSON.stringify(logs));
+            
+            closePrf();
+            renderLogs();
+            window.open(PRF_LINK, '_blank');
+            document.getElementById('in-prf').value = '';
+            document.getElementById('in-asset').value = '';
         }
 
-        function closeAdmin() { document.getElementById('settings-overlay').style.display = 'none'; }
-
-        function renderAdminList() {
-            const list = document.getElementById('admin-list');
-            list.innerHTML = '';
-            links.forEach((l, i) => {
-                list.innerHTML += `
-                    <div class="admin-row">
-                        <input type="text" value="${l.name}" id="adm-n-${i}">
-                        <input type="text" value="${l.url}" id="adm-u-${i}">
-                        <select id="adm-c-${i}">
-                            <option value="inventory" ${l.cat==='inventory'?'selected':''}>Inventory</option>
-                            <option value="planning" ${l.cat==='planning'?'selected':''}>Planning</option>
-                        </select>
-                        <button onclick="removeItem(${i})" style="color:red; background:none; border:none; cursor:pointer;">✕</button>
-                    </div>`;
+        function renderLogs() {
+            const b = document.getElementById('log-body');
+            b.innerHTML = '';
+            logs.forEach((l, i) => {
+                b.innerHTML += `
+                    <tr>
+                        <td>${l.date}</td>
+                        <td style="font-weight:700">${l.prf}</td>
+                        <td>${l.asset}</td>
+                        <td>
+                            <select onchange="up(${i}, 'status', this.value)">
+                                <option ${l.status==='Submitted'?'selected':''}>Submitted</option>
+                                <option ${l.status==='PO Raised'?'selected':''}>PO Raised</option>
+                                <option ${l.status==='Delivery Pending'?'selected':''}>Delivery Pending</option>
+                                <option ${l.status==='Part received'?'selected':''}>Part received</option>
+                                <option ${l.status==='All received'?'selected':''}>All received</option>
+                                <option ${l.status==='On-hold'?'selected':''}>On-hold</option>
+                                <option ${l.status==='Cancelled'?'selected':''}>Cancelled</option>
+                            </select>
+                        </td>
+                        <td><input type="date" value="${l.eta}" onchange="up(${i}, 'eta', this.value)"></td>
+                        <td><textarea onchange="up(${i}, 'remarks', this.value)" rows="1">${l.remarks}</textarea></td>
+                    </tr>`;
             });
         }
 
-        function addItem() {
-            const n = document.getElementById('new-name').value;
-            const u = document.getElementById('new-url').value;
-            const c = document.getElementById('new-cat').value;
-            if(n && u) {
-                links.push({ name: n, url: u, cat: c, icon: '📄' });
-                renderAdminList();
-                document.getElementById('new-name').value = '';
-                document.getElementById('new-url').value = '';
-            }
+        function up(i, f, v) {
+            logs[i][f] = v;
+            localStorage.setItem('sc_logs_v3', JSON.stringify(logs));
         }
 
-        function removeItem(i) { links.splice(i, 1); renderAdminList(); }
-
-        function saveData() {
-            links.forEach((l, i) => {
-                l.name = document.getElementById(`adm-n-${i}`).value;
-                l.url = document.getElementById(`adm-u-${i}`).value;
-                l.cat = document.getElementById(`adm-c-${i}`).value;
-            });
-            localStorage.setItem('desktopLinks', JSON.stringify(links));
-            renderUI();
-            closeAdmin();
-        }
-
-        renderUI();
+        render();
     </script>
 </body>
 </html>
