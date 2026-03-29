@@ -9,231 +9,247 @@
     <style>
         :root {
             --sidebar-w: 260px; --sidebar-min: 80px; --top-h: 64px;
-            --bg-main: #f4f7fa; --navy: #0f172a; --accent: #2563eb;
-            --border: #e2e8f0; --pdf-red: #d93025;
+            --bg-main: #f8fafc; --navy: #0f172a; --accent: #2563eb;
+            --border: #e2e8f0; --danger: #ef4444;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg-main); color: #1e293b; display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-main); color: #1e293b; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Sidebar */
-        .sidebar { width: var(--sidebar-w); background: var(--navy); color: white; display: flex; flex-direction: column; flex-shrink: 0; transition: 0.3s; overflow: hidden; z-index: 10; }
+        /* Navigation */
+        .sidebar { width: var(--sidebar-w); background: var(--navy); color: white; display: flex; flex-direction: column; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); flex-shrink: 0; }
         .sidebar.minimized { width: var(--sidebar-min); }
         .sidebar-brand { height: var(--top-h); display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 700; white-space: nowrap; }
-        .nav-list { padding: 20px 0; flex-grow: 1; }
-        .nav-btn { width: 100%; padding: 14px 24px; display: flex; align-items: center; gap: 16px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; transition: 0.2s; border-left: 3px solid transparent; white-space: nowrap; }
-        .nav-btn.active { background: rgba(37, 99, 235, 0.1); color: white; border-left-color: var(--accent); }
+        .nav-btn { width: 100%; padding: 14px 24px; display: flex; align-items: center; gap: 16px; background: none; border: none; color: #94a3b8; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; }
+        .nav-btn.active { background: rgba(37, 99, 235, 0.15); color: white; border-left-color: var(--accent); }
         .sidebar.minimized .nav-text { display: none; }
 
-        /* Workspace */
+        /* Layout */
         .wrapper { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
-        .top-nav { height: var(--top-h); background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; flex-shrink: 0; }
-        .scroll-container { flex-grow: 1; padding: 32px; overflow-y: auto; }
+        .top-nav { height: var(--top-h); background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 30px; justify-content: space-between; }
+        .scroll-container { flex-grow: 1; padding: 25px; overflow-y: auto; scroll-behavior: smooth; }
 
-        /* Full Status Dashboard */
-        .stats-bar { display: none; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        /* Dashboard */
+        .stats-grid { display: none; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
         .stat-card .val { display: block; font-size: 20px; font-weight: 800; color: var(--navy); }
-        .stat-card .lbl { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 600; margin-top: 4px; white-space: nowrap; }
+        .stat-card .lbl { font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
 
-        /* Tracker Actions */
-        .actions-row { display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .search-input { padding: 8px 12px 8px 35px; border: 1px solid var(--border); border-radius: 8px; width: 300px; font-size: 13px; }
-        .btn-pdf { background: var(--pdf-red); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; }
-        .btn-pdf:hover { opacity: 0.9; }
+        /* Flexible Table */
+        .actions-bar { display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .search-wrap { position: relative; width: 320px; }
+        .search-wrap input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; text-transform: uppercase; }
+        .search-wrap svg { position: absolute; left: 12px; top: 12px; fill: #94a3b8; }
 
-        /* Grid & Table */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-        .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: 0.2s; }
-        .card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .table-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-        th { background: #f8fafc; padding: 12px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid var(--border); }
-        td { padding: 12px 20px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
-        .asset-bold { font-weight: 700; color: #0f172a; }
-        textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; resize: none; overflow: hidden; min-height: 38px; }
+        .table-wrap { background: white; border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; min-width: 1000px; }
+        th { background: #f8fafc; padding: 14px 15px; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; text-transform: uppercase; }
+        
+        /* Column Control */
+        .col-date { width: 110px; }
+        .col-prf { width: 130px; }
+        .col-status { width: 180px; min-width: 180px; } /* Fixed Status Width */
+        .col-eta { width: 165px; }
+        .col-del { width: 45px; }
 
+        .row-age { font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-top: 4px; display: block; }
+        .btn-delete { color: #cbd5e1; background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px; transition: 0.2s; }
+        .btn-delete:hover { color: var(--danger); }
+
+        /* Status Colors */
+        .status-select { padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; width: 100%; text-transform: uppercase; }
+        .s-submitted { background: #dbeafe; color: #1e40af; }
+        .s-po { background: #ede9fe; color: #5b21b6; }
+        .s-pending { background: #ffedd5; color: #9a3412; }
+        .s-received { background: #dcfce7; color: #166534; }
+        .s-hold { background: #f1f5f9; color: #475569; }
+        .s-cancelled { background: #fee2e2; color: #991b1b; }
+
+        textarea { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; font-family: inherit; resize: none; overflow: hidden; min-height: 36px; text-transform: uppercase; }
         .view { display: none; }
         .view.active { display: block; }
-        .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal { background: white; width: 400px; padding: 32px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        
+        /* Modal UI */
+        .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
+        .modal { background: white; width: 420px; padding: 30px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+        .modal input { text-transform: uppercase; }
+        .modal-btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-log { flex: 1; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; text-transform: uppercase; font-size: 11px; }
     </style>
 </head>
 <body>
 
-    <aside id="main-sidebar" class="sidebar">
+    <aside id="sidebar" class="sidebar">
         <div class="sidebar-brand">
-            <button onclick="toggleSidebar()" style="background:none; border:none; cursor:pointer; color:white; font-size:20px; margin-right:15px;">☰</button>
+            <button onclick="toggleSidebar()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer; margin-right:15px;">☰</button>
             <span class="nav-text">SRD PORTAL</span>
         </div>
         <div class="nav-list">
             <button class="nav-btn active" onclick="nav('inventory', this, 'Inventory & Assets')">
-                <span class="nav-icon">📦</span><span class="nav-text">Inventory & Assets</span>
+                <span>📦</span><span class="nav-text">Inventory & Assets</span>
             </button>
             <button class="nav-btn" onclick="nav('planning', this, 'Planning & Commercial')">
-                <span class="nav-icon">📊</span><span class="nav-text">Planning & Commercial</span>
+                <span>📊</span><span class="nav-text">Planning & Commercial</span>
             </button>
             <button class="nav-btn" onclick="nav('tracker', this, 'PRF Tracker')">
-                <span class="nav-icon">📋</span><span class="nav-text">PRF Tracker</span>
+                <span>📋</span><span class="nav-text">PRF Tracker</span>
             </button>
         </div>
     </aside>
 
     <div class="wrapper">
-        <header class="top-nav"><h2 id="current-title">Inventory & Assets</h2></header>
+        <header class="top-nav"><h2 id="view-title">Inventory & Assets</h2></header>
+        
         <main class="scroll-container">
-            
-            <div id="stats-summary" class="stats-bar">
-                <div class="stat-card" style="border-top: 3px solid #64748b;"><span class="val" id="count-all">0</span><span class="lbl">Total</span></div>
-                <div class="stat-card" style="border-top: 3px solid #2563eb;"><span class="val" id="count-submitted">0</span><span class="lbl">Submitted</span></div>
-                <div class="stat-card" style="border-top: 3px solid #7c3aed;"><span class="val" id="count-po">0</span><span class="lbl">PO Raised</span></div>
-                <div class="stat-card" style="border-top: 3px solid #0891b2;"><span class="val" id="count-pending">0</span><span class="lbl">Deliv. Pend.</span></div>
-                <div class="stat-card" style="border-top: 3px solid #10b981;"><span class="val" id="count-part">0</span><span class="lbl">Part Recv.</span></div>
-                <div class="stat-card" style="border-top: 3px solid #059669;"><span class="val" id="count-allrec">0</span><span class="lbl">All Recv.</span></div>
-                <div class="stat-card" style="border-top: 3px solid #f59e0b;"><span class="val" id="count-hold">0</span><span class="lbl">On-Hold</span></div>
-                <div class="stat-card" style="border-top: 3px solid #dc2626;"><span class="val" id="count-cancel">0</span><span class="lbl">Cancelled</span></div>
-            </div>
+            <div id="stats-bar" class="stats-grid"></div>
 
-            <div id="tracker-actions" class="actions-row">
-                <div style="position:relative;">
-                    <span style="position:absolute; left:12px; top:8px; color:#94a3b8">🔍</span>
-                    <input type="text" id="log-search" class="search-input" placeholder="Search PRF or Vessel..." onkeyup="filterLogs()">
+            <div id="actions-bar" class="actions-bar">
+                <div class="search-wrap">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="main-search" placeholder="FILTER PRFS..." onkeyup="refreshTable()">
                 </div>
-                <button class="btn-pdf" onclick="generatePDF()">📄 Download PDF Report</button>
+                <button onclick="exportPDF()" style="background:var(--navy); color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer;">📥 EXPORT PDF</button>
             </div>
 
-            <div id="v-inventory" class="view active"><div id="grid-inv" class="grid"></div></div>
-            <div id="v-planning" class="view"><div id="grid-plan" class="grid"></div></div>
+            <div id="v-inventory" class="view active"><div id="g-inv" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:20px;"></div></div>
+            <div id="v-planning" class="view"><div id="g-plan" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:20px;"></div></div>
             <div id="v-tracker" class="view">
-                <div class="table-card">
-                    <table>
+                <div class="table-wrap">
+                    <table id="prf-table">
                         <thead>
                             <tr>
-                                <th style="width: 100px;">Date</th><th style="width: 120px;">PRF #</th>
-                                <th style="width: 200px;">Asset / Vessel</th><th style="width: 180px;">Status</th>
-                                <th style="width: 140px;">ETA</th><th>Remarks</th>
+                                <th class="col-date">Date</th>
+                                <th class="col-prf">PRF #</th>
+                                <th>Asset / Vessel</th>
+                                <th class="col-status">Status</th>
+                                <th class="col-eta">ETA Info</th>
+                                <th>Remarks</th>
+                                <th class="col-del"></th>
                             </tr>
                         </thead>
-                        <tbody id="log-body"></tbody>
+                        <tbody id="table-body"></tbody>
                     </table>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="modal-prf" class="overlay">
+    <div id="prf-modal" class="overlay">
         <div class="modal">
-            <h3 style="margin-bottom: 20px;">Log New PRF</h3>
-            <input type="text" id="in-prf" placeholder="PRF Number" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:6px;">
-            <input type="text" id="in-asset" placeholder="Vessel Name" style="width:100%; padding:10px; margin-bottom:20px; border:1px solid #ddd; border-radius:6px;">
-            <button onclick="executePRF()" style="width:100%; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">Proceed</button>
-            <button onclick="closePrf()" style="width:100%; background:none; border:none; margin-top:10px; color:#64748b; cursor:pointer;">Cancel</button>
+            <h3 style="margin-bottom:10px; text-transform: uppercase;">New PRF Entry</h3>
+            <p style="font-size:11px; color:#64748b; margin-bottom:20px; text-transform: uppercase;">Log data to tracking system.</p>
+            <input type="text" id="m-prf" placeholder="PRF NUMBER" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px">
+            <input type="text" id="m-asset" placeholder="VESSEL NAME" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px">
+            
+            <div class="modal-btn-group">
+                <button onclick="processPRF(false)" class="btn-log" style="background:#f1f5f9; color:#475569">JUST LOG ENTRY</button>
+                <button onclick="processPRF(true)" class="btn-log" style="background:var(--accent); color:white">LOG & OPEN FORM</button>
+            </div>
+            <button onclick="closeModal()" style="width:100%; background:none; border:none; margin-top:15px; color:#94a3b8; cursor:pointer; font-size:12px">CANCEL</button>
         </div>
     </div>
 
     <script>
-        const PRF_LINK = "https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u&route=shorturl";
+        const STORAGE_KEY = 'srd_portal_final_v4';
+        const FORM_URL = "https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u&route=shorturl";
+        
         const tools = [
-            { name: 'Submit MRN', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzMxS1lCRzlRUFlOMk9JOENXWFU0Sk0wMC4u&route=shorturl', icon: '📝' },
-            { name: 'Submit PRF', cat: 'inventory', url: 'ACTION_PRF', icon: '📁' },
-            { name: 'i-MRN Sheet', cat: 'inventory', url: 'https://maldivetransportcontracting.sharepoint.com/:x:/s/EDDTeam/IQCAOvzeximvTZUKT2cqJdS0AaOsyFR4euCb2FXUfqxJBB4?e=7lvwfV', icon: '📈' },
-            { name: 'Submit Report', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzhBOFcxMVBDWDJYWExJVkUzOUxRQlRWWi4u&route=shorturl', icon: '📊' },
-            { name: 'Submit BOQ', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UREpVTFM5R0NRSDBTQzJJMVdPUjRQMzRXTi4u&route=shorturl', icon: '📐' },
-            { name: 'Submit SRN', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UOVY2TFFXSlhXRlRIT0pJSk1TOTNKWlJBRS4u&route=shorturl', icon: '📋' }
+            { name: 'SUBMIT MRN', cat: 'inventory', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzMxS1lCRzlRUFlOMk9JOENXWFU0Sk0wMC4u&route=shorturl', icon: '📝' },
+            { name: 'SUBMIT PRF', cat: 'inventory', url: 'MODAL', icon: '📁' },
+            { name: 'I-MRN SHEET', cat: 'inventory', url: 'https://maldivetransportcontracting.sharepoint.com/:x:/s/EDDTeam/IQCAOvzeximvTZUKT2cqJdS0AaOsyFR4euCb2FXUfqxJBB4?e=7lvwfV', icon: '📊' },
+            { name: 'SUBMIT REPORT', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UMzhBOFcxMVBDWDJYWExJVkUzOUxRQlRWWi4u&route=shorturl', icon: '📈' },
+            { name: 'SUBMIT BOQ', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UREpVTFM5R0NRSDBTQzJJMVdPUjRQMzRXTi4u&route=shorturl', icon: '📐' },
+            { name: 'SUBMIT SRN', cat: 'planning', url: 'https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UOVY2TFFXSlhXRlRIT0pJSk1TOTNKWlJBRS4u&route=shorturl', icon: '📋' }
         ];
 
-        let logs = JSON.parse(localStorage.getItem('sc_logs_v7')) || [];
+        let logs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
-        function render() {
-            const iG = document.getElementById('grid-inv'), pG = document.getElementById('grid-plan');
+        function init() { renderTools(); refreshTable(); }
+
+        function renderTools() {
+            const iG = document.getElementById('g-inv'), pG = document.getElementById('g-plan');
             iG.innerHTML = ''; pG.innerHTML = '';
             tools.forEach(t => {
-                const action = t.url === 'ACTION_PRF' ? `onclick="openPrf()"` : `onclick="window.open('${t.url}', '_blank')"`;
-                const html = `<div ${action} class="card"><div class="icon-box" style="font-size:24px; padding:10px; background:#f1f5f9; border-radius:8px;">${t.icon}</div><div style="font-weight:600">${t.name}</div></div>`;
+                const action = t.url === 'MODAL' ? `onclick="openModal()"` : `onclick="window.open('${t.url}', '_blank')"`;
+                const html = `<div ${action} class="card" style="background:white; padding:20px; border-radius:12px; border:1px solid var(--border); cursor:pointer; display:flex; align-items:center; gap:15px; transition:0.2s"><span style="font-size:24px">${t.icon}</span><span style="font-weight:600">${t.name}</span></div>`;
                 t.cat === 'inventory' ? iG.innerHTML += html : pG.innerHTML += html;
             });
-            updateDashboard(); renderLogs();
         }
 
-        function nav(v, btn, title) {
-            document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-            document.getElementById('v-' + v).classList.add('active');
-            document.getElementById('current-title').innerText = title;
+        function nav(id, btn, title) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('v-' + id).classList.add('active');
             btn.classList.add('active');
-            const isT = (v === 'tracker');
-            document.getElementById('stats-summary').style.display = isT ? 'grid' : 'none';
-            document.getElementById('tracker-actions').style.display = isT ? 'flex' : 'none';
+            document.getElementById('view-title').innerText = title.toUpperCase();
+            const isT = (id === 'tracker');
+            document.getElementById('stats-bar').style.display = isT ? 'grid' : 'none';
+            document.getElementById('actions-bar').style.display = isT ? 'flex' : 'none';
         }
 
-        function toggleSidebar() { document.getElementById('main-sidebar').classList.toggle('minimized'); }
-        function openPrf() { document.getElementById('modal-prf').style.display = 'flex'; }
-        function closePrf() { document.getElementById('modal-prf').style.display = 'none'; }
-
-        function executePRF() {
-            const p = document.getElementById('in-prf').value, a = document.getElementById('in-asset').value;
-            if(!p || !a) return alert("Required fields missing");
-            logs.unshift({ date: new Date().toLocaleDateString('en-GB'), prf: p, asset: a, status: 'Submitted', eta: '', remarks: '' });
-            localStorage.setItem('sc_logs_v7', JSON.stringify(logs));
-            closePrf(); render(); window.open(PRF_LINK, '_blank');
-        }
-
-        function updateDashboard() {
-            const getCount = (s) => logs.filter(l => l.status === s).length;
-            document.getElementById('count-all').innerText = logs.length;
-            document.getElementById('count-submitted').innerText = getCount('Submitted');
-            document.getElementById('count-po').innerText = getCount('PO Raised');
-            document.getElementById('count-pending').innerText = getCount('Delivery Pending');
-            document.getElementById('count-part').innerText = getCount('Part received');
-            document.getElementById('count-allrec').innerText = getCount('All received');
-            document.getElementById('count-hold').innerText = getCount('On-hold');
-            document.getElementById('count-cancel').innerText = getCount('Cancelled');
-        }
-
-        function renderLogs(data = logs) {
-            const b = document.getElementById('log-body'); b.innerHTML = '';
-            data.forEach((l, i) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${l.date}</td><td style="font-weight:700">${l.prf}</td><td class="asset-bold">${l.asset}</td>
-                    <td><select onchange="up(${i}, 'status', this.value)">
-                        <option ${l.status==='Submitted'?'selected':''}>Submitted</option>
-                        <option ${l.status==='PO Raised'?'selected':''}>PO Raised</option>
-                        <option ${l.status==='Delivery Pending'?'selected':''}>Delivery Pending</option>
-                        <option ${l.status==='Part received'?'selected':''}>Part received</option>
-                        <option ${l.status==='All received'?'selected':''}>All received</option>
-                        <option ${l.status==='On-hold'?'selected':''}>On-hold</option>
-                        <option ${l.status==='Cancelled'?'selected':''}>Cancelled</option>
-                    </select></td>
-                    <td><input type="date" value="${l.eta}" onchange="up(${i}, 'eta', this.value)"></td>
-                    <td><textarea oninput="autoGrow(this)" onchange="up(${i}, 'remarks', this.value)">${l.remarks}</textarea></td>`;
-                b.appendChild(tr);
-                autoGrow(tr.querySelector('textarea'));
-            });
-        }
-
-        function autoGrow(el) { el.style.height = "5px"; el.style.height = (el.scrollHeight) + "px"; }
-        function up(i, f, v) { logs[i][f] = v; localStorage.setItem('sc_logs_v7', JSON.stringify(logs)); updateDashboard(); }
-        function filterLogs() { const v = document.getElementById('log-search').value.toLowerCase(); renderLogs(logs.filter(l => l.prf.toLowerCase().includes(v) || l.asset.toLowerCase().includes(v))); }
-
-        function generatePDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            doc.setFontSize(18); doc.text("PRF Comprehensive Status Report", 14, 20);
-            doc.setFontSize(10); doc.text(`Date: ${new Date().toLocaleString()}`, 14, 28);
+        function refreshTable() {
+            const query = document.getElementById('main-search').value.toUpperCase();
+            const filtered = logs.filter(l => l.prf.includes(query) || l.asset.includes(query));
+            const stats = ['TOTAL', 'SUBMITTED', 'PO RAISED', 'DELIVERY PENDING', 'PART RECEIVED', 'ALL RECEIVED', 'ON-HOLD', 'CANCELLED'];
             
-            const tableData = logs.map(l => [l.date, l.prf, l.asset, l.status, l.eta || 'N/A', l.remarks]);
-            doc.autoTable({
-                startY: 35,
-                head: [['Date', 'PRF Number', 'Asset / Vessel', 'Status', 'ETA', 'Remarks']],
-                body: tableData, theme: 'grid',
-                headStyles: { fillColor: [15, 23, 42] },
-                styles: { fontSize: 8 },
-                columnStyles: { 5: { cellWidth: 80 } }
+            document.getElementById('stats-bar').innerHTML = stats.map(s => {
+                const count = s === 'TOTAL' ? logs.length : logs.filter(l => l.status === s).length;
+                return `<div class="stat-card"><span class="val">${count}</span><span class="lbl">${s}</span></div>`;
+            }).join('');
+
+            const body = document.getElementById('table-body');
+            body.innerHTML = '';
+            filtered.forEach((l, i) => {
+                const origIdx = logs.indexOf(l);
+                const age = Math.floor((new Date() - new Date(l.rawDate)) / 86400000);
+                const etaDays = l.eta ? Math.ceil((new Date(l.eta) - new Date()) / 86400000) : null;
+                const etaUI = etaDays === null ? '--' : (etaDays < 0 ? `<b style="color:var(--danger)">OVERDUE ${Math.abs(etaDays)}D</b>` : `${etaDays}D REMAINING`);
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${l.date}<span class="row-age">${age}D AGO</span></td>
+                    <td style="font-weight:700; color:var(--accent)">${l.prf}</td>
+                    <td style="font-weight:700">${l.asset}</td>
+                    <td><select class="status-select ${getStatusClass(l.status)}" onchange="up(${origIdx}, 'status', this.value)">
+                        ${stats.slice(1).map(st => `<option ${l.status===st?'selected':''}>${st}</option>`).join('')}
+                    </select></td>
+                    <td><input type="date" value="${l.eta}" onchange="up(${origIdx}, 'eta', this.value)" style="border:1px solid #e2e8f0; padding:4px; border-radius:4px"><br><small>${etaUI}</small></td>
+                    <td><textarea oninput="autoSize(this)" onchange="up(${origIdx}, 'remarks', this.value.toUpperCase())">${l.remarks}</textarea></td>
+                    <td style="text-align:center"><button class="btn-delete" onclick="del(${origIdx})">×</button></td>
+                `;
+                body.appendChild(tr);
+                autoSize(tr.querySelector('textarea'));
             });
-            doc.save(`PRF_Full_Report_${new Date().toLocaleDateString()}.pdf`);
         }
 
-        render();
+        function up(idx, f, v) { logs[idx][f] = v; localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); if(f !== 'remarks') refreshTable(); }
+        function del(idx) { if(confirm("DELETE THIS ENTRY?")) { logs.splice(idx, 1); localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); refreshTable(); } }
+        function getStatusClass(s) { if(s.includes('RECEIVED')) return 's-received'; const m = {'SUBMITTED':'s-submitted','PO RAISED':'s-po','CANCELLED':'s-cancelled','ON-HOLD':'s-hold'}; return m[s] || 's-pending'; }
+        function openModal() { document.getElementById('prf-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('prf-modal').style.display = 'none'; }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('minimized'); }
+        function autoSize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
+        function processPRF(shouldOpen) {
+            const p = document.getElementById('m-prf').value.toUpperCase(), a = document.getElementById('m-asset').value.toUpperCase();
+            if(!p || !a) return alert("REQUIRED: PRF # AND VESSEL");
+            logs.unshift({ date: new Date().toLocaleDateString('en-GB'), rawDate: new Date().toISOString(), prf: p, asset: a, status: 'SUBMITTED', eta: '', remarks: '' });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+            document.getElementById('m-prf').value = ''; document.getElementById('m-asset').value = '';
+            closeModal(); refreshTable();
+            if(shouldOpen) window.open(FORM_URL, '_blank');
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'mm', 'a4');
+            doc.setFontSize(18); doc.text("PRF STATUS SUMMARY", 14, 15);
+            doc.autoTable({ startY: 25, head: [['DATE', 'PRF NUMBER', 'VESSEL', 'STATUS', 'ETA', 'REMARKS']], 
+                body: logs.map(l => [l.date, l.prf, l.asset, l.status, l.eta || 'TBC', l.remarks]), theme: 'grid', headStyles: {fillColor:[15,23,42]}, styles:{fontSize:8} });
+            doc.save(`PRF_REPORT_${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+
+        init();
     </script>
 </body>
 </html>
