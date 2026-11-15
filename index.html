@@ -1,404 +1,1422 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SRD PORTAL | 2026</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root { 
-            --bg: #f1f5f9; --side: #0f172a; --brand: #6366f1; --brand-light: #e0e7ff; 
-            --success: #10b981; --border: #cbd5e1; --text-main: #1e293b; 
-            --text-muted: #64748b; --danger: #f43f5e; --warning: #f59e0b; 
-            --glass: rgba(255, 255, 255, 0.7);
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>SplitMate — Local Bill Splitter</title>
+<meta name="apple-mobile-web-app-title" content="SplitMate">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>💸</text></svg>">
+<style>
+:root{
+  --rf:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAzCAYAAAAAcY9ZAAAFh0lEQVR42u2bW4gcRRSGv+6Zddc1XmJATRC8IEEIKioaNC6igkaRjQhqiJCI9ydRvIEKoi8SRFBfBJ+CouKFmBfNi4igQSNENz7EqMTgBhUjZl1N1p3p6R4f+pQey+rumskk6Z6ZA8V0b9//+uuc/5yqhaG5LADqan8B8DDwHdAAdgM3D2FyW01tHw3cC3wNtK3WBFYM4XIDNwLcCexUgMVAItuR/H48hC0FLlBD91ZguwKuJeDZDEyEhQNroTRjNwJbPYAz4LWA+UEFTg/Xa4CPPIEzQ7kp2y9VGYS6ajWLTT7ArQDes4DJAy5Rvq8NvAqMVRW8PKs7/JoG7nzgTQu4VgHj9PFp4Hatd6oGXgIsAa4HzgT2AzvE8e9ygNmS7bOAR4Hb5O+GVbWMZ8WCj+mwaeBlGbb75O/tKjLvBuA3B1MawDZgvQxPc/5i4FngT8vPZTHOPrYVuAs4PkPyVAa8ADgdmFNCNpLmAmRK2LLXAifJAU4f2wRc7WB0UEW/Z9KqxxR4LicfC6BJATjtnOCxEbgkRytWOkt4wxEN85x/lANc2zq2GbgsJ2r3RZq10cOH+TaTmn0KLFfPOqoT4GoVAjABLgUulu2wR/fep1KyHxW7a1WLsj4dPaF8YNIDFroCzwMq4laCYIHKSwMPGfNij0Fz+crdwCpP4X5EgatlsC1LLphofAcwKx+dHAIwzf5kERPDIwieeeE6cKpovHErdaopCVFTWcWJUrNr91hehFb28jwwKp0UlIl5kJbJnwG+BQ5IJrEHeAtYKxmEbSeL3PBhU6tA/xU1c92FZfKHxt8dK/Ih7wNmgLeBm+T85cD3/Lci7JuOdQOmOX+yTACal1gvLzmv9Fiihq8NwB6VwkUFPixWqdg74itdfi4uANTc56qyAGiG7jjwk2f9zQYzxi+reFI9dwmwBnhddJ6LaZHVkWZ/VvxtKSpXoSorRY6P9ska8sCLpaxlCgAjDtYcJ8efA770cAX3l2n4hioQ7O+xBDFD/3Hxl/qZoYrmtp0txdENwFfAr8Av4p/XlVEHmpfZ4hkMummzUnS43OE+AqUzXXaCVfcrXQXGsOCKDN/VCybq/deAhTlgGN1X8xT5pQJxFfCzh3/rRr/p4LNNWBV6MCooe91P9+p5wDcqALQPQZuX3xcqVn1y9qzxO6PA04p1CQcXgYuujSUwLCirX+uEdRMypNoeUTixNGA32YQ5tyG5dqmrKy4HbV52oSTm7S5SsS/4/yycL5imk2YKgkmpy1RrpL7W9vB3er7jAHCf3OMU0tVSm0VDulIzF6AN+X2/Cj7QXpR4gVU5ifCXIJ8A52Qw5jTSedpNInyzshKz/xfpaoSgzMNX9+xiqRpH+C3W0axrAk+o+9WtzrEBWARcSzpxvsUa6pFkFBNl9n0auHHgIYl4PisA7OOfAxdZZa+8oqfr+CJh/gSwtASFYy8fVyNdb7LT6v3Ek3UR8JQk/+SkWXnvkrdiIDycoJimJ3kCxYi6dc0tSpYUrQBwse4z0mnKXn1soIoHh411nT6oDqyWIee7KNHWdXOkyzTq6p6VXDphXvoYYJlkCU2RCr+TrmhqyAeeBFwH3A2cK9fFntEtVsP+A+BBKR8ZdidU2K7k37kG3eYkIPwgldz5Dhlnl9j3AvdYTO4L22WBkhT4Lx/g7AVAr5BOXdoZSl9YVnagJ3o6qR7rIDEFrOxH1mlr9Kh0pCPwDOly2lEldQL61KYPsjJsL8LeAJyRIbb70t51lI66Ae5DlTZVWpp0aqspnnPNA26KdPWAZlzIANkY6X8j5rEwcUTgHVJiGslI8QbKVjpkSoJ79cB2AW5skPycT0XlkZxh+4f4yklHISFgaP+Ask6EdVOyEJN2LXXkw0PggL8BAzsrUkjS0GIAAAAASUVORK5CYII=);
+  --bg:#f2f2f7;--card:#fff;--tx:#000;--mu:#8e8e93;--ac:#007aff;--ac2:#e5f1ff;--bd:#e5e5ea;--red:#ff3b30;--grn:#34c759;
+  --glass-bg:rgba(255,255,255,.72);--glass-bd:rgba(255,255,255,.6);
+  --glass-sh:0 10px 30px rgba(0,0,0,.14),inset 0 .5px 0 rgba(255,255,255,.6);--glass-pill:rgba(0,122,255,.13);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000;--card:#1c1c1e;--tx:#fff;--mu:#98989f;--ac:#0a84ff;--ac2:#10273f;--bd:#38383a;--red:#ff453a;--grn:#30d158;
+    --glass-bg:rgba(28,28,30,.72);--glass-bd:rgba(255,255,255,.16);
+    --glass-sh:0 12px 32px rgba(0,0,0,.5),inset 0 .5px 0 rgba(255,255,255,.18);--glass-pill:rgba(10,132,255,.22);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000;--card:#1c1c1e;--tx:#fff;--mu:#98989f;--ac:#0a84ff;--ac2:#10273f;--bd:#38383a;--red:#ff453a;--grn:#30d158;
+  --glass-bg:rgba(28,28,30,.72);--glass-bd:rgba(255,255,255,.16);
+  --glass-sh:0 12px 32px rgba(0,0,0,.5),inset 0 .5px 0 rgba(255,255,255,.18);--glass-pill:rgba(10,132,255,.22);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;background:var(--bg);color:var(--tx);
+  font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  position:fixed;top:0;left:0;right:0;bottom:0;height:100%;overflow:hidden;overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
+input,select,textarea{-webkit-user-select:text;user-select:text}
+.rf{display:inline-block;width:.95em;height:.6em;background:currentColor;-webkit-mask:var(--rf) center/contain no-repeat;mask:var(--rf) center/contain no-repeat;margin-right:.18em}
+.w{
+  max-width:560px;margin:0 auto;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:0 max(16px,env(safe-area-inset-left,0px)) calc(114px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.w::-webkit-scrollbar,::-webkit-scrollbar{display:none;width:0;height:0}
+.hdr{position:sticky;top:0;z-index:6;background:var(--bg);margin:0 -16px 8px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 8px}
+.hdr .pill{margin-top:0}
+.hdr h1{margin:6px 0 2px}
+.hdr .sub{margin-bottom:2px}
+h1{font-size:clamp(26px,8.4vw,34px);font-weight:800;letter-spacing:-.5px;margin:10px 0 2px}
+.sub{color:var(--mu);font-size:14px;margin-bottom:14px}
+.sh{font-size:13px;text-transform:uppercase;color:var(--mu);margin:22px 14px 8px;letter-spacing:.3px;font-weight:600}
+.l{background:var(--card);border-radius:14px;overflow:hidden}
+.l.vis{overflow:visible}
+.li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;min-height:48px;border-bottom:.5px solid var(--bd)}
+.li:last-child{border:0}
+.li.col{display:block}
+.li small,.mu{color:var(--mu);font-size:13px}
+.li>span:first-child{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.li>b{flex:none;white-space:nowrap}
+input,select{font:inherit;font-size:16px;color:var(--tx);background:transparent;border:0;outline:0;text-align:right;min-width:0;width:100%;-webkit-appearance:none;appearance:none}
+.li>input,.li>select{flex:1}
+.li>select{padding-right:16px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='13' viewBox='0 0 8 13'%3E%3Cpath d='M1 1l5 5.5L1 12' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right center}
+.pos{color:var(--grn);font-weight:700}.neg{color:var(--red);font-weight:700}
+.btn{display:block;width:100%;text-align:center;background:var(--ac);color:#fff;border:0;border-radius:12px;padding:15px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer;transition:opacity .12s,background .12s}
+.btn.sec{background:var(--ac2);color:var(--ac)}
+.btn.red{background:var(--red);color:#fff}
+button:active,.btn:active{opacity:.65}
+.li[onclick]:active{background:var(--bg)}
+.pill{background:var(--ac2);color:var(--ac);border:0;border-radius:8px;padding:7px 14px;min-height:34px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .12s,background .12s}
+.pill.g{background:var(--grn);color:#fff}
+.pill.r{background:none;color:var(--red)}
+.pill.solid{background:var(--ac);color:#fff}
+.x{background:none;border:0;color:var(--red);font-size:22px;padding:6px 8px;cursor:pointer}
+.sw{position:relative;width:51px;height:31px;flex:none;display:inline-block}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw i{position:absolute;inset:0;background:var(--bd);border-radius:99px;transition:.2s}
+.sw i:before{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+i{background:var(--grn)}
+.sw input:checked+i:before{transform:translateX(20px)}
+.seg{display:flex;background:var(--bg);border-radius:10px;padding:2px;gap:2px}
+.seg button{flex:1;border:0;background:none;color:var(--tx);padding:7px 4px;border-radius:8px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.seg button.on{background:var(--card);font-weight:700}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
+/* Dynamic People Grid Picker */
+.pk-dyn{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
+.nb{height:44px;border:0;border-radius:10px;background:var(--bg);color:var(--tx);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb.on{background:var(--c);color:#fff}
+.nb.add-p{background:var(--ac2);color:var(--ac);border:1.5px dashed var(--ac)}
+.dot{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
+.sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 
-        /* Sidebar Glassmorphism */
-        .sidebar { 
-            width: 260px; background: var(--side); color: white; display: flex; 
-            flex-direction: column; padding: 40px 20px; flex-shrink: 0; z-index: 1000; 
-            border-right: 1px solid rgba(255,255,255,0.1); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .logo-box { margin-bottom: 40px; padding-left: 15px; border-left: 4px solid var(--brand); }
-        .logo-box h1 { font-size: 13px; font-weight: 800; letter-spacing: 1px; }
-        
-        .nav-btn { 
-            width: 100%; padding: 14px; border-radius: 12px; border: none; 
-            background: transparent; color: #94a3b8; font-weight: 700; font-size: 11px; 
-            cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; 
-            margin-bottom: 8px; text-transform: uppercase; 
-        }
-        .nav-btn:hover { background: rgba(255,255,255,0.05); color: white; }
-        .nav-btn.active { background: var(--brand); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+/* Floating Glass Bottom Tabs */
+.tabs{
+  position:absolute;left:14px;right:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;
+  display:flex;align-items:center;gap:4px;background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
+  border:.5px solid var(--glass-bd);border-radius:32px;box-shadow:var(--glass-sh);padding:5px 6px;z-index:10;
+}
+.tabs button{flex:1;background:none;border:0;border-radius:24px;color:var(--mu);font:inherit;font-size:10.5px;font-weight:600;padding:6px 2px;cursor:pointer;position:relative;transition:background .2s ease,color .2s ease}
+.tabs button span{display:flex;justify-content:center;margin-bottom:2px}
+.tabs button.on{color:var(--ac);background:var(--glass-pill)}
+.bg{position:absolute;top:2px;left:56%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 
-        .presence-box { margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
-        .u-row { font-size: 10px; color: #cbd5e1; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
-        .u-dot { width: 7px; height: 7px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); }
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
+.cp{background:var(--ac2);color:var(--ac);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
+.row2{display:flex;gap:8px;margin-top:10px}.row2>*{flex:1;min-width:0}
+.tile{background:var(--card);border-radius:14px;padding:14px}.tile small{color:var(--mu);font-size:13px}.tile b{display:block;font-size:clamp(17px,5.6vw,22px);margin-top:2px;white-space:nowrap}
+.bd{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--ac2);color:var(--ac)}.bd.ok{background:var(--grn);color:#fff}.bd.no{background:var(--red);color:#fff}
+.step{display:flex;align-items:center;gap:14px}.step b{font-size:24px;min-width:30px;text-align:center}.step .pill{min-width:44px;min-height:40px;font-size:20px}
+.fp{position:absolute;top:0;left:0;right:0;bottom:0;z-index:60;background:var(--bg);overflow:hidden}
+.fp .w{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.dd{display:none;position:absolute;left:8px;right:8px;top:100%;z-index:25;background:var(--card);border:.5px solid var(--bd);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.2);max-height:230px;overflow-y:auto;scrollbar-width:none}
+.dd::-webkit-scrollbar{display:none}
 
-        /* Content Area */
-        .wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative; }
-        
-        .top-bar { 
-            padding: 15px 30px; background: var(--glass); backdrop-filter: blur(10px); 
-            border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 15px; z-index: 10;
-        }
-        
-        .header-info { display: flex; align-items: center; gap: 12px; }
-        .header-info h2 { font-weight: 800; font-size: 16px; white-space: nowrap; }
-
-        .mobile-menu-btn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-main); }
-
-        .search-wrap { flex: 1; max-width: 300px; }
-        .search-wrap input { 
-            width: 100%; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border); 
-            font-size: 13px; font-family: inherit; background: white;
-        }
-
-        .action-group { display: flex; gap: 8px; margin-left: auto; align-items: center; }
-
-        .main-content { flex: 1; padding: 20px 30px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .table-container { background: white; border-radius: 16px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-
-        table { width: 100%; border-collapse: collapse; }
-        thead th { 
-            background: #f8fafc; padding: 15px 20px; text-align: left; font-size: 10px; 
-            font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); 
-        }
-        tbody td { padding: 12px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
-
-        /* Dynamic Status Coloring */
-        .status-select { padding: 8px; border-radius: 8px; font-size: 10px; font-weight: 800; width: 100%; border: 1px solid rgba(0,0,0,0.05); cursor: pointer; text-align: center; }
-        .s-PENDING { background: #f1f5f9; color: #64748b; }
-        .s-ITEM-CREATION { background: #e0e7ff; color: #4338ca; }
-        .s-PR-MTR-RAISED { background: #fef9c3; color: #854d0e; }
-        .s-PO-RAISED, .s-Docked { background: #dcfce7; color: #166534; }
-        .s-PAYMENT-PENDING { background: #ffedd5; color: #9a3412; }
-        .s-ALL-RECEIVED { background: var(--success); color: white; }
-        .s-ON-HOLD { background: #fee2e2; color: #991b1b; }
-        .s-CANCELLED { background: var(--side); color: white; }
-
-        .remarks-editor { 
-            width: 100%; padding: 10px; background: #f8fafc; border-radius: 8px; font-size: 12px; 
-            border: 1px solid var(--border); font-family: inherit; min-height: 38px; transition: 0.2s;
-        }
-        .remarks-editor:focus { background: white; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
-        
-        .age-badge { font-weight: 800; font-size: 10px; background: var(--brand-light); color: var(--brand); padding: 4px 8px; border-radius: 6px; }
-
-        /* Buttons */
-        .btn-main { 
-            padding: 10px 14px; border-radius: 10px; font-weight: 800; border: 1px solid transparent; 
-            cursor: pointer; text-transform: uppercase; font-size: 10px; transition: 0.2s; 
-            display: flex; align-items: center; gap: 6px; white-space: nowrap;
-        }
-        .btn-primary { background: var(--brand); color: white; }
-        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-completed.active-toggle { background: var(--success); color: white; border: none; }
-        .btn-delete { color: #cbd5e1; background: none; border: none; cursor: pointer; font-size: 20px; transition: 0.2s; }
-        .btn-delete:hover { color: var(--danger); transform: scale(1.1); }
-
-        /* Mobile Optimization: iPhone 12 Pro Focus */
-        @media (max-width: 850px) {
-            .sidebar { position: fixed; left: -260px; top: 0; bottom: 0; }
-            .sidebar.open { transform: translateX(260px); }
-            .mobile-menu-btn { display: block; }
-            
-            .top-bar { padding: 10px 15px; flex-wrap: wrap; gap: 8px; }
-            .header-info { width: 100%; justify-content: space-between; }
-            .search-wrap { width: 100%; max-width: none; order: 3; }
-            .action-group { width: 100%; order: 2; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
-            .action-group .btn-main { padding: 8px 10px; font-size: 9px; }
-
-            .main-content { padding: 15px; }
-            
-            /* Enhanced Card View */
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            tbody tr { background: white; margin-bottom: 15px; border-radius: 16px; border: 1px solid var(--border); padding: 15px; position: relative; }
-            tbody td { 
-                border: none; padding: 8px 0; border-bottom: 1px solid #f8fafc; 
-                display: flex; flex-direction: column; align-items: flex-start;
-            }
-            tbody td:last-child { border: none; padding-top: 15px; align-items: center; }
-            tbody td::before { 
-                content: attr(data-label); font-size: 9px; font-weight: 800; color: var(--brand); 
-                margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
-            }
-            .remarks-editor { background: #fff; border-style: dashed; }
-            .btn-delete::before { content: 'DELETE RECORD'; font-size: 10px; font-weight: 800; margin-right: 5px; }
-        }
-
-        .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 2000; }
-        .modal { background: white; padding: 30px; border-radius: 24px; width: 450px; max-width: 90%; }
-    </style>
+/* Prominent 8% GST Toggle Card */
+.gst-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border-radius:14px;background:var(--card);border:1.5px solid var(--bd);
+  transition:border-color .2s,background .2s;
+}
+.gst-banner.on{border-color:var(--grn);background:color-mix(in srgb,var(--grn) 7%,var(--card))}
+.gst-badge{display:inline-block;background:var(--grn);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+.gst-badge.off{background:var(--mu)}
+@media (max-width:360px){.nb{font-size:13.5px}.li{padding:11px 12px}.btn{padding:13px}}
+</style>
 </head>
 <body>
+<div class="w" id="v"></div>
+<div class="tabs" id="nav"></div>
+<div id="ovl"></div>
+<div id="dlgov"></div>
 
-    <div id="auth-overlay" style="position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 5000;">
-        <div style="background: white; padding: 40px; border-radius: 28px; width: 360px; text-align: center;">
-            <h2 style="font-weight: 800; margin-bottom: 20px; font-size: 18px;">SRD SYSTEM ACCESS</h2>
-            <input type="email" id="login-email" placeholder="Email" style="width:100%; padding:14px; margin-bottom:12px; border-radius:12px; border:1px solid var(--border);">
-            <input type="password" id="login-pass" placeholder="Password" style="width:100%; padding:14px; margin-bottom:20px; border-radius:12px; border:1px solid var(--border);">
-            <button onclick="handleLogin()" class="btn-main btn-primary" style="width:100%; justify-content: center; padding: 14px;">Authenticate</button>
-        </div>
+<script>
+/* ==========================================================================
+   1. STATE & LOCALSTORAGE PERSISTENCE (100% Standalone, Offline-Capable)
+   ========================================================================== */
+const STORAGE_KEY = "splitmate_local_v1";
+const GST_RATE = 8; // Fixed 8% GST on ordered items per person
+const PALETTE = [
+  "#007aff", "#ff9500", "#34c759", "#af52de", "#ff2d92",
+  "#30b0c7", "#ff3b30", "#5856d6", "#00c7be", "#a2845e"
+];
+
+let S = {
+  people: [],   // [{ id: 1, name: "Ali", color: "#007aff" }, ...]
+  bills: [],    // [{ id, title, date, trip, payerId, gstEnabled, scAmt, scMode, other, recTotal, items, settled }]
+  settings: {
+    defaultGst: true,
+    theme: "auto"
+  }
+};
+
+let tab = "dash";     // "dash" | "new" | "hist" | "people"
+let tripFilter = "All";
+let histQuery = "";
+let openBillId = null;
+let sheet = null;     // Active modal/sheet state
+let D = null;         // Draft bill object
+
+function loadState() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (raw && typeof raw === "object") {
+      S.people = Array.isArray(raw.people) ? raw.people : [];
+      S.bills = Array.isArray(raw.bills) ? raw.bills : [];
+      S.settings = Object.assign({ defaultGst: true, theme: "auto" }, raw.settings || {});
+    }
+  } catch (e) {
+    console.warn("Could not read localStorage:", e);
+  }
+  applyTheme();
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
+  } catch (e) {
+    showNotice("Storage limit reached or unavailable in this browser.", "Storage Error");
+  }
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  if (S.settings.theme === "light" || S.settings.theme === "dark") {
+    root.setAttribute("data-theme", S.settings.theme);
+  } else {
+    root.removeAttribute("data-theme");
+  }
+}
+
+/* ==========================================================================
+   2. UTILITIES & FORMATTING
+   ========================================================================== */
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const f = n => {
+  n = Math.abs(n) < 0.005 ? 0 : +n;
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+const r2 = x => Math.round((+x || 0) * 100) / 100;
+const sum = a => a.reduce((x, y) => x + (+y || 0), 0);
+const cl = o => JSON.parse(JSON.stringify(o));
+const mh = x => `<span class="rf"></span>${f(x)}`;
+const mt = x => `MVR ${f(x)}`;
+
+function ldate(d) {
+  d = d || new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+const today = () => ldate();
+
+const dayLabel = d => {
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  if (d === ldate()) return "Today";
+  if (d === ldate(y)) return "Yesterday";
+  const dt = new Date(d + "T00:00:00");
+  return isNaN(dt) ? d : dt.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+};
+
+const shortDate = d => {
+  const t = new Date(d + "T00:00:00");
+  return isNaN(t) ? d : t.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
+};
+
+function nextId(list) {
+  return Math.max(Date.now(), ...list.map(x => (+x.id || 0) + 1));
+}
+
+function getPerson(id) {
+  return S.people.find(p => p.id === id) || { id, name: "Removed Person", color: "#8e8e93" };
+}
+
+function initials(name) {
+  const parts = String(name || "?").trim().split(/\s+/);
+  return parts.length > 1
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0].slice(0, 2).toUpperCase();
+}
+
+function scrollTopMain() {
+  const el = document.getElementById("v");
+  if (el) el.scrollTop = 0;
+}
+
+/* ==========================================================================
+   3. NON-BLOCKING CUSTOM DIALOGS (Replaces alert / confirm / prompt)
+   ========================================================================== */
+let dlg = null;
+
+function showNotice(msg, title) {
+  return new Promise(res => {
+    dlg = { type: "alert", title: title || "Notice", msg: String(msg), res };
+    renderDlg();
+  });
+}
+
+function showConfirm(msg, title, okLbl, danger) {
+  return new Promise(res => {
+    dlg = { type: "confirm", title: title || "Please confirm", msg: String(msg), okLbl: okLbl || "Confirm", danger: !!danger, res };
+    renderDlg();
+  });
+}
+
+function showPrompt(msg, title, ph, defVal) {
+  return new Promise(res => {
+    dlg = { type: "prompt", title: title || "Enter details", msg: String(msg), ph: ph || "", val: defVal || "", res };
+    renderDlg();
+    setTimeout(() => {
+      const inp = document.getElementById("dlginp");
+      if (inp) { inp.focus(); inp.select(); }
+    }, 60);
+  });
+}
+
+function closeDlg(val) {
+  if (!dlg) return;
+  const resolve = dlg.res;
+  dlg = null;
+  const el = document.getElementById("dlgov");
+  if (el) el.innerHTML = "";
+  if (resolve) resolve(val);
+}
+
+function renderDlg() {
+  const el = document.getElementById("dlgov");
+  if (!el) return;
+  if (!dlg) { el.innerHTML = ""; return; }
+  const d = dlg;
+  const cancelCall = d.type === "alert" ? "closeDlg(true)" : d.type === "confirm" ? "closeDlg(false)" : "closeDlg(null)";
+  const body = d.type === "alert"
+    ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
+       <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
+    : d.type === "confirm"
+    ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
+       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(false)">Cancel</button><button class="btn ${d.danger ? "red" : ""}" onclick="closeDlg(true)">${esc(d.okLbl)}</button></div>`
+    : `<div class="l" style="margin-top:8px"><div class="li"><span>${esc(d.msg)}</span><input id="dlginp" autocomplete="off" placeholder="${esc(d.ph)}" value="${esc(d.val)}" oninput="dlg.val=this.value" onkeydown="if(event.key==='Enter')closeDlg(dlg.val)"></div></div>
+       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="closeDlg(dlg.val)">Save</button></div>`;
+
+  el.innerHTML = `<div class="fp" style="z-index:99"><div class="w">
+    ${headB(`style="margin-top:6px" onclick="${cancelCall}"`, "‹ Close", esc(d.title), "")}
+    ${body}
+  </div></div>`;
+}
+
+/* ==========================================================================
+   4. DYNAMIC PEOPLE MANAGEMENT
+   ========================================================================== */
+async function promptAddPerson(autoSelectInDraftOrSheet) {
+  const raw = await showPrompt("Person name", "Add Person", "e.g. Amina, Ziyan", "");
+  const name = (raw || "").trim();
+  if (!name) return null;
+  if (S.people.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    await showNotice(`"${name}" is already in your list.`);
+    return null;
+  }
+  const color = PALETTE[S.people.length % PALETTE.length];
+  const person = { id: nextId(S.people), name, color };
+  S.people.push(person);
+  saveState();
+
+  if (autoSelectInDraftOrSheet === "payer" && D) {
+    D.payerId = person.id;
+  } else if (autoSelectInDraftOrSheet === "item" && sheet && sheet.t === "item") {
+    sheet.w.push(person.id);
+  } else if (D && !D.payerId) {
+    D.payerId = person.id;
+  }
+  render();
+  return person;
+}
+
+async function promptRenamePerson(id) {
+  const p = S.people.find(x => x.id === id);
+  if (!p) return;
+  const raw = await showPrompt("New name", "Rename Person", "Name", p.name);
+  const name = (raw || "").trim();
+  if (!name || name === p.name) return;
+  if (S.people.some(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase())) {
+    return showNotice(`"${name}" already exists.`);
+  }
+  p.name = name;
+  saveState();
+  render();
+}
+
+function cyclePersonColor(id) {
+  const p = S.people.find(x => x.id === id);
+  if (!p) return;
+  const idx = PALETTE.indexOf(p.color);
+  p.color = PALETTE[(idx + 1) % PALETTE.length];
+  saveState();
+  render();
+}
+
+async function removePerson(id) {
+  const p = S.people.find(x => x.id === id);
+  if (!p) return;
+  const usedInBills = S.bills.some(b => b.payerId === id || (b.items || []).some(it => (it.w || []).includes(id)));
+  const msg = usedInBills
+    ? `Remove "${p.name}" from your active people list?\n\nPast bills will still display their name.`
+    : `Remove "${p.name}" from your people list?`;
+  if (!(await showConfirm(msg, "Remove Person", "Remove", true))) return;
+  S.people = S.people.filter(x => x.id !== id);
+  if (D && D.payerId === id) D.payerId = S.people[0] ? S.people[0].id : null;
+  saveState();
+  render();
+}
+
+/* ==========================================================================
+   5. BILL SPLITTING & 8% FIXED GST CALCULATION ENGINE
+   ========================================================================== */
+function blankBill() {
+  return {
+    title: "",
+    date: today(),
+    trip: tripFilter === "All" ? "" : tripFilter,
+    payerId: S.people[0] ? S.people[0].id : null,
+    gstEnabled: !!S.settings.defaultGst, // 8% GST enabled/disabled toggle
+    scAmt: 0,
+    scMode: "ord", // "ord" = equal among those who ordered, "prop" = proportional to ordered items
+    other: 0,
+    recTotal: 0,
+    items: [],
+    settled: {} // map of personId -> true when their share is settled
+  };
+}
+
+/**
+ * Calculates per-person breakdown for a bill:
+ * - Items Subtotal: sum of (item price / number of people sharing item)
+ * - 8% GST: strictly 8% of each person's ordered items subtotal when bill.gstEnabled is true, else 0
+ * - Service Charge & Other: shared among people who ordered (either equally or proportionally)
+ */
+function calcBill(b) {
+  // Collect all person IDs involved in this bill (payer + anyone on items + current S.people)
+  const idSet = new Set(S.people.map(p => p.id));
+  if (b.payerId) idSet.add(b.payerId);
+  (b.items || []).forEach(it => (it.w || []).forEach(pid => idSet.add(pid)));
+  const ids = [...idSet];
+
+  const subMap = {};
+  ids.forEach(id => subMap[id] = 0);
+
+  (b.items || []).forEach(it => {
+    const sharers = (it.w || []).filter(id => idSet.has(id));
+    const price = +it.p || 0;
+    if (sharers.length > 0 && price > 0) {
+      const share = price / sharers.length;
+      sharers.forEach(id => { subMap[id] += share; });
+    }
+  });
+
+  const activeIds = ids.filter(id => subMap[id] > 0);
+  const totalSub = sum(Object.values(subMap));
+  const extraPool = (+b.scAmt || 0) + (+b.other || 0);
+  const useProp = b.scMode === "prop" && totalSub > 0;
+
+  const rows = ids.map(id => {
+    const sub = subMap[id] || 0;
+    // 8% fixed GST calculated specifically on the person's ordered items subtotal
+    const gst = b.gstEnabled ? (sub * GST_RATE / 100) : 0;
+
+    let extra = 0;
+    if (extraPool > 0 && activeIds.length > 0) {
+      extra = useProp
+        ? (extraPool * (sub / totalSub))
+        : (sub > 0 ? (extraPool / activeIds.length) : 0);
+    }
+
+    const tot = sub + gst + extra;
+    return {
+      personId: id,
+      person: getPerson(id),
+      sub,
+      gst,
+      extra,
+      tot
+    };
+  });
+
+  return {
+    rows,
+    totalSub,
+    totalGst: sum(rows.map(r => r.gst)),
+    totalExtra: extraPool,
+    grandTotal: sum(rows.map(r => r.tot))
+  };
+}
+
+/* ==========================================================================
+   6. SETTLEMENTS & BALANCES ENGINE
+   ========================================================================== */
+function getBillDues(bill) {
+  const c = calcBill(bill);
+  const settled = bill.settled || {};
+  return c.rows
+    .filter(r => r.personId !== bill.payerId && r2(r.tot) >= 0.01)
+    .map(r => ({
+      bill,
+      fromId: r.personId,
+      toId: bill.payerId,
+      amount: r2(r.tot),
+      isSettled: !!settled[r.personId]
+    }));
+}
+
+function computeAllBalances() {
+  const filteredBills = S.bills.filter(b => tripFilter === "All" || (b.trip || "") === tripFilter);
+  const unsettledRows = [];
+  const pairMap = {}; // "fromId->toId" -> { fromId, toId, total, items: [] }
+
+  filteredBills.forEach(b => {
+    getBillDues(b).forEach(d => {
+      if (!d.isSettled && d.toId) {
+        unsettledRows.push(d);
+        const key = `${d.fromId}->${d.toId}`;
+        if (!pairMap[key]) pairMap[key] = { fromId: d.fromId, toId: d.toId, total: 0, items: [] };
+        pairMap[key].total = r2(pairMap[key].total + d.amount);
+        pairMap[key].items.push(d);
+      }
+    });
+  });
+
+  const pairs = Object.values(pairMap).sort((a, b) => b.total - a.total);
+  const totalUnsettled = r2(sum(pairs.map(p => p.total)));
+  const totalSpend = r2(sum(filteredBills.map(b => calcBill(b).grandTotal)));
+
+  return { filteredBills, unsettledRows, pairs, totalUnsettled, totalSpend };
+}
+
+function toggleBillPersonSettled(billId, personId) {
+  const b = S.bills.find(x => x.id === billId);
+  if (!b) return;
+  b.settled = b.settled || {};
+  if (b.settled[personId]) delete b.settled[personId];
+  else b.settled[personId] = true;
+  saveState();
+  render();
+}
+
+async function settlePairAll(fromId, toId) {
+  const fromP = getPerson(fromId), toP = getPerson(toId);
+  const ok = await showConfirm(
+    `Mark all pending bills from ${fromP.name} to ${toP.name} as settled?`,
+    "Settle Balances",
+    "Mark Settled",
+    false
+  );
+  if (!ok) return;
+  S.bills.forEach(b => {
+    if ((tripFilter === "All" || (b.trip || "") === tripFilter) && b.payerId === toId) {
+      b.settled = b.settled || {};
+      b.settled[fromId] = true;
+    }
+  });
+  saveState();
+  render();
+}
+
+/* ==========================================================================
+   7. UI HELPERS
+   ========================================================================== */
+const head = (t, s) => `<div class="hdr"><h1>${t}</h1><div class="sub">${s}</div></div>`;
+const headB = (attrs, label, t, s) => `<div class="hdr"><button class="pill" ${attrs}>${label}</button><h1>${t}</h1>${s ? `<div class="sub">${s}</div>` : ""}</div>`;
+const sw = (on, fn) => `<label class="sw"><input type="checkbox" ${on ? "checked" : ""} onchange="${fn}"><i></i></label>`;
+const seg = (opts, cur, fn) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur == k ? "on" : ""}" onclick="${fn}('${k}')">${l}</button>`).join("")}</div>`;
+
+function personPicker(selectedIds, toggleExpr, addContext) {
+  if (!S.people.length) {
+    return `<div style="padding:8px 0">
+      <div class="mu" style="margin-bottom:10px">No people added yet. Add the people sharing this bill:</div>
+      <button class="btn sec" onclick="promptAddPerson('${addContext}')">+ Add Person</button>
+    </div>`;
+  }
+  return `<div class="pk-dyn">
+    ${S.people.map(p => {
+      const on = selectedIds.includes(p.id);
+      return `<button type="button" class="nb ${on ? "on" : ""}" style="--c:${p.color}" onclick="${toggleExpr(p.id)}">
+        ${!on ? `<span class="sdot" style="--c:${p.color}"></span>` : ""}<span>${esc(p.name)}</span>
+      </button>`;
+    }).join("")}
+    <button type="button" class="nb add-p" onclick="promptAddPerson('${addContext}')">+ Person</button>
+  </div>`;
+}
+
+/* ==========================================================================
+   8. TAB 1: OVERVIEW (Balances, Settlements & Quick Summary)
+   ========================================================================== */
+function viewDash() {
+  const { filteredBills, pairs, totalUnsettled, totalSpend } = computeAllBalances();
+  const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
+
+  let h = head("Overview", `${S.people.length} people · ${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"} · Offline Ready`);
+
+  // Quick Setup Banner if no people exist yet
+  if (S.people.length === 0) {
+    h += `<div class="l" style="border-left:4px solid var(--ac);margin-bottom:12px">
+      <div class="li col">
+        <b>Welcome to SplitMate</b>
+        <div class="mu" style="margin:4px 0 12px">Add the names of people sharing expenses, then create your first bill with automatic 8% GST per person.</div>
+        <button class="btn" onclick="promptAddPerson()">+ Add First Person</button>
+      </div>
+    </div>`;
+  }
+
+  // Summary Tiles
+  h += `<div class="row2" style="margin-top:4px">
+    <div class="tile"><small>Total Bills</small><b>${mh(totalSpend)}</b></div>
+    <div class="tile"><small>Unsettled</small><b class="${totalUnsettled > 0.005 ? "neg" : "pos"}">${mh(totalUnsettled)}</b></div>
+  </div>`;
+
+  // Trip Filter
+  if (trips.length > 0) {
+    h += `<div class="l" style="margin-top:12px">
+      <div class="li">
+        <span>Filter by Trip</span>
+        <select onchange="tripFilter=this.value;render()">
+          <option value="All" ${tripFilter === "All" ? "selected" : ""}>All Trips</option>
+          ${trips.map(t => `<option value="${esc(t)}" ${t === tripFilter ? "selected" : ""}>${esc(t)}</option>`).join("")}
+        </select>
+      </div>
+    </div>`;
+  }
+
+  // Who Owes Whom
+  h += `<div class="sh">Who owes whom</div><div class="l">`;
+  if (pairs.length === 0) {
+    h += `<div class="li mu">${filteredBills.length ? "All bills are settled! 🎉" : "No unsettled balances yet."}</div>`;
+  } else {
+    h += pairs.map(pair => {
+      const fromP = getPerson(pair.fromId), toP = getPerson(pair.toId);
+      return `<div class="li">
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="dot" style="--c:${fromP.color}">${esc(initials(fromP.name))}</span>
+          <span>
+            <b>${esc(fromP.name)}</b> owes <b>${esc(toP.name)}</b><br>
+            <span class="neg">${mh(pair.total)}</span>
+            <small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small>
+          </span>
+        </span>
+        <button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Settle</button>
+      </div>`;
+    }).join("");
+  }
+  h += `</div>`;
+
+  // Quick Action Buttons
+  h += `<div style="margin-top:16px">
+    <button class="btn" style="padding:16px;font-size:17px" onclick="startNewBill()">+ New Bill</button>
+  </div>`;
+  if (S.bills.length > 0) {
+    h += `<div style="margin-top:10px">
+      <button class="btn sec" onclick="go('hist')">View All Bills · ${S.bills.length}</button>
+    </div>`;
+  }
+
+  return h;
+}
+
+/* ==========================================================================
+   9. TAB 2: NEW / EDIT BILL (With Prominent 8% Fixed GST Toggle)
+   ========================================================================== */
+function startNewBill() {
+  D = blankBill();
+  openBillId = null;
+  tab = "new";
+  render();
+  scrollTopMain();
+}
+
+function pastPlaces() {
+  const seen = {}, out = [];
+  S.bills.forEach(b => {
+    const n = (b.title || "").trim(), k = n.toLowerCase();
+    if (n && n !== "Untitled bill" && !seen[k]) { seen[k] = 1; out.push(n); }
+  });
+  return out;
+}
+
+function pastItems() {
+  const seen = {}, out = [];
+  S.bills.forEach(b => (b.items || []).forEach(it => {
+    const n = (it.n || "").trim(), k = n.toLowerCase();
+    if (n && !seen[k]) { seen[k] = 1; out.push({ n, p: +it.p || 0 }); }
+  }));
+  return out;
+}
+
+let plMatches = [], itMatches = [];
+function updatePlaceSuggestions() {
+  const q = (D.title || "").trim().toLowerCase(), box = document.getElementById("pls");
+  if (!box) return;
+  plMatches = q ? pastPlaces().filter(x => x.toLowerCase().includes(q) && x.toLowerCase() !== q).slice(0, 20) : [];
+  box.style.display = plMatches.length ? "block" : "none";
+  box.innerHTML = plMatches.map((x, i) => `<div class="li" onclick="D.title=plMatches[${i}];render()" style="cursor:pointer;min-height:44px"><span>${esc(x)}</span></div>`).join("");
+}
+
+function toggleBillGst() {
+  D.gstEnabled = !D.gstEnabled;
+  render();
+}
+
+function viewNewBill() {
+  if (!D) D = blankBill();
+  const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
+  const gstOn = !!D.gstEnabled;
+
+  let h = head(
+    D.editId ? "Edit Bill" : "New Bill",
+    D.editId ? "Update items, payer, or 8% GST toggle" : "Add items & choose who shared them"
+  );
+
+  // Prominent 8% Fixed GST Toggle Button / Card
+  h += `<div class="sh">Tax &amp; GST</div>
+  <div class="gst-banner ${gstOn ? "on" : ""}" onclick="toggleBillGst()" style="cursor:pointer">
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;font-size:16px">
+        8% Fixed GST <span class="gst-badge ${gstOn ? "" : "off"}">${gstOn ? "ENABLED" : "OFF"}</span>
+      </div>
+      <small class="mu" style="display:block;margin-top:3px">
+        ${gstOn ? "Adds 8% GST to each person's ordered items subtotal" : "Tap to enable 8% GST calculation per person"}
+      </small>
+    </div>
+    <div onclick="event.stopPropagation()">
+      ${sw(gstOn, "D.gstEnabled=this.checked;render()")}
+    </div>
+  </div>`;
+
+  // Bill Details
+  h += `<div class="sh">Details</div>
+  <div class="l vis">
+    <div style="position:relative">
+      <div class="li"><span>Place / Title</span><input autocomplete="off" value="${esc(D.title)}" placeholder="e.g. Shell Beans, Dinner" oninput="D.title=this.value;updatePlaceSuggestions()"></div>
+      <div id="pls" class="dd"></div>
+    </div>
+    <div class="li"><span>Trip / Tag</span><input list="tl" value="${esc(D.trip)}" placeholder="Optional" oninput="D.trip=this.value"><datalist id="tl">${trips.map(t => `<option value="${esc(t)}">`).join("")}</datalist></div>
+    <div class="li"><span>Date</span><input type="date" value="${esc(D.date)}" oninput="D.date=this.value"></div>
+    <div class="li"><span>Receipt total</span><input type="number" inputmode="decimal" step="any" placeholder="Optional check" value="${D.recTotal || ""}" oninput="D.recTotal=+this.value;renderPreview()"></div>
+    <div class="li col">
+      <div class="mu">Who paid the bill?</div>
+      ${personPicker(D.payerId ? [D.payerId] : [], id => `D.payerId=${id};render()`, "payer")}
+    </div>
+  </div>`;
+
+  // Ordered Items
+  h += `<div class="sh">Ordered Items (${D.items.length})</div>
+  <div class="l">`;
+  if (D.items.length === 0) {
+    h += `<div class="li mu">No items yet. Tap "+ Add item" below.</div>`;
+  } else {
+    h += D.items.map((it, idx) => {
+      const names = (it.w || []).map(id => getPerson(id).name);
+      const whoLabel = S.people.length > 0 && names.length === S.people.length
+        ? "Everyone"
+        : (names.join(", ") || "Nobody selected");
+      return `<div class="li" onclick="openItemSheet(${idx})" style="cursor:pointer">
+        <span>
+          <b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}<br>
+          <small>${esc(whoLabel)}</small>
+        </span>
+        <span style="display:flex;gap:8px;align-items:center">
+          <b>${mh(+it.p || 0)}</b>
+          <span class="mu">›</span>
+        </span>
+      </div>`;
+    }).join("");
+  }
+  h += `</div>
+  <div style="margin-top:10px"><button class="btn" onclick="openItemSheet(-1)">+ Add item</button></div>`;
+
+  // Optional Extra Charges
+  h += `<div class="sh">Optional Extra Charges</div>
+  <div class="l">
+    <div class="li"><span>Service charge</span><input type="number" inputmode="decimal" step="any" value="${D.scAmt || ""}" placeholder="0" oninput="D.scAmt=+this.value;renderPreview()"></div>
+    <div class="li"><span>Other charges / Tip</span><input type="number" inputmode="decimal" step="any" value="${D.other || ""}" placeholder="0" oninput="D.other=+this.value;renderPreview()"></div>
+    ${(+D.scAmt > 0 || +D.other > 0) ? `<div class="li col"><div class="mu" style="margin-bottom:6px">Share extra charges</div>${seg([["ord", "Equally (who ordered)"], ["prop", "Proportional to items"]], D.scMode || "ord", "((m)=>{D.scMode=m;renderPreview()})")}</div>` : ""}
+  </div>`;
+
+  // Live Per-Person Breakdown Preview
+  h += `<div class="sh">Per-Person Breakdown</div>
+  <div class="l" id="pv"></div>`;
+
+  // Save / Cancel Actions
+  h += `<div style="margin-top:16px">
+    <button class="btn" onclick="saveCurrentBill()">${D.editId ? "Save Changes" : "Save Bill"}</button>
+    ${D.editId ? `<button class="btn sec" style="margin-top:8px" onclick="D=blankBill();tab='hist';render()">Cancel Edit</button>` : ""}
+  </div>`;
+
+  return h;
+}
+
+function renderPreview() {
+  const pv = document.getElementById("pv");
+  if (!pv || !D) return;
+  const c = calcBill(D);
+  const activeRows = c.rows.filter(r => r.tot > 0 || r.sub > 0);
+
+  let html = `<div class="li"><span>Items subtotal</span><b>${mh(c.totalSub)}</b></div>`;
+  html += `<div class="li">
+    <span>8% Fixed GST ${D.gstEnabled ? '<span class="bd ok" style="margin-left:4px">ON</span>' : '<span class="bd" style="margin-left:4px">OFF</span>'}</span>
+    <b>${D.gstEnabled ? mh(c.totalGst) : "Off"}</b>
+  </div>`;
+  if (c.totalExtra > 0) {
+    html += `<div class="li"><span>Service / Other charges</span><b>${mh(c.totalExtra)}</b></div>`;
+  }
+
+  if (activeRows.length === 0) {
+    html += `<div class="li mu">Add items and assign people to see each person's share and 8% GST.</div>`;
+  } else {
+    html += activeRows.map(r => `
+      <div class="li">
+        <span style="display:flex;gap:10px;align-items:center">
+          <span class="dot" style="--c:${r.person.color}">${esc(initials(r.person.name))}</span>
+          <span>
+            <b>${esc(r.person.name)}</b>${r.personId === D.payerId ? '<span class="cp">payer</span>' : ""}<br>
+            <small>Items ${f(r.sub)}${D.gstEnabled ? ` + 8% GST ${f(r.gst)}` : ""}${r.extra > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
+          </span>
+        </span>
+        <b>${mh(r.tot)}</b>
+      </div>
+    `).join("");
+  }
+
+  html += `<div class="li"><b>Grand Total</b><b style="font-size:19px">${mh(c.grandTotal)}</b></div>`;
+
+  const rec = +D.recTotal || 0;
+  if (rec > 0) {
+    const diff = c.grandTotal - rec;
+    html += Math.abs(diff) <= 0.015
+      ? `<div class="li"><span>Receipt check</span><b class="pos">Matches receipt ✓</b></div>`
+      : `<div class="li"><span>Receipt total (${f(rec)})</span><b class="neg">${diff > 0 ? "+" : "−"}${f(Math.abs(diff))} difference</b></div>`;
+  }
+
+  pv.innerHTML = html;
+}
+
+async function saveCurrentBill() {
+  if (!S.people.length) {
+    return showNotice("Add at least one person before saving a bill.");
+  }
+  if (!D.payerId) {
+    return showNotice("Select who paid the bill.");
+  }
+  if (!D.items.some(i => +i.p > 0)) {
+    return showNotice("Add at least one item with a price.");
+  }
+  if (D.items.some(i => +i.p > 0 && !(i.w && i.w.length))) {
+    return showNotice("Select at least one person for every item.");
+  }
+
+  const editId = D.editId;
+  const bill = {
+    id: editId || nextId(S.bills),
+    title: (D.title || "").trim() || "Untitled bill",
+    date: D.date || today(),
+    trip: (D.trip || "").trim(),
+    payerId: D.payerId,
+    gstEnabled: !!D.gstEnabled,
+    scAmt: +D.scAmt || 0,
+    scMode: D.scMode || "ord",
+    other: +D.other || 0,
+    recTotal: +D.recTotal || 0,
+    items: cl(D.items),
+    settled: D.settled ? cl(D.settled) : {}
+  };
+
+  if (editId) {
+    S.bills = S.bills.map(b => b.id === editId ? bill : b);
+  } else {
+    S.bills.unshift(bill);
+  }
+
+  saveState();
+  D = blankBill();
+  if (editId) {
+    tab = "hist";
+    openBillId = bill.id;
+  } else {
+    tab = "dash";
+  }
+  render();
+  scrollTopMain();
+}
+
+/* ==========================================================================
+   10. FULL-SCREEN ITEM ENTRY MODAL / SHEET
+   ========================================================================== */
+function openItemSheet(idx) {
+  const it = idx >= 0 ? D.items[idx] : null;
+  const pm = it && it.pm ? it.pm : "bill";
+  const q = it ? (it.q || 1) : 1;
+  const defaultSharers = it ? [...it.w] : S.people.map(p => p.id);
+
+  sheet = {
+    t: "item",
+    k: idx,
+    n: it ? it.n : "",
+    pm,
+    pr: it ? String(r2(pm === "unit" ? (+it.p || 0) / q : (+it.p || 0))) : "",
+    q,
+    w: defaultSharers
+  };
+  render();
+  if (idx < 0) {
+    setTimeout(() => {
+      const inp = document.getElementById("isn");
+      if (inp) inp.focus();
+    }, 80);
+  }
+}
+
+const sheetItemTotal = () => r2((+sheet.pr || 0) * (sheet.pm === "unit" ? sheet.q : 1));
+
+function updateItemSuggestions() {
+  const q = (sheet.n || "").trim().toLowerCase(), box = document.getElementById("its");
+  if (!box) return;
+  itMatches = q ? pastItems().filter(x => x.n.toLowerCase().includes(q) && x.n.toLowerCase() !== q).slice(0, 20) : [];
+  box.style.display = itMatches.length ? "block" : "none";
+  box.innerHTML = itMatches.map((x, i) => `<div class="li" onclick="pickPastItem(${i})" style="cursor:pointer;min-height:44px"><span>${esc(x.n)}</span><span class="mu">${mh(x.p)}</span></div>`).join("");
+}
+
+function pickPastItem(i) {
+  const x = itMatches[i];
+  if (!x) return;
+  sheet.n = x.n;
+  sheet.pm = "bill";
+  sheet.pr = String(x.p);
+  sheet.q = 1;
+  render();
+}
+
+function toggleSheetPerson(id) {
+  const idx = sheet.w.indexOf(id);
+  if (idx < 0) sheet.w.push(id);
+  else sheet.w.splice(idx, 1);
+  render();
+}
+
+function itemSheetLiveText() {
+  const tot = sheetItemTotal(), q = sheet.q;
+  const der = sheet.pm === "unit"
+    ? (tot > 0 ? `Bill price: <b>${mh(tot)}</b>` : "Bill price = unit price × quantity")
+    : (q > 1 && tot > 0 ? `Unit price: <b>${mh(tot / q)}</b>` : "Enter total item price from receipt");
+
+  const n = sheet.w.length;
+  const gstOn = !!D.gstEnabled;
+  const shares = n === 0
+    ? '<div class="li mu">Select who shared this item to preview split.</div>'
+    : sheet.w.map(id => {
+        const p = getPerson(id);
+        const baseShare = tot / n;
+        const gstShare = gstOn ? baseShare * GST_RATE / 100 : 0;
+        return `<div class="li">
+          <span>${esc(p.name)}${gstOn && tot > 0 ? `<br><small>Item ${f(baseShare)} + 8% GST ${f(gstShare)}</small>` : ""}</span>
+          <b>${mh(baseShare + gstShare)}</b>
+        </div>`;
+      }).join("") + `<div class="li"><b>Item Total${gstOn ? " (incl. 8% GST)" : ""}</b><b>${mh(gstOn ? tot * (1 + GST_RATE / 100) : tot)}</b></div>`;
+
+  return { der, shares };
+}
+
+function updateItemSheetPreview() {
+  const { der, shares } = itemSheetLiveText();
+  const a = document.getElementById("itd"), b = document.getElementById("itp");
+  if (a) a.innerHTML = der;
+  if (b) b.innerHTML = shares;
+}
+
+function saveSheetItem(addAnother) {
+  const total = sheetItemTotal();
+  if (!(total > 0)) return showNotice("Enter a valid price greater than 0.");
+  if (!sheet.w.length) return showNotice("Select at least one person who shared this item.");
+
+  const item = {
+    n: (sheet.n || "").trim() || "Item",
+    p: total,
+    q: sheet.q,
+    pm: sheet.pm,
+    w: [...sheet.w]
+  };
+
+  if (sheet.k < 0) D.items.push(item);
+  else D.items[sheet.k] = item;
+
+  if (addAnother) {
+    sheet = { t: "item", k: -1, n: "", pm: sheet.pm, pr: "", q: 1, w: [...item.w] };
+    render();
+    setTimeout(() => {
+      const inp = document.getElementById("isn");
+      if (inp) inp.focus();
+    }, 80);
+  } else {
+    sheet = null;
+    render();
+  }
+}
+
+function deleteSheetItem() {
+  if (sheet && sheet.k >= 0) D.items.splice(sheet.k, 1);
+  sheet = null;
+  render();
+}
+
+function renderSheetHtml() {
+  if (!sheet || sheet.t !== "item") return "";
+  const s = sheet, unit = s.pm === "unit";
+  const lastItem = s.k < 0 && D.items.length ? D.items[D.items.length - 1] : null;
+  const { der, shares } = itemSheetLiveText();
+
+  return `<div class="fp"><div class="w">
+    ${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", s.k < 0 ? "Add Item" : "Edit Item", "Enter price and select who shared it")}
+    <div style="position:relative">
+      <div class="l vis">
+        <div class="li"><span>Item name</span><input id="isn" autocomplete="off" placeholder="e.g. Grilled Fish, Coffee" value="${esc(s.n)}" oninput="sheet.n=this.value;updateItemSuggestions()"></div>
+      </div>
+      <div id="its" class="dd"></div>
     </div>
 
-    <nav class="sidebar" id="sidebar">
-        <div class="logo-box"><h1>MTCC SHIPYARD<br>PORTAL 2026</h1></div>
-        <div style="flex: 1;">
-            <button onclick="switchPage('DASH')" id="nav-dash" class="nav-btn active">PRF Tracker</button>
-            <button onclick="switchPage('YARD')" id="nav-yard" class="nav-btn">Boat Yard Log</button>
-            <button onclick="switchPage('TRANS')" id="nav-trans" class="nav-btn">Transaction Log</button>
-        </div>
-        <div class="presence-box" id="online-list"></div>
-        <button onclick="handleLogout()" class="nav-btn" style="color: var(--danger); border: 1px solid rgba(244,63,94,0.2);">Sign Out</button>
-    </nav>
-
-    <div class="wrapper">
-        <header class="top-bar">
-            <div class="header-info">
-                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-                <h2 id="page-title">PRF TRACKER</h2>
-            </div>
-            <div class="search-wrap"><input type="text" id="main-search" placeholder="Search data..." onkeyup="refreshTable()"></div>
-            <div class="action-group">
-                <button id="btn-toggle-comp" onclick="toggleCompleted()" class="btn-main btn-outline btn-completed">COMPLETED</button>
-                <button onclick="exportToPDF()" class="btn-main btn-outline">EXPORT PDF</button>
-                <button id="btn-create" onclick="openModal()" class="btn-main btn-primary">+ NEW ENTRY</button>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <div class="table-container">
-                <table>
-                    <thead id="table-head"></thead>
-                    <tbody id="table-body"></tbody>
-                </table>
-            </div>
-        </main>
+    <div class="sh">Price Mode</div>
+    ${seg([["bill", "Bill Price"], ["unit", "Unit Price × Qty"]], s.pm, "((v)=>{sheet.pm=v;render()})")}
+    <div class="l" style="margin-top:10px">
+      <div class="li"><span>${unit ? "Unit price" : "Bill price"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
+      <div class="li"><span>Quantity</span><span class="step"><button type="button" class="pill" onclick="sheet.q=Math.max(1,sheet.q-1);render()">−</button><b>${s.q}</b><button type="button" class="pill" onclick="sheet.q++;render()">+</button></span></div>
+      <div class="li"><span class="mu" id="itd">${der}</span></div>
     </div>
 
-    <div id="entry-modal" class="overlay" onclick="if(event.target===this) closeModal()">
-        <div class="modal">
-            <h2 id="modal-title" style="margin-bottom:20px; font-weight: 800;">NEW ENTRY</h2>
-            <div id="prf-form">
-                <input type="text" id="m-prf" placeholder="PRF NUMBER" class="remarks-editor" style="margin-bottom:12px;">
-                <input type="text" id="m-asset" placeholder="ASSET NAME" class="remarks-editor" style="margin-bottom:12px;">
-                <select id="m-workshop" class="remarks-editor" style="margin-bottom:20px; height: 45px; font-weight: 700;">
-                    <option value="DAU/LOS">DAU/LOS</option><option value="EEW">EEW</option><option value="MRW">MRW</option>
-                    <option value="MSH">MSH</option><option value="MWU">MWU</option><option value="NMU">NMU</option>
-                    <option value="OSU">OSU</option><option value="PLU">PLU</option><option value="SMU">SMU</option>
-                    <option value="STU">STU</option><option value="ADM">ADM</option><option value="INV">INV</option>
-                </select>
-                <button onclick="savePRF()" class="btn-main btn-primary" style="width:100%; justify-content: center; padding: 14px;">Upload & Link Form</button>
-            </div>
-            <div id="yard-form" style="display:none;">
-                <input type="text" id="y-slot" placeholder="SLOT #" class="remarks-editor" style="margin-bottom:12px;">
-                <input type="text" id="y-vessel" placeholder="ASSET NAME" class="remarks-editor" style="margin-bottom:12px;">
-                <div style="margin-bottom:12px;">
-                    <label style="font-size: 10px; font-weight: 800; color: var(--text-muted);">DOCKING DATE</label>
-                    <input type="date" id="y-docked" class="remarks-editor">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label style="font-size: 10px; font-weight: 800; color: var(--text-muted);">EST. UNDOCK DATE</label>
-                    <input type="date" id="y-est" class="remarks-editor">
-                </div>
-                <button onclick="saveYard()" class="btn-main btn-primary" style="width:100%; justify-content: center; padding: 14px;">Register Vessel</button>
-            </div>
-        </div>
+    <div class="sh">Who shared this item?</div>
+    <div class="chips" style="margin:0 0 6px">
+      <button type="button" class="pill" onclick="sheet.w=S.people.map(p=>p.id);render()">Everyone</button>
+      ${lastItem ? `<button type="button" class="pill" onclick="sheet.w=[...${JSON.stringify(lastItem.w)}];render()">Same as last</button>` : ""}
+      <button type="button" class="pill r" onclick="sheet.w=[];render()">Clear</button>
     </div>
+    ${personPicker(s.w, id => `toggleSheetPerson(${id})`, "item")}
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove, update, set, onDisconnect } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    <div class="sh">Split Preview</div>
+    <div class="l" id="itp">${shares}</div>
 
-        const firebaseConfig = { 
-            apiKey: "AIzaSyD612DVL9xvsK1lWVyEB9TehpGJry6Rprw", 
-            authDomain: "srd-portal-1234.firebaseapp.com", 
-            projectId: "srd-portal-1234", 
-            databaseURL: "https://srd-portal-1234-default-rtdb.firebaseio.com"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const auth = getAuth(app);
-        
-        const STATUS_LIST = ["PENDING", "ITEM CREATION", "PR/MTR-RAISED", "PO-RAISED", "PAYMENT PENDING", "PART RECEIVED", "ALL RECEIVED", "ON-HOLD", "CANCELLED"];
-        let logs = [], yardLogs = [], trans = [], currentPage = 'DASH', showCompleted = false;
+    <div class="row2" style="margin-top:16px">
+      ${s.k < 0
+        ? `<button type="button" class="btn sec" onclick="saveSheetItem(true)">Add &amp; Next</button>`
+        : `<button type="button" class="btn red" onclick="deleteSheetItem()">Delete</button>`}
+      <button type="button" class="btn" onclick="saveSheetItem(false)">${s.k < 0 ? "Add Item" : "Save"}</button>
+    </div>
+  </div></div>`;
+}
 
-        onAuthStateChanged(auth, user => {
-            document.getElementById('auth-overlay').style.display = user ? 'none' : 'flex';
-            if(user) {
-                const userRef = ref(db, `status/${user.uid}`);
-                set(userRef, { state: 'online', email: user.email });
-                onDisconnect(userRef).remove();
-                
-                onValue(ref(db, 'status'), s => {
-                    const data = s.val() || {};
-                    document.getElementById('online-list').innerHTML = Object.values(data).map(u => `<div class="u-row"><span class="u-dot"></span>${u.email.split('@')[0].toUpperCase()}</div>`).join('');
-                });
+/* ==========================================================================
+   11. TAB 3: BILLS / HISTORY & DETAILED DRILL-DOWN
+   ========================================================================== */
+function billStatus(b) {
+  const d = getBillDues(b);
+  const pending = d.filter(x => !x.isSettled);
+  if (d.length === 0 || pending.length === 0) return { label: "Settled", cls: "ok", sub: "" };
+  return {
+    label: `${pending.length} pending`,
+    cls: "no",
+    sub: pending.map(x => `${getPerson(x.fromId).name} owes ${mh(x.amount)}`).join(" · ")
+  };
+}
 
-                onValue(ref(db, 'prf_logs'), s => { logs = s.val() ? Object.keys(s.val()).map(k => ({id:k, ...s.val()[k]})) : []; refreshTable(); });
-                onValue(ref(db, 'yard_logs'), s => { yardLogs = s.val() ? Object.keys(s.val()).map(k => ({id:k, ...s.val()[k]})) : []; refreshTable(); });
-                onValue(ref(db, 'transactions'), s => { trans = s.val() ? Object.values(s.val()).reverse() : []; refreshTable(); });
-            }
-        });
+function viewHistory() {
+  if (openBillId !== null) return viewBillDetail(openBillId);
 
-        window.handleLogin = () => signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value).catch(e => alert("Login Failed"));
-        window.handleLogout = () => signOut(auth);
-        window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
+  let h = head("Bills", `${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"}`);
+  h += `<div class="l"><div class="li"><input type="search" placeholder="Search place, trip, item or person" value="${esc(histQuery)}" oninput="histQuery=this.value;document.getElementById('hl').innerHTML=renderHistoryList()" style="text-align:left"></div></div>`;
+  h += `<div id="hl">${renderHistoryList()}</div>`;
+  return h;
+}
 
-        window.switchPage = (p) => {
-            currentPage = p;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('nav-' + p.toLowerCase()).classList.add('active');
-            document.getElementById('page-title').innerText = p === 'DASH' ? 'PRF TRACKER' : (p === 'YARD' ? 'BOAT YARD LOG' : 'TRANSACTION HISTORY');
-            document.getElementById('btn-create').style.display = p === 'TRANS' ? 'none' : 'block';
-            document.getElementById('btn-toggle-comp').style.display = p === 'DASH' ? 'block' : 'none';
-            if(window.innerWidth <= 850) toggleSidebar();
-            refreshTable();
-        };
+function renderHistoryList() {
+  const q = histQuery.trim().toLowerCase();
+  const filtered = q
+    ? S.bills.filter(b => [
+        b.title, b.trip, getPerson(b.payerId).name,
+        ...(b.items || []).map(i => i.n)
+      ].join(" ").toLowerCase().includes(q))
+    : S.bills;
 
-        window.toggleCompleted = () => {
-            showCompleted = !showCompleted;
-            document.getElementById('btn-toggle-comp').classList.toggle('active-toggle');
-            refreshTable();
-        };
+  if (!filtered.length) {
+    return `<div class="l" style="margin-top:14px"><div class="li mu">${q ? "No matching bills found." : "No bills saved yet. Create one in New Bill."}</div></div>`;
+  }
 
-        window.refreshTable = () => {
-            const q = document.getElementById('main-search').value.toUpperCase();
-            const body = document.getElementById('table-body');
-            const head = document.getElementById('table-head');
+  // Group by trip totals when not searching
+  let h = "";
+  const tripTotals = {};
+  S.bills.forEach(b => {
+    const k = b.trip || "General";
+    tripTotals[k] = (tripTotals[k] || 0) + calcBill(b).grandTotal;
+  });
+  if (!q && Object.keys(tripTotals).length > 1) {
+    h += `<div class="sh">Totals by Trip</div><div class="l">${Object.entries(tripTotals).map(([k, v]) => `<div class="li"><span>${esc(k)}</span><b>${mh(v)}</b></div>`).join("")}</div>`;
+  }
 
-            if(currentPage === 'DASH') {
-                head.innerHTML = `<tr><th>Date</th><th>PRF #</th><th>Asset</th><th>Workshop</th><th>Status</th><th>Due Date</th><th>Remarks</th><th></th></tr>`;
-                const filtered = logs.filter(l => (l.prf.includes(q) || l.asset.includes(q)) && (showCompleted ? l.status==='ALL RECEIVED' : l.status!=='ALL RECEIVED'));
-                body.innerHTML = filtered.map(l => `
-                    <tr>
-                        <td data-label="Date Issued">${l.date}</td>
-                        <td data-label="PRF #" style="font-weight:800; color:var(--brand);">${l.prf}</td>
-                        <td data-label="Asset Name" style="font-weight:700;">${l.asset}</td>
-                        <td data-label="Workshop">${l.workshop}</td>
-                        <td data-label="Status">
-                            <select class="status-select s-${l.status.replace(/[/ ]/g,'-')}" onchange="updatePRF('${l.id}','status',this.value)">
-                                ${STATUS_LIST.map(s => `<option ${l.status===s?'selected':''}>${s}</option>`).join('')}
-                            </select>
-                        </td>
-                        <td data-label="Due Date"><input type="date" value="${l.eta||''}" class="remarks-editor" style="border:none; padding:5px;" onchange="updatePRF('${l.id}','eta',this.value)"></td>
-                        <td data-label="Remarks & History"><div class="remarks-editor" contenteditable="true" onblur="updatePRF('${l.id}','remarks',this.innerText.toUpperCase())">${l.remarks||''}</div></td>
-                        <td data-label="Action"><button class="btn-delete" onclick="deleteEntry('prf_logs','${l.id}')">&times;</button></td>
-                    </tr>`).join('');
-            } else if(currentPage === 'YARD') {
-                head.innerHTML = `<tr><th>Slot</th><th>Vessel</th><th>Docked</th><th>Est. Undock</th><th>Age</th><th>Status</th><th></th></tr>`;
-                const filtered = yardLogs.filter(l => l.name.toUpperCase().includes(q) || l.slot.includes(q));
-                body.innerHTML = filtered.map(l => {
-                    const start = new Date(l.docked);
-                    const end = l.status === 'Undocked' ? new Date(l.undocked) : new Date();
-                    const age = Math.floor((end - start) / (1000 * 60 * 60 * 24)) || 0;
-                    return `<tr>
-                        <td data-label="Slot" style="font-weight:800; color:var(--brand);">${l.slot}</td>
-                        <td data-label="Asset Name" style="font-weight:700;">${l.name}</td>
-                        <td data-label="Docking Date">${l.docked}</td>
-                        <td data-label="Est. Undock Date">${l.est || 'N/A'}</td>
-                        <td data-label="Days in Yard"><span class="age-badge">${age} Days</span></td>
-                        <td data-label="Status">
-                            <select class="status-select s-${l.status}" onchange="updateYardStatus('${l.id}',this.value)">
-                                <option ${l.status==='Docked'?'selected':''}>Docked</option>
-                                <option ${l.status==='Undocked'?'selected':''}>Undocked</option>
-                            </select>
-                        </td>
-                        <td data-label="Action"><button class="btn-delete" onclick="deleteEntry('yard_logs','${l.id}')">&times;</button></td>
-                    </tr>`}).join('');
-            } else {
-                head.innerHTML = `<tr><th>Timestamp</th><th>Reference</th><th>Action Type</th><th>Value</th><th>User</th></tr>`;
-                body.innerHTML = trans.filter(t => t.prf.includes(q) || t.action.includes(q)).map(t => `
-                    <tr>
-                        <td data-label="Time" style="color:var(--text-muted); font-size:11px;">${t.time}</td>
-                        <td data-label="Ref" style="font-weight:800; color:var(--brand);">${t.prf}</td>
-                        <td data-label="Action">${t.action}</td>
-                        <td data-label="Details" style="font-style:italic;">${t.details}</td>
-                        <td data-label="User" style="font-weight:700;">${t.user}</td>
-                    </tr>`).join('');
-            }
-        };
+  // Group bills by date
+  const byDate = {};
+  filtered.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id).forEach(b => {
+    const d = b.date || "Unknown";
+    (byDate[d] = byDate[d] || []).push(b);
+  });
 
-        window.savePRF = () => {
-            const p = document.getElementById('m-prf').value.toUpperCase(), a = document.getElementById('m-asset').value.toUpperCase();
-            if(!p || !a) return alert("Required Fields Missing");
-            push(ref(db, 'prf_logs'), { date: new Date().toLocaleDateString('en-GB'), prf: p, asset: a, workshop: document.getElementById('m-workshop').value, status: 'PENDING', remarks: '', eta: '' });
-            closeModal();
-            window.open("https://forms.office.com/pages/responsepage.aspx?id=rS-35FLkcEy4rMmBiUUcM-wq0ZU8I9BHssORFyfEW95UN0ZMM1gxR1YwUDZKMkNHMkhFMUdMRzlRSS4u", "_blank");
-        };
+  h += Object.keys(byDate).sort().reverse().map(d => {
+    const daySum = sum(byDate[d].map(b => calcBill(b).grandTotal));
+    return `<div class="sh" style="display:flex;justify-content:space-between"><span>${dayLabel(d)}</span><span>${mh(daySum)}</span></div>
+    <div class="l">${byDate[d].map(b => {
+      const c = calcBill(b), st = billStatus(b), payer = getPerson(b.payerId);
+      return `<div class="li col" onclick="openBillId=${b.id};render();scrollTopMain()" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <b>${esc(b.title)}</b>${b.trip ? `<span class="cp">${esc(b.trip)}</span>` : ""}${b.gstEnabled ? `<span class="cp">8% GST</span>` : ""}
+            <div class="mu">${shortDate(d)} · paid by ${esc(payer.name)}</div>
+          </div>
+          <div style="text-align:right;flex:none">
+            <b>${mh(c.grandTotal)}</b><br>
+            <span class="bd ${st.cls}">${st.label}</span>
+          </div>
+        </div>
+        ${st.sub ? `<div class="mu" style="margin-top:5px">${st.sub}</div>` : ""}
+      </div>`;
+    }).join("")}</div>`;
+  }).join("");
 
-        window.saveYard = () => {
-            const s = document.getElementById('y-slot').value, v = document.getElementById('y-vessel').value, d = document.getElementById('y-docked').value;
-            if(!s || !v || !d) return alert("Required Fields Missing");
-            push(ref(db, 'yard_logs'), { slot: s, name: v.toUpperCase(), docked: d, est: document.getElementById('y-est').value, status: 'Docked', undocked: '' });
-            closeModal();
-        };
+  return h;
+}
 
-        window.updatePRF = (id, f, v) => { 
-            update(ref(db, `prf_logs/${id}`), {[f]:v}); 
-            const prfNum = logs.find(x=>x.id===id)?.prf || 'Unknown';
-            push(ref(db, 'transactions'), { time: new Date().toLocaleString(), user: auth.currentUser.email.split('@')[0].toUpperCase(), action: `Update ${f}`, details: v, prf: prfNum });
-        };
+function viewBillDetail(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b) { openBillId = null; return viewHistory(); }
 
-        window.updateYardStatus = (id, v) => {
-            const upd = { status: v };
-            if(v === 'Undocked') upd.undocked = new Date().toISOString().split('T')[0];
-            update(ref(db, `yard_logs/${id}`), upd);
-        };
+  const c = calcBill(b);
+  const payer = getPerson(b.payerId);
+  const activeRows = c.rows.filter(r => r.tot > 0.004);
+  const dues = getBillDues(b);
 
-        window.deleteEntry = (path, id) => { if(confirm("Delete this entry permanently?")) remove(ref(db, `${path}/${id}`)); };
-        window.openModal = () => {
-            document.getElementById('prf-form').style.display = currentPage === 'DASH' ? 'block' : 'none';
-            document.getElementById('yard-form').style.display = currentPage === 'YARD' ? 'block' : 'none';
-            document.getElementById('modal-title').innerText = currentPage === 'DASH' ? 'NEW PRF TRACKER ENTRY' : 'REGISTER VESSEL';
-            document.getElementById('entry-modal').style.display = 'flex';
-        };
-        window.closeModal = () => document.getElementById('entry-modal').style.display = 'none';
+  let h = headB(
+    'style="margin-top:6px" onclick="openBillId=null;render();scrollTopMain()"',
+    "‹ Bills",
+    esc(b.title),
+    `${shortDate(b.date)} · Paid by ${esc(payer.name)}${b.trip ? " · " + esc(b.trip) : ""}`
+  );
 
-        // THE EXPORT FUNCTION
-        window.exportToPDF = () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            const dateStr = new Date().toLocaleString('en-GB');
-            
-            let headers = [], data = [], title = "";
+  // Summary Card
+  h += `<div class="l">
+    <div class="li"><span>Items subtotal</span><b>${mh(c.totalSub)}</b></div>
+    <div class="li"><span>8% Fixed GST</span><b>${b.gstEnabled ? mh(c.totalGst) : "Disabled"}</b></div>
+    ${+b.scAmt > 0 ? `<div class="li"><span>Service charge</span><b>${mh(+b.scAmt)}</b></div>` : ""}
+    ${+b.other > 0 ? `<div class="li"><span>Other charges</span><b>${mh(+b.other)}</b></div>` : ""}
+    <div class="li"><b>Grand Total</b><b style="font-size:20px">${mh(c.grandTotal)}</b></div>
+  </div>`;
 
-            if(currentPage === 'DASH') {
-                title = showCompleted ? "COMPLETED PRF REPORT" : "ACTIVE PRF TRACKER";
-                headers = [['Date', 'PRF #', 'Asset Name', 'Workshop', 'Status', 'Due Date', 'Remarks']];
-                data = logs.filter(l => showCompleted ? l.status==='ALL RECEIVED' : l.status!=='ALL RECEIVED')
-                           .map(l => [l.date, l.prf, l.asset, l.workshop, l.status, l.eta||'N/A', l.remarks]);
-            } else if(currentPage === 'YARD') {
-                title = "BOAT YARD DOCKING LOG";
-                headers = [['Slot', 'Asset Name', 'Docked Date', 'Est. Undock', 'Status']];
-                data = yardLogs.map(l => [l.slot, l.name, l.docked, l.est||'N/A', l.status]);
-            } else {
-                title = "SYSTEM TRANSACTION HISTORY";
-                headers = [['Timestamp', 'Ref', 'Action', 'Value', 'User']];
-                data = trans.map(t => [t.time, t.prf, t.action, t.details, t.user]);
-            }
+  // Per-Person Breakdown
+  h += `<div class="sh">Per-Person Breakdown</div>
+  <div class="l">${activeRows.map(r => `
+    <div class="li">
+      <span style="display:flex;gap:10px;align-items:center">
+        <span class="dot" style="--c:${r.person.color}">${esc(initials(r.person.name))}</span>
+        <span>
+          <b>${esc(r.person.name)}</b>${r.personId === b.payerId ? '<span class="cp">paid bill</span>' : ""}<br>
+          <small>Items ${f(r.sub)}${b.gstEnabled ? ` + 8% GST ${f(r.gst)}` : ""}${r.extra > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
+        </span>
+      </span>
+      <b>${mh(r.tot)}</b>
+    </div>
+  `).join("")}</div>`;
 
-            doc.setFontSize(18);
-            doc.text(`MTCC SRD: ${title}`, 14, 15);
-            doc.setFontSize(10);
-            doc.text(`Generated On: ${dateStr}`, 14, 22);
-            
-            doc.autoTable({
-                startY: 28, head: headers, body: data, theme: 'grid',
-                headStyles: { fillStyle: [99, 102, 241], fontSize: 8 },
-                styles: { fontSize: 7, cellPadding: 2 }
-            });
-            doc.save(`SRD_REPORT_${currentPage}_${Date.now()}.pdf`);
-        };
-    </script>
+  // Settlement Status per Person
+  if (dues.length > 0) {
+    h += `<div class="sh">Settlement Status (Owed to ${esc(payer.name)})</div>
+    <div class="l">${dues.map(d => {
+      const p = getPerson(d.fromId);
+      return `<div class="li">
+        <span><b>${esc(p.name)}</b><br><small>${mh(d.amount)}</small></span>
+        <button class="pill ${d.isSettled ? "g" : ""}" onclick="toggleBillPersonSettled(${b.id},${d.fromId})">
+          ${d.isSettled ? "Settled ✓" : "Mark Settled"}
+        </button>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  // Ordered Items List
+  h += `<div class="sh">Items (${(b.items || []).length})</div>
+  <div class="l">${(b.items || []).map(it => {
+    const names = (it.w || []).map(pid => getPerson(pid).name).join(", ") || "Nobody";
+    return `<div class="li">
+      <span><b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}<br><small>${esc(names)}</small></span>
+      <b>${mh(+it.p || 0)}</b>
+    </div>`;
+  }).join("")}</div>`;
+
+  // Actions
+  h += `<div class="row2" style="margin-top:18px">
+    <button class="btn sec" onclick="useBillAsTemplate(${b.id})">Use as Template</button>
+    <button class="btn sec" onclick="editSavedBill(${b.id})">Edit Bill</button>
+  </div>
+  <div style="margin-top:10px">
+    <button class="btn sec" style="color:var(--red)" onclick="deleteSavedBill(${b.id})">Delete Bill</button>
+  </div>`;
+
+  return h;
+}
+
+function editSavedBill(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b) return;
+  D = cl(b);
+  D.editId = id;
+  openBillId = null;
+  tab = "new";
+  render();
+  scrollTopMain();
+}
+
+function useBillAsTemplate(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b) return;
+  D = blankBill();
+  D.title = b.title;
+  D.trip = b.trip || "";
+  D.payerId = b.payerId;
+  D.gstEnabled = !!b.gstEnabled;
+  D.scAmt = +b.scAmt || 0;
+  D.scMode = b.scMode || "ord";
+  D.other = +b.other || 0;
+  D.items = cl(b.items || []);
+  openBillId = null;
+  tab = "new";
+  render();
+  scrollTopMain();
+}
+
+async function deleteSavedBill(id) {
+  if (!(await showConfirm("Delete this bill permanently?", "Delete Bill", "Delete", true))) return;
+  S.bills = S.bills.filter(b => b.id !== id);
+  saveState();
+  openBillId = null;
+  render();
+}
+
+/* ==========================================================================
+   12. TAB 4: PEOPLE & DATA MANAGEMENT
+   ========================================================================== */
+function exportCsv() {
+  const rows = [["Date", "Place", "Trip", "Paid By", "8% GST Enabled", "Person", "Items Subtotal", "8% GST", "Extra Charges", "Person Total", "Settled"].join(",")];
+  S.bills.slice().reverse().forEach(b => {
+    const c = calcBill(b), payer = getPerson(b.payerId).name;
+    c.rows.forEach(r => {
+      if (r.tot > 0 || r.sub > 0) {
+        const isSettled = r.personId === b.payerId ? "Payer" : ((b.settled && b.settled[r.personId]) ? "Yes" : "No");
+        rows.push([
+          b.date, b.title, b.trip || "", payer, b.gstEnabled ? "Yes" : "No",
+          r.person.name, r.sub.toFixed(2), r.gst.toFixed(2), r.extra.toFixed(2), r.tot.toFixed(2), isSettled
+        ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(","));
+      }
+    });
+  });
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `splitmate-bills-${today()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function exportJsonBackup() {
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `splitmate-backup-${today()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function importJsonBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed || !Array.isArray(parsed.people) || !Array.isArray(parsed.bills)) {
+        return showNotice("Invalid SplitMate JSON backup file.", "Import Error");
+      }
+      const ok = await showConfirm(
+        `Restore ${parsed.people.length} people and ${parsed.bills.length} bills? This will replace your current local data.`,
+        "Restore Backup",
+        "Restore",
+        true
+      );
+      if (!ok) return;
+      S.people = parsed.people;
+      S.bills = parsed.bills;
+      if (parsed.settings) S.settings = Object.assign(S.settings, parsed.settings);
+      saveState();
+      applyTheme();
+      D = blankBill();
+      render();
+      showNotice("Backup restored successfully!");
+    } catch (e) {
+      showNotice("Could not parse JSON file.", "Import Error");
+    }
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+
+async function resetAllData() {
+  const ok = await showConfirm(
+    "Delete all saved people and bills from this device? This cannot be undone.",
+    "Reset All Data",
+    "Delete Everything",
+    true
+  );
+  if (!ok) return;
+  S = { people: [], bills: [], settings: { defaultGst: true, theme: S.settings.theme } };
+  saveState();
+  D = blankBill();
+  openBillId = null;
+  render();
+}
+
+function viewPeopleAndData() {
+  let h = head("People & Data", "Manage people & local device storage");
+
+  // People Manager
+  h += `<div class="sh">People (${S.people.length})</div>
+  <div class="l">`;
+  if (!S.people.length) {
+    h += `<div class="li mu">No people added yet. Tap below to add names.</div>`;
+  } else {
+    h += S.people.map(p => `
+      <div class="li">
+        <span style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="cyclePersonColor(${p.id})" title="Tap to change color">
+          <span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span>
+          <span><b>${esc(p.name)}</b><br><small>Tap badge to change color</small></span>
+        </span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <button class="pill" onclick="promptRenamePerson(${p.id})">Rename</button>
+          <button class="x" onclick="removePerson(${p.id})" title="Remove">×</button>
+        </span>
+      </div>
+    `).join("");
+  }
+  h += `</div>
+  <div style="margin-top:10px">
+    <button class="btn" onclick="promptAddPerson()">+ Add Person</button>
+  </div>`;
+
+  // Defaults & Appearance
+  h += `<div class="sh">Defaults &amp; Appearance</div>
+  <div class="l">
+    <div class="li">
+      <span>Enable 8% GST on new bills</span>
+      ${sw(!!S.settings.defaultGst, "S.settings.defaultGst=this.checked;saveState();render()")}
+    </div>
+    <div class="li col">
+      <div class="mu" style="margin-bottom:6px">Theme</div>
+      ${seg([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]], S.settings.theme || "auto", "((t)=>{S.settings.theme=t;applyTheme();saveState();render()})")}
+    </div>
+  </div>`;
+
+  // Export & Backup
+  h += `<div class="sh">Local Storage &amp; Backup</div>
+  <div class="l">
+    <div class="li" onclick="exportCsv()" style="cursor:pointer"><span>Export all bills (CSV)</span><span class="mu">›</span></div>
+    <div class="li" onclick="exportJsonBackup()" style="cursor:pointer"><span>Download JSON backup</span><span class="mu">›</span></div>
+    <label class="li" style="cursor:pointer"><span>Restore JSON backup</span><span class="mu">›</span><input type="file" accept=".json,application/json" hidden onchange="importJsonBackup(this)"></label>
+  </div>
+  <div class="mu" style="margin:6px 12px">All data is stored privately on this device in browser localStorage.</div>
+  <div style="margin-top:16px">
+    <button class="btn sec" style="color:var(--red)" onclick="resetAllData()">Reset All Local Data</button>
+  </div>`;
+
+  return h;
+}
+
+/* ==========================================================================
+   13. MAIN RENDER & NAVIGATION
+   ========================================================================== */
+function go(k) {
+  tab = k;
+  openBillId = null;
+  if (k === "new" && !D) D = blankBill();
+  render();
+  scrollTopMain();
+}
+
+function render() {
+  const v = document.getElementById("v");
+  const nav = document.getElementById("nav");
+  const ovl = document.getElementById("ovl");
+  const scrollPos = v ? v.scrollTop : 0;
+
+  const { unsettledRows } = computeAllBalances();
+  const badgeCount = unsettledRows.length;
+
+  const tabs = [
+    ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
+    ["new", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`, "New Bill"],
+    ["hist", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`, "Bills"],
+    ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "People"]
+  ];
+
+  nav.innerHTML = tabs.map(([k, icon, label]) => `
+    <button class="${tab === k ? "on" : ""}" onclick="go('${k}')">
+      <span>${icon}</span>${label}
+      ${k === "dash" && badgeCount > 0 ? `<em class="bg">${badgeCount > 99 ? "99+" : badgeCount}</em>` : ""}
+    </button>
+  `).join("");
+
+  v.innerHTML = tab === "dash"
+    ? viewDash()
+    : tab === "new"
+    ? viewNewBill()
+    : tab === "hist"
+    ? viewHistory()
+    : viewPeopleAndData();
+
+  const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
+  ovl.innerHTML = renderSheetHtml();
+  const newSheetEl = document.querySelector("#ovl .w");
+  if (newSheetEl) newSheetEl.scrollTop = sheetScroll;
+
+  if (tab === "new") {
+    renderPreview();
+    updatePlaceSuggestions();
+  }
+  if (sheet && sheet.t === "item") {
+    updateItemSuggestions();
+  }
+
+  v.scrollTop = scrollPos;
+}
+
+// Prevent pinch zoom issues on mobile Safari while allowing smooth scrolling
+["gesturestart", "gesturechange", "gestureend"].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault())
+);
+if (window.visualViewport) {
+  const fitViewport = () => {
+    document.body.style.height = visualViewport.height + "px";
+    document.body.style.width = visualViewport.width + "px";
+    document.body.style.bottom = "auto";
+    window.scrollTo(0, 0);
+  };
+  visualViewport.addEventListener("resize", fitViewport);
+  fitViewport();
+}
+
+// Boot immediately into the local app
+loadState();
+D = blankBill();
+render();
+</script>
 </body>
 </html>
