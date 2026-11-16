@@ -134,11 +134,11 @@ button:active,.btn:active{opacity:.65}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { initializeAuth, indexedDBLocalPersistence, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
-   1. FIREBASE INITIALIZATION
+   1. FIREBASE INITIALIZATION & AUTH PERSISTENCE (PWA Home Screen Support)
    ========================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBHlZBWP1wQm_4GXwkc4aW02JSfucEKoTk",
@@ -152,7 +152,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// Explicitly initialize auth with indexedDB persistence so standalone PWA home screen app retains sign-in session
+const auth = initializeAuth(app, {
+  persistence: indexedDBLocalPersistence
+});
+
 const db = getDatabase(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
@@ -220,7 +224,6 @@ const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera
 window.signInWithGmail = async function() {
   try {
     if (isMobileDevice) {
-      // Use redirect on mobile to avoid browser popup blocking issues
       await signInWithRedirect(auth, googleProvider);
     } else {
       await signInWithPopup(auth, googleProvider);
@@ -236,7 +239,6 @@ window.logoutUser = async function() {
   await signOut(auth);
 };
 
-// Check for redirect result when returning back on mobile browsers
 getRedirectResult(auth).catch((err) => {
   console.error("Redirect sign-in error:", err);
 });
