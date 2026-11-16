@@ -134,7 +134,7 @@ button:active,.btn:active{opacity:.65}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
@@ -168,9 +168,9 @@ const PALETTE = [
 
 let authState = {
   loading: true,
-  user: null,      // Firebase Auth user
-  profile: null,   // { uid, email, name, photoURL, role: 'admin'|'user', status: 'approved'|'pending'|'rejected', createdAt }
-  allUsers: []     // Populated only for admins
+  user: null,
+  profile: null,
+  allUsers: []
 };
 
 let S = {
@@ -182,7 +182,7 @@ let S = {
   }
 };
 
-let tab = "dash"; // "dash" | "new" | "hist" | "people" | "admin"
+let tab = "dash";
 let tripFilter = "All";
 let histQuery = "";
 let openBillId = null;
@@ -213,11 +213,18 @@ function saveState() {
 }
 
 /* ==========================================================================
-   3. GOOGLE SIGN-IN & FIRST-USER ADMIN CLAIM FLOW
+   3. MOBILE-FRIENDLY GOOGLE SIGN-IN
    ========================================================================== */
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 window.signInWithGmail = async function() {
   try {
-    await signInWithPopup(auth, googleProvider);
+    if (isMobileDevice) {
+      // Use redirect on mobile to avoid browser popup blocking issues
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      await signInWithPopup(auth, googleProvider);
+    }
   } catch (err) {
     console.error("Login failed:", err);
     showNotice(err.message || "Google sign-in failed.", "Sign-In Error");
@@ -228,6 +235,11 @@ window.logoutUser = async function() {
   clearDbListeners();
   await signOut(auth);
 };
+
+// Check for redirect result when returning back on mobile browsers
+getRedirectResult(auth).catch((err) => {
+  console.error("Redirect sign-in error:", err);
+});
 
 onAuthStateChanged(auth, async (user) => {
   clearDbListeners();
@@ -250,14 +262,11 @@ onAuthStateChanged(auth, async (user) => {
 
     if (!userSnap.exists()) {
       let isFirstUser = false;
-
-      // If no admin exists yet, claim admin atomically via security rules
       if (!adminSnap.exists()) {
         try {
           await set(adminUidRef, user.uid);
           isFirstUser = true;
         } catch (e) {
-          // Another user claimed admin simultaneously
           isFirstUser = false;
         }
       } else if (adminSnap.val() === user.uid) {
@@ -277,14 +286,12 @@ onAuthStateChanged(auth, async (user) => {
       await set(userRef, newProfile);
     }
 
-    // Listen in real-time to current user's profile (detects when Admin approves them!)
     onValue(userRef, (snap) => {
       const prof = snap.val();
       const prevStatus = authState.profile?.status;
       authState.profile = prof;
       authState.loading = false;
 
-      // Once approved, start listening to shared SplitMate data (and all users if admin)
       if (prof?.status === "approved" && prevStatus !== "approved") {
         attachApprovedListeners(prof.role === "admin");
       }
@@ -428,10 +435,7 @@ window.closeDlg = function(val) {
   if (resolve) resolve(val);
 };
 
-window.dlg = dlg;
-
 function renderDlg() {
-  window.dlg = dlg;
   const el = document.getElementById("dlgov");
   if (!el) return;
   if (!dlg) { el.innerHTML = ""; return; }
@@ -681,7 +685,7 @@ function viewLoginScreen() {
     <div style="font-size:56px;margin-bottom:12px">💸</div>
     <h1 style="margin:0 0 8px">SplitMate</h1>
     <div class="sub" style="max-width:300px;margin-bottom:28px">
-      Sign in with your Gmail account to sync bills in real time. The first person to sign in becomes the Admin.
+      Sign in securely with your Gmail account to sync bills and split expenses with your group.
     </div>
     <button class="google-btn" onclick="signInWithGmail()">
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -699,7 +703,7 @@ function viewPendingScreen() {
     <div class="sub" style="max-width:320px;margin-bottom:20px">
       ${isRejected
         ? "Your account request was declined by the administrator."
-        : "Your Gmail account is registered. Please wait for the Admin to approve your access—this page will unlock automatically."}
+        : "Your account is registered. Please wait for the admin to approve your access—this page will unlock automatically once approved."}
     </div>
     <div class="l" style="width:100%;max-width:340px;margin-bottom:20px;text-align:left">
       <div class="li">
@@ -780,7 +784,7 @@ function viewAdminApprovals() {
 }
 
 /* ==========================================================================
-   11. MAIN TABS (Overview, New Bill, Bills, People & Account)
+   11. MAIN TABS
    ========================================================================== */
 function viewDash() {
   const { filteredBills, pairs, totalUnsettled, totalSpend } = computeAllBalances();
@@ -893,7 +897,6 @@ window.updatePlaceSuggestions = function() {
   box.style.display = plMatches.length ? "block" : "none";
   box.innerHTML = plMatches.map((x, i) => `<div class="li" onclick="D.title=plMatches[${i}];render()" style="cursor:pointer;min-height:44px"><span>${esc(x)}</span></div>`).join("");
 };
-window.plMatches = plMatches;
 
 window.toggleBillGst = function() {
   D.gstEnabled = !D.gstEnabled;
@@ -1443,7 +1446,6 @@ function viewPeopleAndData() {
   const prof = authState.profile || {};
   let h = head("People & Account", "Manage group members & your Gmail session");
 
-  // Signed-in Account Card
   h += `<div class="sh">Signed-in Account</div>
   <div class="l">
     <div class="li">
@@ -1458,7 +1460,6 @@ function viewPeopleAndData() {
     </div>
   </div>`;
 
-  // People Manager
   h += `<div class="sh">Split People (${S.people.length})</div>
   <div class="l">`;
   if (!S.people.length) {
@@ -1482,7 +1483,6 @@ function viewPeopleAndData() {
     <button class="btn" onclick="promptAddPerson()">+ Add Person</button>
   </div>`;
 
-  // Defaults & Appearance
   h += `<div class="sh">Defaults &amp; Appearance</div>
   <div class="l">
     <div class="li">
@@ -1495,7 +1495,6 @@ function viewPeopleAndData() {
     </div>
   </div>`;
 
-  // Export
   h += `<div class="sh">Export</div>
   <div class="l">
     <div class="li" onclick="exportCsv()" style="cursor:pointer"><span>Export all bills (CSV)</span><span class="mu">›</span></div>
@@ -1504,9 +1503,6 @@ function viewPeopleAndData() {
   return h;
 }
 
-/* ==========================================================================
-   12. MAIN RENDER & NAVIGATION
-   ========================================================================== */
 window.go = function(k) {
   tab = k;
   openBillId = null;
@@ -1530,28 +1526,24 @@ window.render = function() {
   const nav = document.getElementById("nav");
   const ovl = document.getElementById("ovl");
 
-  // 1. Loading Auth State
   if (authState.loading) {
     nav.style.display = "none";
     v.innerHTML = `<div class="auth-box"><div class="mu">Connecting to SplitMate...</div></div>`;
     return;
   }
 
-  // 2. Not Signed In
   if (!authState.user) {
     nav.style.display = "none";
     v.innerHTML = viewLoginScreen();
     return;
   }
 
-  // 3. Signed In but Pending or Rejected
   if (authState.profile?.status !== "approved") {
     nav.style.display = "none";
     v.innerHTML = viewPendingScreen();
     return;
   }
 
-  // 4. Approved User / Admin View
   nav.style.display = "flex";
   const scrollPos = v ? v.scrollTop : 0;
   const { unsettledRows } = computeAllBalances();
