@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>SplitMate — Local Bill Splitter</title>
+<title>SplitMate — Cloud Sync</title>
 <meta name="apple-mobile-web-app-title" content="SplitMate">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
@@ -85,16 +85,12 @@ button:active,.btn:active{opacity:.65}
 .seg{display:flex;background:var(--bg);border-radius:10px;padding:2px;gap:2px}
 .seg button{flex:1;border:0;background:none;color:var(--tx);padding:7px 4px;border-radius:8px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
 .seg button.on{background:var(--card);font-weight:700}
-
-/* Dynamic People Grid Picker */
 .pk-dyn{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
 .nb{height:44px;border:0;border-radius:10px;background:var(--bg);color:var(--tx);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nb.on{background:var(--c);color:#fff}
 .nb.add-p{background:var(--ac2);color:var(--ac);border:1.5px dashed var(--ac)}
 .dot{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
 .sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
-
-/* Floating Glass Bottom Tabs */
 .tabs{
   position:absolute;left:14px;right:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;
   display:flex;align-items:center;gap:4px;background:var(--glass-bg);
@@ -105,7 +101,6 @@ button:active,.btn:active{opacity:.65}
 .tabs button span{display:flex;justify-content:center;margin-bottom:2px}
 .tabs button.on{color:var(--ac);background:var(--glass-pill)}
 .bg{position:absolute;top:2px;left:56%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
 .cp{background:var(--ac2);color:var(--ac);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
@@ -117,8 +112,6 @@ button:active,.btn:active{opacity:.65}
 .fp .w{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .dd{display:none;position:absolute;left:8px;right:8px;top:100%;z-index:25;background:var(--card);border:.5px solid var(--bd);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.2);max-height:230px;overflow-y:auto;scrollbar-width:none}
 .dd::-webkit-scrollbar{display:none}
-
-/* Prominent 8% GST Toggle Card */
 .gst-banner{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:14px 16px;border-radius:14px;background:var(--card);border:1.5px solid var(--bd);
@@ -127,62 +120,79 @@ button:active,.btn:active{opacity:.65}
 .gst-banner.on{border-color:var(--grn);background:color-mix(in srgb,var(--grn) 7%,var(--card))}
 .gst-badge{display:inline-block;background:var(--grn);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
 .gst-badge.off{background:var(--mu)}
+.auth-box{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:85vh;text-align:center;padding:20px}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:320px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:15px 20px;font:inherit;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;background:var(--bd)}
 @media (max-width:360px){.nb{font-size:13.5px}.li{padding:11px 12px}.btn{padding:13px}}
 </style>
 </head>
 <body>
 <div class="w" id="v"></div>
-<div class="tabs" id="nav"></div>
+<div class="tabs" id="nav" style="display:none"></div>
 <div id="ovl"></div>
 <div id="dlgov"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
 /* ==========================================================================
-   1. STATE & LOCALSTORAGE PERSISTENCE (100% Standalone, Offline-Capable)
+   1. FIREBASE INITIALIZATION
    ========================================================================== */
-const STORAGE_KEY = "splitmate_local_v1";
-const GST_RATE = 8; // Fixed 8% GST on ordered items per person
+const firebaseConfig = {
+  apiKey: "AIzaSyBHlZBWP1wQm_4GXwkc4aW02JSfucEKoTk",
+  authDomain: "thila-island-resort-and-spa.firebaseapp.com",
+  projectId: "thila-island-resort-and-spa",
+  storageBucket: "thila-island-resort-and-spa.firebasestorage.app",
+  messagingSenderId: "553790393300",
+  appId: "1:553790393300:web:7a943f51b24217a8be2441",
+  measurementId: "G-H23W0TDETH",
+  databaseURL: "https://thila-island-resort-and-spa-default-rtdb.firebaseio.com/"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
+
+/* ==========================================================================
+   2. APP & AUTH STATE
+   ========================================================================== */
+const GST_RATE = 8;
 const PALETTE = [
   "#007aff", "#ff9500", "#34c759", "#af52de", "#ff2d92",
   "#30b0c7", "#ff3b30", "#5856d6", "#00c7be", "#a2845e"
 ];
 
+let authState = {
+  loading: true,
+  user: null,      // Firebase Auth user
+  profile: null,   // { uid, email, name, photoURL, role: 'admin'|'user', status: 'approved'|'pending'|'rejected', createdAt }
+  allUsers: []     // Populated only for admins
+};
+
 let S = {
-  people: [],   // [{ id: 1, name: "Ali", color: "#007aff" }, ...]
-  bills: [],    // [{ id, title, date, trip, payerId, gstEnabled, scAmt, scMode, other, recTotal, items, settled }]
+  people: [],
+  bills: [],
   settings: {
     defaultGst: true,
     theme: "auto"
   }
 };
 
-let tab = "dash";     // "dash" | "new" | "hist" | "people"
+let tab = "dash"; // "dash" | "new" | "hist" | "people" | "admin"
 let tripFilter = "All";
 let histQuery = "";
 let openBillId = null;
-let sheet = null;     // Active modal/sheet state
-let D = null;         // Draft bill object
+let sheet = null;
+let D = null;
+let activeListeners = [];
 
-function loadState() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (raw && typeof raw === "object") {
-      S.people = Array.isArray(raw.people) ? raw.people : [];
-      S.bills = Array.isArray(raw.bills) ? raw.bills : [];
-      S.settings = Object.assign({ defaultGst: true, theme: "auto" }, raw.settings || {});
-    }
-  } catch (e) {
-    console.warn("Could not read localStorage:", e);
-  }
-  applyTheme();
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
-  } catch (e) {
-    showNotice("Storage limit reached or unavailable in this browser.", "Storage Error");
-  }
+function clearDbListeners() {
+  activeListeners.forEach(r => off(r));
+  activeListeners = [];
 }
 
 function applyTheme() {
@@ -194,8 +204,140 @@ function applyTheme() {
   }
 }
 
+function saveState() {
+  if (!authState.user || authState.profile?.status !== "approved") return;
+  set(ref(db, "splitmate/state"), S).catch(err => {
+    console.error("Firebase save error:", err);
+    showNotice("Could not sync changes to Firebase: " + err.message, "Sync Error");
+  });
+}
+
 /* ==========================================================================
-   2. UTILITIES & FORMATTING
+   3. GOOGLE SIGN-IN & FIRST-USER ADMIN CLAIM FLOW
+   ========================================================================== */
+window.signInWithGmail = async function() {
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (err) {
+    console.error("Login failed:", err);
+    showNotice(err.message || "Google sign-in failed.", "Sign-In Error");
+  }
+};
+
+window.logoutUser = async function() {
+  clearDbListeners();
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth, async (user) => {
+  clearDbListeners();
+
+  if (!user) {
+    authState = { loading: false, user: null, profile: null, allUsers: [] };
+    render();
+    return;
+  }
+
+  authState.loading = true;
+  authState.user = user;
+  render();
+
+  try {
+    const userRef = ref(db, `users/${user.uid}`);
+    const adminUidRef = ref(db, "config/adminUid");
+
+    const [userSnap, adminSnap] = await Promise.all([get(userRef), get(adminUidRef)]);
+
+    if (!userSnap.exists()) {
+      let isFirstUser = false;
+
+      // If no admin exists yet, claim admin atomically via security rules
+      if (!adminSnap.exists()) {
+        try {
+          await set(adminUidRef, user.uid);
+          isFirstUser = true;
+        } catch (e) {
+          // Another user claimed admin simultaneously
+          isFirstUser = false;
+        }
+      } else if (adminSnap.val() === user.uid) {
+        isFirstUser = true;
+      }
+
+      const newProfile = {
+        uid: user.uid,
+        email: user.email || "",
+        name: user.displayName || (user.email ? user.email.split("@")[0] : "User"),
+        photoURL: user.photoURL || "",
+        role: isFirstUser ? "admin" : "user",
+        status: isFirstUser ? "approved" : "pending",
+        createdAt: Date.now()
+      };
+
+      await set(userRef, newProfile);
+    }
+
+    // Listen in real-time to current user's profile (detects when Admin approves them!)
+    onValue(userRef, (snap) => {
+      const prof = snap.val();
+      const prevStatus = authState.profile?.status;
+      authState.profile = prof;
+      authState.loading = false;
+
+      // Once approved, start listening to shared SplitMate data (and all users if admin)
+      if (prof?.status === "approved" && prevStatus !== "approved") {
+        attachApprovedListeners(prof.role === "admin");
+      }
+      render();
+    });
+    activeListeners.push(userRef);
+
+  } catch (err) {
+    console.error("Profile init error:", err);
+    authState.loading = false;
+    showNotice("Database permission error: " + err.message, "Setup Error");
+    render();
+  }
+});
+
+function attachApprovedListeners(isAdmin) {
+  const stateRef = ref(db, "splitmate/state");
+  onValue(stateRef, (snap) => {
+    const val = snap.val();
+    if (val && typeof val === "object") {
+      S.people = Array.isArray(val.people) ? val.people : [];
+      S.bills = Array.isArray(val.bills) ? val.bills : [];
+      S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
+      applyTheme();
+      if (!D) D = blankBill();
+    }
+    render();
+  });
+  activeListeners.push(stateRef);
+
+  if (isAdmin) {
+    const allUsersRef = ref(db, "users");
+    onValue(allUsersRef, (snap) => {
+      const data = snap.val() || {};
+      authState.allUsers = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      render();
+    });
+    activeListeners.push(allUsersRef);
+  }
+}
+
+window.updateUserApproval = async function(targetUid, newStatus, newRole) {
+  try {
+    const updates = { status: newStatus };
+    if (newRole) updates.role = newRole;
+    await update(ref(db, `users/${targetUid}`), updates);
+  } catch (err) {
+    showNotice("Could not update user: " + err.message, "Admin Error");
+  }
+};
+
+/* ==========================================================================
+   4. UTILITIES & FORMATTING
    ========================================================================== */
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const f = n => {
@@ -206,7 +348,6 @@ const r2 = x => Math.round((+x || 0) * 100) / 100;
 const sum = a => a.reduce((x, y) => x + (+y || 0), 0);
 const cl = o => JSON.parse(JSON.stringify(o));
 const mh = x => `<span class="rf"></span>${f(x)}`;
-const mt = x => `MVR ${f(x)}`;
 
 function ldate(d) {
   d = d || new Date();
@@ -249,7 +390,7 @@ function scrollTopMain() {
 }
 
 /* ==========================================================================
-   3. NON-BLOCKING CUSTOM DIALOGS (Replaces alert / confirm / prompt)
+   5. NON-BLOCKING CUSTOM DIALOGS
    ========================================================================== */
 let dlg = null;
 
@@ -278,16 +419,19 @@ function showPrompt(msg, title, ph, defVal) {
   });
 }
 
-function closeDlg(val) {
+window.closeDlg = function(val) {
   if (!dlg) return;
   const resolve = dlg.res;
   dlg = null;
   const el = document.getElementById("dlgov");
   if (el) el.innerHTML = "";
   if (resolve) resolve(val);
-}
+};
+
+window.dlg = dlg;
 
 function renderDlg() {
+  window.dlg = dlg;
   const el = document.getElementById("dlgov");
   if (!el) return;
   if (!dlg) { el.innerHTML = ""; return; }
@@ -309,9 +453,9 @@ function renderDlg() {
 }
 
 /* ==========================================================================
-   4. DYNAMIC PEOPLE MANAGEMENT
+   6. DYNAMIC PEOPLE MANAGEMENT
    ========================================================================== */
-async function promptAddPerson(autoSelectInDraftOrSheet) {
+window.promptAddPerson = async function(autoSelectInDraftOrSheet) {
   const raw = await showPrompt("Person name", "Add Person", "e.g. Amina, Ziyan", "");
   const name = (raw || "").trim();
   if (!name) return null;
@@ -333,9 +477,9 @@ async function promptAddPerson(autoSelectInDraftOrSheet) {
   }
   render();
   return person;
-}
+};
 
-async function promptRenamePerson(id) {
+window.promptRenamePerson = async function(id) {
   const p = S.people.find(x => x.id === id);
   if (!p) return;
   const raw = await showPrompt("New name", "Rename Person", "Name", p.name);
@@ -347,18 +491,18 @@ async function promptRenamePerson(id) {
   p.name = name;
   saveState();
   render();
-}
+};
 
-function cyclePersonColor(id) {
+window.cyclePersonColor = function(id) {
   const p = S.people.find(x => x.id === id);
   if (!p) return;
   const idx = PALETTE.indexOf(p.color);
   p.color = PALETTE[(idx + 1) % PALETTE.length];
   saveState();
   render();
-}
+};
 
-async function removePerson(id) {
+window.removePerson = async function(id) {
   const p = S.people.find(x => x.id === id);
   if (!p) return;
   const usedInBills = S.bills.some(b => b.payerId === id || (b.items || []).some(it => (it.w || []).includes(id)));
@@ -370,10 +514,10 @@ async function removePerson(id) {
   if (D && D.payerId === id) D.payerId = S.people[0] ? S.people[0].id : null;
   saveState();
   render();
-}
+};
 
 /* ==========================================================================
-   5. BILL SPLITTING & 8% FIXED GST CALCULATION ENGINE
+   7. BILL SPLITTING & 8% FIXED GST ENGINE
    ========================================================================== */
 function blankBill() {
   return {
@@ -381,24 +525,17 @@ function blankBill() {
     date: today(),
     trip: tripFilter === "All" ? "" : tripFilter,
     payerId: S.people[0] ? S.people[0].id : null,
-    gstEnabled: !!S.settings.defaultGst, // 8% GST enabled/disabled toggle
+    gstEnabled: !!S.settings.defaultGst,
     scAmt: 0,
-    scMode: "ord", // "ord" = equal among those who ordered, "prop" = proportional to ordered items
+    scMode: "ord",
     other: 0,
     recTotal: 0,
     items: [],
-    settled: {} // map of personId -> true when their share is settled
+    settled: {}
   };
 }
 
-/**
- * Calculates per-person breakdown for a bill:
- * - Items Subtotal: sum of (item price / number of people sharing item)
- * - 8% GST: strictly 8% of each person's ordered items subtotal when bill.gstEnabled is true, else 0
- * - Service Charge & Other: shared among people who ordered (either equally or proportionally)
- */
 function calcBill(b) {
-  // Collect all person IDs involved in this bill (payer + anyone on items + current S.people)
   const idSet = new Set(S.people.map(p => p.id));
   if (b.payerId) idSet.add(b.payerId);
   (b.items || []).forEach(it => (it.w || []).forEach(pid => idSet.add(pid)));
@@ -423,25 +560,15 @@ function calcBill(b) {
 
   const rows = ids.map(id => {
     const sub = subMap[id] || 0;
-    // 8% fixed GST calculated specifically on the person's ordered items subtotal
     const gst = b.gstEnabled ? (sub * GST_RATE / 100) : 0;
-
     let extra = 0;
     if (extraPool > 0 && activeIds.length > 0) {
       extra = useProp
         ? (extraPool * (sub / totalSub))
         : (sub > 0 ? (extraPool / activeIds.length) : 0);
     }
-
     const tot = sub + gst + extra;
-    return {
-      personId: id,
-      person: getPerson(id),
-      sub,
-      gst,
-      extra,
-      tot
-    };
+    return { personId: id, person: getPerson(id), sub, gst, extra, tot };
   });
 
   return {
@@ -453,9 +580,6 @@ function calcBill(b) {
   };
 }
 
-/* ==========================================================================
-   6. SETTLEMENTS & BALANCES ENGINE
-   ========================================================================== */
 function getBillDues(bill) {
   const c = calcBill(bill);
   const settled = bill.settled || {};
@@ -473,7 +597,7 @@ function getBillDues(bill) {
 function computeAllBalances() {
   const filteredBills = S.bills.filter(b => tripFilter === "All" || (b.trip || "") === tripFilter);
   const unsettledRows = [];
-  const pairMap = {}; // "fromId->toId" -> { fromId, toId, total, items: [] }
+  const pairMap = {};
 
   filteredBills.forEach(b => {
     getBillDues(b).forEach(d => {
@@ -494,7 +618,7 @@ function computeAllBalances() {
   return { filteredBills, unsettledRows, pairs, totalUnsettled, totalSpend };
 }
 
-function toggleBillPersonSettled(billId, personId) {
+window.toggleBillPersonSettled = function(billId, personId) {
   const b = S.bills.find(x => x.id === billId);
   if (!b) return;
   b.settled = b.settled || {};
@@ -502,9 +626,9 @@ function toggleBillPersonSettled(billId, personId) {
   else b.settled[personId] = true;
   saveState();
   render();
-}
+};
 
-async function settlePairAll(fromId, toId) {
+window.settlePairAll = async function(fromId, toId) {
   const fromP = getPerson(fromId), toP = getPerson(toId);
   const ok = await showConfirm(
     `Mark all pending bills from ${fromP.name} to ${toP.name} as settled?`,
@@ -521,10 +645,10 @@ async function settlePairAll(fromId, toId) {
   });
   saveState();
   render();
-}
+};
 
 /* ==========================================================================
-   7. UI HELPERS
+   8. UI HELPERS
    ========================================================================== */
 const head = (t, s) => `<div class="hdr"><h1>${t}</h1><div class="sub">${s}</div></div>`;
 const headB = (attrs, label, t, s) => `<div class="hdr"><button class="pill" ${attrs}>${label}</button><h1>${t}</h1>${s ? `<div class="sub">${s}</div>` : ""}</div>`;
@@ -550,15 +674,131 @@ function personPicker(selectedIds, toggleExpr, addContext) {
 }
 
 /* ==========================================================================
-   8. TAB 1: OVERVIEW (Balances, Settlements & Quick Summary)
+   9. AUTH VIEWS (Login Screen & Pending Approval Screen)
+   ========================================================================== */
+function viewLoginScreen() {
+  return `<div class="auth-box">
+    <div style="font-size:56px;margin-bottom:12px">💸</div>
+    <h1 style="margin:0 0 8px">SplitMate</h1>
+    <div class="sub" style="max-width:300px;margin-bottom:28px">
+      Sign in with your Gmail account to sync bills in real time. The first person to sign in becomes the Admin.
+    </div>
+    <button class="google-btn" onclick="signInWithGmail()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      <span>Continue with Gmail</span>
+    </button>
+  </div>`;
+}
+
+function viewPendingScreen() {
+  const p = authState.profile || {};
+  const isRejected = p.status === "rejected";
+  return `<div class="auth-box">
+    <div style="font-size:52px;margin-bottom:12px">${isRejected ? "🚫" : "⏳"}</div>
+    <h1 style="margin:0 0 8px">${isRejected ? "Access Denied" : "Pending Approval"}</h1>
+    <div class="sub" style="max-width:320px;margin-bottom:20px">
+      ${isRejected
+        ? "Your account request was declined by the administrator."
+        : "Your Gmail account is registered. Please wait for the Admin to approve your access—this page will unlock automatically."}
+    </div>
+    <div class="l" style="width:100%;max-width:340px;margin-bottom:20px;text-align:left">
+      <div class="li">
+        <span style="display:flex;align-items:center;gap:10px">
+          ${p.photoURL ? `<img class="avatar" src="${esc(p.photoURL)}">` : `<span class="dot" style="--c:#007aff">${esc(initials(p.name))}</span>`}
+          <span><b>${esc(p.name)}</b><br><small>${esc(p.email)}</small></span>
+        </span>
+        <span class="bd ${isRejected ? "no" : ""}">${isRejected ? "Rejected" : "Pending"}</span>
+      </div>
+    </div>
+    <button class="btn sec" style="max-width:340px" onclick="logoutUser()">Sign Out / Switch Account</button>
+  </div>`;
+}
+
+/* ==========================================================================
+   10. ADMIN APPROVALS TAB
+   ========================================================================== */
+function viewAdminApprovals() {
+  const users = authState.allUsers || [];
+  const pending = users.filter(u => u.status === "pending");
+  const approved = users.filter(u => u.status === "approved");
+  const rejected = users.filter(u => u.status === "rejected");
+
+  let h = head("User Approvals", `${pending.length} pending · ${approved.length} approved`);
+
+  h += `<div class="sh">Pending Requests (${pending.length})</div><div class="l">`;
+  if (!pending.length) {
+    h += `<div class="li mu">No pending user requests right now.</div>`;
+  } else {
+    h += pending.map(u => `
+      <div class="li col">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="display:flex;align-items:center;gap:10px;min-width:0">
+            ${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}">` : `<span class="dot" style="--c:#ff9500">${esc(initials(u.name))}</span>`}
+            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">
+              <b>${esc(u.name)}</b><br>
+              <small>${esc(u.email)}</small>
+            </span>
+          </span>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <button class="pill r" style="border:1px solid var(--bd)" onclick="updateUserApproval('${u.uid}','rejected')">Reject</button>
+          <button class="pill g" onclick="updateUserApproval('${u.uid}','approved','user')">Approve Access</button>
+        </div>
+      </div>
+    `).join("");
+  }
+  h += `</div>`;
+
+  h += `<div class="sh">Approved Users (${approved.length})</div><div class="l">`;
+  h += approved.map(u => {
+    const isMe = u.uid === authState.user?.uid;
+    return `<div class="li">
+      <span style="display:flex;align-items:center;gap:10px">
+        ${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}">` : `<span class="dot" style="--c:#34c759">${esc(initials(u.name))}</span>`}
+        <span>
+          <b>${esc(u.name)}</b>${u.role === "admin" ? '<span class="cp">Admin</span>' : ""}${isMe ? '<span class="cp">You</span>' : ""}<br>
+          <small>${esc(u.email)}</small>
+        </span>
+      </span>
+      ${!isMe ? `<button class="pill r" onclick="updateUserApproval('${u.uid}','rejected')">Revoke</button>` : `<span class="bd ok">Active</span>`}
+    </div>`;
+  }).join("");
+  h += `</div>`;
+
+  if (rejected.length > 0) {
+    h += `<div class="sh">Rejected / Revoked (${rejected.length})</div><div class="l">`;
+    h += rejected.map(u => `
+      <div class="li">
+        <span><b>${esc(u.name)}</b><br><small>${esc(u.email)}</small></span>
+        <button class="pill" onclick="updateUserApproval('${u.uid}','approved','user')">Re-approve</button>
+      </div>
+    `).join("");
+    h += `</div>`;
+  }
+
+  return h;
+}
+
+/* ==========================================================================
+   11. MAIN TABS (Overview, New Bill, Bills, People & Account)
    ========================================================================== */
 function viewDash() {
   const { filteredBills, pairs, totalUnsettled, totalSpend } = computeAllBalances();
   const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
+  const isAdmin = authState.profile?.role === "admin";
+  const pendingUsersCount = (authState.allUsers || []).filter(u => u.status === "pending").length;
 
-  let h = head("Overview", `${S.people.length} people · ${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"} · Offline Ready`);
+  let h = head("Overview", `${S.people.length} people · ${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"} · Live Sync`);
 
-  // Quick Setup Banner if no people exist yet
+  if (isAdmin && pendingUsersCount > 0) {
+    h += `<div class="l" style="border-left:4px solid #ff9500;margin-bottom:12px">
+      <div class="li" onclick="go('admin')" style="cursor:pointer">
+        <span><b>${pendingUsersCount} New User${pendingUsersCount === 1 ? "" : "s"} Waiting</b><br><small>Tap to review and approve Gmail accounts</small></span>
+        <button class="pill solid">Review</button>
+      </div>
+    </div>`;
+  }
+
   if (S.people.length === 0) {
     h += `<div class="l" style="border-left:4px solid var(--ac);margin-bottom:12px">
       <div class="li col">
@@ -569,13 +809,11 @@ function viewDash() {
     </div>`;
   }
 
-  // Summary Tiles
   h += `<div class="row2" style="margin-top:4px">
     <div class="tile"><small>Total Bills</small><b>${mh(totalSpend)}</b></div>
     <div class="tile"><small>Unsettled</small><b class="${totalUnsettled > 0.005 ? "neg" : "pos"}">${mh(totalUnsettled)}</b></div>
   </div>`;
 
-  // Trip Filter
   if (trips.length > 0) {
     h += `<div class="l" style="margin-top:12px">
       <div class="li">
@@ -588,7 +826,6 @@ function viewDash() {
     </div>`;
   }
 
-  // Who Owes Whom
   h += `<div class="sh">Who owes whom</div><div class="l">`;
   if (pairs.length === 0) {
     h += `<div class="li mu">${filteredBills.length ? "All bills are settled! 🎉" : "No unsettled balances yet."}</div>`;
@@ -610,7 +847,6 @@ function viewDash() {
   }
   h += `</div>`;
 
-  // Quick Action Buttons
   h += `<div style="margin-top:16px">
     <button class="btn" style="padding:16px;font-size:17px" onclick="startNewBill()">+ New Bill</button>
   </div>`;
@@ -623,16 +859,13 @@ function viewDash() {
   return h;
 }
 
-/* ==========================================================================
-   9. TAB 2: NEW / EDIT BILL (With Prominent 8% Fixed GST Toggle)
-   ========================================================================== */
-function startNewBill() {
+window.startNewBill = function() {
   D = blankBill();
   openBillId = null;
   tab = "new";
   render();
   scrollTopMain();
-}
+};
 
 function pastPlaces() {
   const seen = {}, out = [];
@@ -653,21 +886,23 @@ function pastItems() {
 }
 
 let plMatches = [], itMatches = [];
-function updatePlaceSuggestions() {
+window.updatePlaceSuggestions = function() {
   const q = (D.title || "").trim().toLowerCase(), box = document.getElementById("pls");
   if (!box) return;
   plMatches = q ? pastPlaces().filter(x => x.toLowerCase().includes(q) && x.toLowerCase() !== q).slice(0, 20) : [];
   box.style.display = plMatches.length ? "block" : "none";
   box.innerHTML = plMatches.map((x, i) => `<div class="li" onclick="D.title=plMatches[${i}];render()" style="cursor:pointer;min-height:44px"><span>${esc(x)}</span></div>`).join("");
-}
+};
+window.plMatches = plMatches;
 
-function toggleBillGst() {
+window.toggleBillGst = function() {
   D.gstEnabled = !D.gstEnabled;
   render();
-}
+};
 
 function viewNewBill() {
   if (!D) D = blankBill();
+  window.D = D;
   const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
   const gstOn = !!D.gstEnabled;
 
@@ -676,7 +911,6 @@ function viewNewBill() {
     D.editId ? "Update items, payer, or 8% GST toggle" : "Add items & choose who shared them"
   );
 
-  // Prominent 8% Fixed GST Toggle Button / Card
   h += `<div class="sh">Tax &amp; GST</div>
   <div class="gst-banner ${gstOn ? "on" : ""}" onclick="toggleBillGst()" style="cursor:pointer">
     <div style="flex:1;min-width:0">
@@ -692,7 +926,6 @@ function viewNewBill() {
     </div>
   </div>`;
 
-  // Bill Details
   h += `<div class="sh">Details</div>
   <div class="l vis">
     <div style="position:relative">
@@ -708,7 +941,6 @@ function viewNewBill() {
     </div>
   </div>`;
 
-  // Ordered Items
   h += `<div class="sh">Ordered Items (${D.items.length})</div>
   <div class="l">`;
   if (D.items.length === 0) {
@@ -734,7 +966,6 @@ function viewNewBill() {
   h += `</div>
   <div style="margin-top:10px"><button class="btn" onclick="openItemSheet(-1)">+ Add item</button></div>`;
 
-  // Optional Extra Charges
   h += `<div class="sh">Optional Extra Charges</div>
   <div class="l">
     <div class="li"><span>Service charge</span><input type="number" inputmode="decimal" step="any" value="${D.scAmt || ""}" placeholder="0" oninput="D.scAmt=+this.value;renderPreview()"></div>
@@ -742,11 +973,9 @@ function viewNewBill() {
     ${(+D.scAmt > 0 || +D.other > 0) ? `<div class="li col"><div class="mu" style="margin-bottom:6px">Share extra charges</div>${seg([["ord", "Equally (who ordered)"], ["prop", "Proportional to items"]], D.scMode || "ord", "((m)=>{D.scMode=m;renderPreview()})")}</div>` : ""}
   </div>`;
 
-  // Live Per-Person Breakdown Preview
   h += `<div class="sh">Per-Person Breakdown</div>
   <div class="l" id="pv"></div>`;
 
-  // Save / Cancel Actions
   h += `<div style="margin-top:16px">
     <button class="btn" onclick="saveCurrentBill()">${D.editId ? "Save Changes" : "Save Bill"}</button>
     ${D.editId ? `<button class="btn sec" style="margin-top:8px" onclick="D=blankBill();tab='hist';render()">Cancel Edit</button>` : ""}
@@ -755,7 +984,7 @@ function viewNewBill() {
   return h;
 }
 
-function renderPreview() {
+window.renderPreview = function() {
   const pv = document.getElementById("pv");
   if (!pv || !D) return;
   const c = calcBill(D);
@@ -798,21 +1027,13 @@ function renderPreview() {
   }
 
   pv.innerHTML = html;
-}
+};
 
-async function saveCurrentBill() {
-  if (!S.people.length) {
-    return showNotice("Add at least one person before saving a bill.");
-  }
-  if (!D.payerId) {
-    return showNotice("Select who paid the bill.");
-  }
-  if (!D.items.some(i => +i.p > 0)) {
-    return showNotice("Add at least one item with a price.");
-  }
-  if (D.items.some(i => +i.p > 0 && !(i.w && i.w.length))) {
-    return showNotice("Select at least one person for every item.");
-  }
+window.saveCurrentBill = async function() {
+  if (!S.people.length) return showNotice("Add at least one person before saving a bill.");
+  if (!D.payerId) return showNotice("Select who paid the bill.");
+  if (!D.items.some(i => +i.p > 0)) return showNotice("Add at least one item with a price.");
+  if (D.items.some(i => +i.p > 0 && !(i.w && i.w.length))) return showNotice("Select at least one person for every item.");
 
   const editId = D.editId;
   const bill = {
@@ -838,6 +1059,7 @@ async function saveCurrentBill() {
 
   saveState();
   D = blankBill();
+  window.D = D;
   if (editId) {
     tab = "hist";
     openBillId = bill.id;
@@ -846,12 +1068,9 @@ async function saveCurrentBill() {
   }
   render();
   scrollTopMain();
-}
+};
 
-/* ==========================================================================
-   10. FULL-SCREEN ITEM ENTRY MODAL / SHEET
-   ========================================================================== */
-function openItemSheet(idx) {
+window.openItemSheet = function(idx) {
   const it = idx >= 0 ? D.items[idx] : null;
   const pm = it && it.pm ? it.pm : "bill";
   const q = it ? (it.q || 1) : 1;
@@ -866,6 +1085,7 @@ function openItemSheet(idx) {
     q,
     w: defaultSharers
   };
+  window.sheet = sheet;
   render();
   if (idx < 0) {
     setTimeout(() => {
@@ -873,19 +1093,19 @@ function openItemSheet(idx) {
       if (inp) inp.focus();
     }, 80);
   }
-}
+};
 
 const sheetItemTotal = () => r2((+sheet.pr || 0) * (sheet.pm === "unit" ? sheet.q : 1));
 
-function updateItemSuggestions() {
+window.updateItemSuggestions = function() {
   const q = (sheet.n || "").trim().toLowerCase(), box = document.getElementById("its");
   if (!box) return;
   itMatches = q ? pastItems().filter(x => x.n.toLowerCase().includes(q) && x.n.toLowerCase() !== q).slice(0, 20) : [];
   box.style.display = itMatches.length ? "block" : "none";
   box.innerHTML = itMatches.map((x, i) => `<div class="li" onclick="pickPastItem(${i})" style="cursor:pointer;min-height:44px"><span>${esc(x.n)}</span><span class="mu">${mh(x.p)}</span></div>`).join("");
-}
+};
 
-function pickPastItem(i) {
+window.pickPastItem = function(i) {
   const x = itMatches[i];
   if (!x) return;
   sheet.n = x.n;
@@ -893,14 +1113,14 @@ function pickPastItem(i) {
   sheet.pr = String(x.p);
   sheet.q = 1;
   render();
-}
+};
 
-function toggleSheetPerson(id) {
+window.toggleSheetPerson = function(id) {
   const idx = sheet.w.indexOf(id);
   if (idx < 0) sheet.w.push(id);
   else sheet.w.splice(idx, 1);
   render();
-}
+};
 
 function itemSheetLiveText() {
   const tot = sheetItemTotal(), q = sheet.q;
@@ -925,14 +1145,14 @@ function itemSheetLiveText() {
   return { der, shares };
 }
 
-function updateItemSheetPreview() {
+window.updateItemSheetPreview = function() {
   const { der, shares } = itemSheetLiveText();
   const a = document.getElementById("itd"), b = document.getElementById("itp");
   if (a) a.innerHTML = der;
   if (b) b.innerHTML = shares;
-}
+};
 
-function saveSheetItem(addAnother) {
+window.saveSheetItem = function(addAnother) {
   const total = sheetItemTotal();
   if (!(total > 0)) return showNotice("Enter a valid price greater than 0.");
   if (!sheet.w.length) return showNotice("Select at least one person who shared this item.");
@@ -950,6 +1170,7 @@ function saveSheetItem(addAnother) {
 
   if (addAnother) {
     sheet = { t: "item", k: -1, n: "", pm: sheet.pm, pr: "", q: 1, w: [...item.w] };
+    window.sheet = sheet;
     render();
     setTimeout(() => {
       const inp = document.getElementById("isn");
@@ -957,15 +1178,17 @@ function saveSheetItem(addAnother) {
     }, 80);
   } else {
     sheet = null;
+    window.sheet = null;
     render();
   }
-}
+};
 
-function deleteSheetItem() {
+window.deleteSheetItem = function() {
   if (sheet && sheet.k >= 0) D.items.splice(sheet.k, 1);
   sheet = null;
+  window.sheet = null;
   render();
-}
+};
 
 function renderSheetHtml() {
   if (!sheet || sheet.t !== "item") return "";
@@ -1010,9 +1233,6 @@ function renderSheetHtml() {
   </div></div>`;
 }
 
-/* ==========================================================================
-   11. TAB 3: BILLS / HISTORY & DETAILED DRILL-DOWN
-   ========================================================================== */
 function billStatus(b) {
   const d = getBillDues(b);
   const pending = d.filter(x => !x.isSettled);
@@ -1033,7 +1253,7 @@ function viewHistory() {
   return h;
 }
 
-function renderHistoryList() {
+window.renderHistoryList = function() {
   const q = histQuery.trim().toLowerCase();
   const filtered = q
     ? S.bills.filter(b => [
@@ -1046,7 +1266,6 @@ function renderHistoryList() {
     return `<div class="l" style="margin-top:14px"><div class="li mu">${q ? "No matching bills found." : "No bills saved yet. Create one in New Bill."}</div></div>`;
   }
 
-  // Group by trip totals when not searching
   let h = "";
   const tripTotals = {};
   S.bills.forEach(b => {
@@ -1057,7 +1276,6 @@ function renderHistoryList() {
     h += `<div class="sh">Totals by Trip</div><div class="l">${Object.entries(tripTotals).map(([k, v]) => `<div class="li"><span>${esc(k)}</span><b>${mh(v)}</b></div>`).join("")}</div>`;
   }
 
-  // Group bills by date
   const byDate = {};
   filtered.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.id - a.id).forEach(b => {
     const d = b.date || "Unknown";
@@ -1086,7 +1304,7 @@ function renderHistoryList() {
   }).join("");
 
   return h;
-}
+};
 
 function viewBillDetail(id) {
   const b = S.bills.find(x => x.id === id);
@@ -1104,7 +1322,6 @@ function viewBillDetail(id) {
     `${shortDate(b.date)} · Paid by ${esc(payer.name)}${b.trip ? " · " + esc(b.trip) : ""}`
   );
 
-  // Summary Card
   h += `<div class="l">
     <div class="li"><span>Items subtotal</span><b>${mh(c.totalSub)}</b></div>
     <div class="li"><span>8% Fixed GST</span><b>${b.gstEnabled ? mh(c.totalGst) : "Disabled"}</b></div>
@@ -1113,7 +1330,6 @@ function viewBillDetail(id) {
     <div class="li"><b>Grand Total</b><b style="font-size:20px">${mh(c.grandTotal)}</b></div>
   </div>`;
 
-  // Per-Person Breakdown
   h += `<div class="sh">Per-Person Breakdown</div>
   <div class="l">${activeRows.map(r => `
     <div class="li">
@@ -1128,7 +1344,6 @@ function viewBillDetail(id) {
     </div>
   `).join("")}</div>`;
 
-  // Settlement Status per Person
   if (dues.length > 0) {
     h += `<div class="sh">Settlement Status (Owed to ${esc(payer.name)})</div>
     <div class="l">${dues.map(d => {
@@ -1142,7 +1357,6 @@ function viewBillDetail(id) {
     }).join("")}</div>`;
   }
 
-  // Ordered Items List
   h += `<div class="sh">Items (${(b.items || []).length})</div>
   <div class="l">${(b.items || []).map(it => {
     const names = (it.w || []).map(pid => getPerson(pid).name).join(", ") || "Nobody";
@@ -1152,7 +1366,6 @@ function viewBillDetail(id) {
     </div>`;
   }).join("")}</div>`;
 
-  // Actions
   h += `<div class="row2" style="margin-top:18px">
     <button class="btn sec" onclick="useBillAsTemplate(${b.id})">Use as Template</button>
     <button class="btn sec" onclick="editSavedBill(${b.id})">Edit Bill</button>
@@ -1164,18 +1377,19 @@ function viewBillDetail(id) {
   return h;
 }
 
-function editSavedBill(id) {
+window.editSavedBill = function(id) {
   const b = S.bills.find(x => x.id === id);
   if (!b) return;
   D = cl(b);
   D.editId = id;
+  window.D = D;
   openBillId = null;
   tab = "new";
   render();
   scrollTopMain();
-}
+};
 
-function useBillAsTemplate(id) {
+window.useBillAsTemplate = function(id) {
   const b = S.bills.find(x => x.id === id);
   if (!b) return;
   D = blankBill();
@@ -1187,24 +1401,22 @@ function useBillAsTemplate(id) {
   D.scMode = b.scMode || "ord";
   D.other = +b.other || 0;
   D.items = cl(b.items || []);
+  window.D = D;
   openBillId = null;
   tab = "new";
   render();
   scrollTopMain();
-}
+};
 
-async function deleteSavedBill(id) {
+window.deleteSavedBill = async function(id) {
   if (!(await showConfirm("Delete this bill permanently?", "Delete Bill", "Delete", true))) return;
   S.bills = S.bills.filter(b => b.id !== id);
   saveState();
   openBillId = null;
   render();
-}
+};
 
-/* ==========================================================================
-   12. TAB 4: PEOPLE & DATA MANAGEMENT
-   ========================================================================== */
-function exportCsv() {
+window.exportCsv = function() {
   const rows = [["Date", "Place", "Trip", "Paid By", "8% GST Enabled", "Person", "Items Subtotal", "8% GST", "Extra Charges", "Person Total", "Settled"].join(",")];
   S.bills.slice().reverse().forEach(b => {
     const c = calcBill(b), payer = getPerson(b.payerId).name;
@@ -1225,71 +1437,29 @@ function exportCsv() {
   document.body.appendChild(a);
   a.click();
   a.remove();
-}
-
-function exportJsonBackup() {
-  const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `splitmate-backup-${today()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
-function importJsonBackup(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      const parsed = JSON.parse(reader.result);
-      if (!parsed || !Array.isArray(parsed.people) || !Array.isArray(parsed.bills)) {
-        return showNotice("Invalid SplitMate JSON backup file.", "Import Error");
-      }
-      const ok = await showConfirm(
-        `Restore ${parsed.people.length} people and ${parsed.bills.length} bills? This will replace your current local data.`,
-        "Restore Backup",
-        "Restore",
-        true
-      );
-      if (!ok) return;
-      S.people = parsed.people;
-      S.bills = parsed.bills;
-      if (parsed.settings) S.settings = Object.assign(S.settings, parsed.settings);
-      saveState();
-      applyTheme();
-      D = blankBill();
-      render();
-      showNotice("Backup restored successfully!");
-    } catch (e) {
-      showNotice("Could not parse JSON file.", "Import Error");
-    }
-  };
-  reader.readAsText(file);
-  input.value = "";
-}
-
-async function resetAllData() {
-  const ok = await showConfirm(
-    "Delete all saved people and bills from this device? This cannot be undone.",
-    "Reset All Data",
-    "Delete Everything",
-    true
-  );
-  if (!ok) return;
-  S = { people: [], bills: [], settings: { defaultGst: true, theme: S.settings.theme } };
-  saveState();
-  D = blankBill();
-  openBillId = null;
-  render();
-}
+};
 
 function viewPeopleAndData() {
-  let h = head("People & Data", "Manage people & local device storage");
+  const prof = authState.profile || {};
+  let h = head("People & Account", "Manage group members & your Gmail session");
+
+  // Signed-in Account Card
+  h += `<div class="sh">Signed-in Account</div>
+  <div class="l">
+    <div class="li">
+      <span style="display:flex;align-items:center;gap:10px">
+        ${prof.photoURL ? `<img class="avatar" src="${esc(prof.photoURL)}">` : `<span class="dot" style="--c:#007aff">${esc(initials(prof.name))}</span>`}
+        <span>
+          <b>${esc(prof.name)}</b>${prof.role === "admin" ? '<span class="cp">Admin</span>' : ""}<br>
+          <small>${esc(prof.email)}</small>
+        </span>
+      </span>
+      <button class="pill r" onclick="logoutUser()">Sign Out</button>
+    </div>
+  </div>`;
 
   // People Manager
-  h += `<div class="sh">People (${S.people.length})</div>
+  h += `<div class="sh">Split People (${S.people.length})</div>
   <div class="l">`;
   if (!S.people.length) {
     h += `<div class="li mu">No people added yet. Tap below to add names.</div>`;
@@ -1325,40 +1495,69 @@ function viewPeopleAndData() {
     </div>
   </div>`;
 
-  // Export & Backup
-  h += `<div class="sh">Local Storage &amp; Backup</div>
+  // Export
+  h += `<div class="sh">Export</div>
   <div class="l">
     <div class="li" onclick="exportCsv()" style="cursor:pointer"><span>Export all bills (CSV)</span><span class="mu">›</span></div>
-    <div class="li" onclick="exportJsonBackup()" style="cursor:pointer"><span>Download JSON backup</span><span class="mu">›</span></div>
-    <label class="li" style="cursor:pointer"><span>Restore JSON backup</span><span class="mu">›</span><input type="file" accept=".json,application/json" hidden onchange="importJsonBackup(this)"></label>
-  </div>
-  <div class="mu" style="margin:6px 12px">All data is stored privately on this device in browser localStorage.</div>
-  <div style="margin-top:16px">
-    <button class="btn sec" style="color:var(--red)" onclick="resetAllData()">Reset All Local Data</button>
   </div>`;
 
   return h;
 }
 
 /* ==========================================================================
-   13. MAIN RENDER & NAVIGATION
+   12. MAIN RENDER & NAVIGATION
    ========================================================================== */
-function go(k) {
+window.go = function(k) {
   tab = k;
   openBillId = null;
   if (k === "new" && !D) D = blankBill();
   render();
   scrollTopMain();
-}
+};
 
-function render() {
+window.render = function() {
+  window.S = S;
+  window.D = D;
+  window.sheet = sheet;
+  window.tab = tab;
+  window.openBillId = openBillId;
+  window.tripFilter = tripFilter;
+  window.histQuery = histQuery;
+  window.applyTheme = applyTheme;
+  window.saveState = saveState;
+
   const v = document.getElementById("v");
   const nav = document.getElementById("nav");
   const ovl = document.getElementById("ovl");
-  const scrollPos = v ? v.scrollTop : 0;
 
+  // 1. Loading Auth State
+  if (authState.loading) {
+    nav.style.display = "none";
+    v.innerHTML = `<div class="auth-box"><div class="mu">Connecting to SplitMate...</div></div>`;
+    return;
+  }
+
+  // 2. Not Signed In
+  if (!authState.user) {
+    nav.style.display = "none";
+    v.innerHTML = viewLoginScreen();
+    return;
+  }
+
+  // 3. Signed In but Pending or Rejected
+  if (authState.profile?.status !== "approved") {
+    nav.style.display = "none";
+    v.innerHTML = viewPendingScreen();
+    return;
+  }
+
+  // 4. Approved User / Admin View
+  nav.style.display = "flex";
+  const scrollPos = v ? v.scrollTop : 0;
   const { unsettledRows } = computeAllBalances();
   const badgeCount = unsettledRows.length;
+  const isAdmin = authState.profile?.role === "admin";
+  const pendingUsersCount = (authState.allUsers || []).filter(u => u.status === "pending").length;
 
   const tabs = [
     ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
@@ -1367,10 +1566,19 @@ function render() {
     ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "People"]
   ];
 
+  if (isAdmin) {
+    tabs.push([
+      "admin",
+      `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+      "Approvals"
+    ]);
+  }
+
   nav.innerHTML = tabs.map(([k, icon, label]) => `
     <button class="${tab === k ? "on" : ""}" onclick="go('${k}')">
       <span>${icon}</span>${label}
       ${k === "dash" && badgeCount > 0 ? `<em class="bg">${badgeCount > 99 ? "99+" : badgeCount}</em>` : ""}
+      ${k === "admin" && pendingUsersCount > 0 ? `<em class="bg">${pendingUsersCount}</em>` : ""}
     </button>
   `).join("");
 
@@ -1380,6 +1588,8 @@ function render() {
     ? viewNewBill()
     : tab === "hist"
     ? viewHistory()
+    : tab === "admin" && isAdmin
+    ? viewAdminApprovals()
     : viewPeopleAndData();
 
   const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
@@ -1396,9 +1606,8 @@ function render() {
   }
 
   v.scrollTop = scrollPos;
-}
+};
 
-// Prevent pinch zoom issues on mobile Safari while allowing smooth scrolling
 ["gesturestart", "gesturechange", "gestureend"].forEach(ev =>
   document.addEventListener(ev, e => e.preventDefault())
 );
@@ -1413,8 +1622,7 @@ if (window.visualViewport) {
   fitViewport();
 }
 
-// Boot immediately into the local app
-loadState();
+applyTheme();
 D = blankBill();
 render();
 </script>
