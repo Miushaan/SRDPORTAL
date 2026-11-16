@@ -133,11 +133,11 @@ button:active,.btn:active{opacity:.65}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { initializeAuth, indexedDBLocalPersistence, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
-   1. FIREBASE INITIALIZATION & AUTH PERSISTENCE
+   1. FIREBASE INITIALIZATION
    ========================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBHlZBWP1wQm_4GXwkc4aW02JSfucEKoTk",
@@ -151,10 +151,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = initializeAuth(app, {
-  persistence: indexedDBLocalPersistence
-});
-
+const auth = getAuth(app);
 const db = getDatabase(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
@@ -320,7 +317,6 @@ function attachApprovedListeners(isAdmin) {
   });
   activeListeners.push(stateRef);
 
-  // Always listen to all users so approved users appear as split participants
   const allUsersRef = ref(db, "users");
   onValue(allUsersRef, (snap) => {
     const data = snap.val() || {};
@@ -383,10 +379,6 @@ const shortDate = d => {
   const t = new Date(d + "T00:00:00");
   return isNaN(t) ? d : t.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
 };
-
-function nextId(list) {
-  return Math.max(Date.now(), ...list.map(x => (+x.id || 0) + 1));
-}
 
 function getPerson(id) {
   const people = getApprovedPeople();
@@ -766,7 +758,7 @@ function viewDash() {
             <small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small>
           </span>
         </span>
-        <button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Settle</button>
+        <button class="pill g" onclick="settlePairAll('${pair.fromId}','${pair.toId}')">Settle</button>
       </div>`;
     }).join("");
   }
