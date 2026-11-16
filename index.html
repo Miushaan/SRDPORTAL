@@ -133,7 +133,7 @@ button:active,.btn:active{opacity:.65}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
@@ -211,17 +211,12 @@ function saveState() {
 }
 
 /* ==========================================================================
-   3. MOBILE-FRIENDLY GOOGLE SIGN-IN & USERS SYNC
+   3. STANDALONE PWA POPUP SIGN-IN & USERS SYNC
    ========================================================================== */
-const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
 window.signInWithGmail = async function() {
   try {
-    if (isMobileDevice) {
-      await signInWithRedirect(auth, googleProvider);
-    } else {
-      await signInWithPopup(auth, googleProvider);
-    }
+    // signInWithPopup works reliably inside iOS standalone home screen PWAs without breaking sessions
+    await signInWithPopup(auth, googleProvider);
   } catch (err) {
     console.error("Login failed:", err);
     showNotice(err.message || "Google sign-in failed.", "Sign-In Error");
@@ -232,10 +227,6 @@ window.logoutUser = async function() {
   clearDbListeners();
   await signOut(auth);
 };
-
-getRedirectResult(auth).catch((err) => {
-  console.error("Redirect sign-in error:", err);
-});
 
 onAuthStateChanged(auth, async (user) => {
   clearDbListeners();
