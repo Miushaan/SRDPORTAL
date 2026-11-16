@@ -99,7 +99,7 @@ button:active,.btn:active{opacity:.65}
 .tabs button{flex:1;background:none;border:0;border-radius:24px;color:var(--mu);font:inherit;font-size:10.5px;font-weight:600;padding:6px 2px;cursor:pointer;position:relative;transition:background .2s ease,color .2s ease}
 .tabs button span{display:flex;justify-content:center;margin-bottom:2px}
 .tabs button.on{color:var(--ac);background:var(--glass-pill)}
-.bg{position:absolute;top:2px;left:56%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.bg{position:absolute;top:2px;left:75%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
 .cp{background:var(--ac2);color:var(--ac);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
@@ -119,22 +119,17 @@ button:active,.btn:active{opacity:.65}
 .gst-banner.on{border-color:var(--grn);background:color-mix(in srgb,var(--grn) 7%,var(--card))}
 .gst-badge{display:inline-block;background:var(--grn);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
 .gst-badge.off{background:var(--mu)}
-.auth-box{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:85vh;text-align:center;padding:20px}
-.google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:320px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:15px 20px;font:inherit;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.06)}
-.avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;background:var(--bd)}
-@media (max-width:360px){.nb{font-size:13.5px}.li{padding:11px 12px}.btn{padding:13px}}
 </style>
 </head>
 <body>
 <div class="w" id="v"></div>
-<div class="tabs" id="nav" style="display:none"></div>
+<div class="tabs" id="nav"></div>
 <div id="ovl"></div>
 <div id="dlgov"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, set, get, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
    1. FIREBASE INITIALIZATION
@@ -151,13 +146,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getDatabase(app);
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
 
 /* ==========================================================================
-   2. APP & AUTH STATE
+   2. APP STATE & FIREBASE SYNC
    ========================================================================== */
 const GST_RATE = 8;
 const PALETTE = [
@@ -165,14 +157,8 @@ const PALETTE = [
   "#30b0c7", "#ff3b30", "#5856d6", "#00c7be", "#a2845e"
 ];
 
-let authState = {
-  loading: true,
-  user: null,
-  profile: null,
-  allUsers: []
-};
-
 let S = {
+  people: [],
   bills: [],
   settings: {
     defaultGst: true,
@@ -186,12 +172,6 @@ let histQuery = "";
 let openBillId = null;
 let sheet = null;
 let D = null;
-let activeListeners = [];
-
-function clearDbListeners() {
-  activeListeners.forEach(r => off(r));
-  activeListeners = [];
-}
 
 function applyTheme() {
   const root = document.documentElement;
@@ -203,144 +183,29 @@ function applyTheme() {
 }
 
 function saveState() {
-  if (!authState.user || authState.profile?.status !== "approved") return;
   set(ref(db, "splitmate/state"), S).catch(err => {
-    console.error("Firebase save error:", err);
+    console.error("Firebase sync error:", err);
     showNotice("Could not sync changes to Firebase: " + err.message, "Sync Error");
   });
 }
 
-/* ==========================================================================
-   3. STANDALONE PWA POPUP SIGN-IN & USERS SYNC
-   ========================================================================== */
-window.signInWithGmail = async function() {
-  try {
-    // signInWithPopup works reliably inside iOS standalone home screen PWAs without breaking sessions
-    await signInWithPopup(auth, googleProvider);
-  } catch (err) {
-    console.error("Login failed:", err);
-    showNotice(err.message || "Google sign-in failed.", "Sign-In Error");
+// Attach real-time database listener on load
+const stateRef = ref(db, "splitmate/state");
+onValue(stateRef, (snap) => {
+  const val = snap.val();
+  if (val && typeof val === "object") {
+    S.people = Array.isArray(val.people) ? val.people : [];
+    S.bills = Array.isArray(val.bills) ? val.bills : [];
+    S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
+    applyTheme();
+    if (!D) D = blankBill();
   }
-};
-
-window.logoutUser = async function() {
-  clearDbListeners();
-  await signOut(auth);
-};
-
-onAuthStateChanged(auth, async (user) => {
-  clearDbListeners();
-
-  if (!user) {
-    authState = { loading: false, user: null, profile: null, allUsers: [] };
-    render();
-    return;
-  }
-
-  authState.loading = true;
-  authState.user = user;
   render();
-
-  try {
-    const userRef = ref(db, `users/${user.uid}`);
-    const adminUidRef = ref(db, "config/adminUid");
-
-    const [userSnap, adminSnap] = await Promise.all([get(userRef), get(adminUidRef)]);
-
-    if (!userSnap.exists()) {
-      let isFirstUser = false;
-      if (!adminSnap.exists()) {
-        try {
-          await set(adminUidRef, user.uid);
-          isFirstUser = true;
-        } catch (e) {
-          isFirstUser = false;
-        }
-      } else if (adminSnap.val() === user.uid) {
-        isFirstUser = true;
-      }
-
-      const newProfile = {
-        uid: user.uid,
-        email: user.email || "",
-        name: user.displayName || (user.email ? user.email.split("@")[0] : "User"),
-        photoURL: user.photoURL || "",
-        role: isFirstUser ? "admin" : "user",
-        status: isFirstUser ? "approved" : "pending",
-        createdAt: Date.now()
-      };
-
-      await set(userRef, newProfile);
-    }
-
-    onValue(userRef, (snap) => {
-      const prof = snap.val();
-      const prevStatus = authState.profile?.status;
-      authState.profile = prof;
-      authState.loading = false;
-
-      if (prof?.status === "approved" && prevStatus !== "approved") {
-        attachApprovedListeners(prof.role === "admin");
-      }
-      render();
-    });
-    activeListeners.push(userRef);
-
-  } catch (err) {
-    console.error("Profile init error:", err);
-    authState.loading = false;
-    showNotice("Database permission error: " + err.message, "Setup Error");
-    render();
-  }
 });
 
-function attachApprovedListeners(isAdmin) {
-  const stateRef = ref(db, "splitmate/state");
-  onValue(stateRef, (snap) => {
-    const val = snap.val();
-    if (val && typeof val === "object") {
-      S.bills = Array.isArray(val.bills) ? val.bills : [];
-      S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
-      applyTheme();
-      if (!D) D = blankBill();
-    }
-    render();
-  });
-  activeListeners.push(stateRef);
-
-  const allUsersRef = ref(db, "users");
-  onValue(allUsersRef, (snap) => {
-    const data = snap.val() || {};
-    authState.allUsers = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    render();
-  });
-  activeListeners.push(allUsersRef);
-}
-
-window.updateUserApproval = async function(targetUid, newStatus, newRole) {
-  try {
-    const updates = { status: newStatus };
-    if (newRole) updates.role = newRole;
-    await update(ref(db, `users/${targetUid}`), updates);
-  } catch (err) {
-    showNotice("Could not update user: " + err.message, "Admin Error");
-  }
-};
-
 /* ==========================================================================
-   4. UTILITIES & FORMATTING
+   3. UTILITIES & FORMATTING
    ========================================================================== */
-const getApprovedPeople = () => {
-  return (authState.allUsers || [])
-    .filter(u => u.status === "approved")
-    .map((u, i) => ({
-      id: u.uid,
-      name: u.name,
-      color: PALETTE[i % PALETTE.length],
-      photoURL: u.photoURL || ""
-    }));
-};
-
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const f = n => {
   n = Math.abs(n) < 0.005 ? 0 : +n;
@@ -371,9 +236,12 @@ const shortDate = d => {
   return isNaN(t) ? d : t.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
 };
 
+function nextId(list) {
+  return Math.max(Date.now(), ...list.map(x => (+x.id || 0) + 1));
+}
+
 function getPerson(id) {
-  const people = getApprovedPeople();
-  return people.find(p => p.id === id) || { id, name: "Registered User", color: "#8e8e93", photoURL: "" };
+  return S.people.find(p => p.id === id) || { id, name: "Removed Person", color: "#8e8e93" };
 }
 
 function initials(name) {
@@ -389,7 +257,7 @@ function scrollTopMain() {
 }
 
 /* ==========================================================================
-   5. NON-BLOCKING CUSTOM DIALOGS
+   4. CUSTOM DIALOGS
    ========================================================================== */
 let dlg = null;
 
@@ -407,22 +275,15 @@ function showConfirm(msg, title, okLbl, danger) {
   });
 }
 
-function renderDlg() {
-  const el = document.getElementById("dlgov");
-  if (!el) return;
-  if (!dlg) { el.innerHTML = ""; return; }
-  const d = dlg;
-  const cancelCall = d.type === "alert" ? "closeDlg(true)" : "closeDlg(false)";
-  const body = d.type === "alert"
-    ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
-       <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
-    : `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
-       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(false)">Cancel</button><button class="btn ${d.danger ? "red" : ""}" onclick="closeDlg(true)">${esc(d.okLbl)}</button></div>`;
-
-  el.innerHTML = `<div class="fp" style="z-index:99"><div class="w">
-    ${headB(`style="margin-top:6px" onclick="${cancelCall}"`, "‹ Close", esc(d.title), "")}
-    ${body}
-  </div></div>`;
+function showPrompt(msg, title, ph, defVal) {
+  return new Promise(res => {
+    dlg = { type: "prompt", title: title || "Enter details", msg: String(msg), ph: ph || "", val: defVal || "", res };
+    renderDlg();
+    setTimeout(() => {
+      const inp = document.getElementById("dlginp");
+      if (inp) { inp.focus(); inp.select(); }
+    }, 60);
+  });
 }
 
 window.closeDlg = function(val) {
@@ -434,16 +295,95 @@ window.closeDlg = function(val) {
   if (resolve) resolve(val);
 };
 
+function renderDlg() {
+  const el = document.getElementById("dlgov");
+  if (!el) return;
+  if (!dlg) { el.innerHTML = ""; return; }
+  const d = dlg;
+  const cancelCall = d.type === "alert" ? "closeDlg(true)" : d.type === "confirm" ? "closeDlg(false)" : "closeDlg(null)";
+  const body = d.type === "alert"
+    ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
+       <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
+    : d.type === "confirm"
+    ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
+       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(false)">Cancel</button><button class="btn ${d.danger ? "red" : ""}" onclick="closeDlg(true)">${esc(d.okLbl)}</button></div>`
+    : `<div class="l" style="margin-top:8px"><div class="li"><span>${esc(d.msg)}</span><input id="dlginp" autocomplete="off" placeholder="${esc(d.ph)}" value="${esc(d.val)}" oninput="dlg.val=this.value" onkeydown="if(event.key==='Enter')closeDlg(dlg.val)"></div></div>
+       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="closeDlg(dlg.val)">Save</button></div>`;
+
+  el.innerHTML = `<div class="fp" style="z-index:99"><div class="w">
+    ${headB(`style="margin-top:6px" onclick="${cancelCall}"`, "‹ Close", esc(d.title), "")}
+    ${body}
+  </div></div>`;
+}
+
+/* ==========================================================================
+   5. USER / MEMBER MANAGEMENT
+   ========================================================================== */
+window.promptAddPerson = async function(autoSelectContext) {
+  const nameRaw = await showPrompt("Member Name", "Add User", "e.g. Amina, Ziyan", "");
+  const name = (nameRaw || "").trim();
+  if (!name) return null;
+
+  const emailRaw = await showPrompt("Email Address (Optional)", "Add User", "e.g. user@gmail.com", "");
+  const email = (emailRaw || "").trim();
+
+  if (S.people.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    await showNotice(`"${name}" is already in your members list.`);
+    return null;
+  }
+  const color = PALETTE[S.people.length % PALETTE.length];
+  const person = { id: nextId(S.people), name, email, color };
+  S.people.push(person);
+  saveState();
+
+  if (autoSelectContext === "payer" && D) {
+    D.payerId = person.id;
+  } else if (autoSelectContext === "item" && sheet && sheet.t === "item") {
+    sheet.w.push(person.id);
+  } else if (D && !D.payerId) {
+    D.payerId = person.id;
+  }
+  render();
+  return person;
+};
+
+window.promptRenamePerson = async function(id) {
+  const p = S.people.find(x => x.id === id);
+  if (!p) return;
+  const raw = await showPrompt("New name", "Rename Member", "Name", p.name);
+  const name = (raw || "").trim();
+  if (!name || name === p.name) return;
+  if (S.people.some(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase())) {
+    return showNotice(`"${name}" already exists.`);
+  }
+  p.name = name;
+  saveState();
+  render();
+};
+
+window.removePerson = async function(id) {
+  const p = S.people.find(x => x.id === id);
+  if (!p) return;
+  const usedInBills = S.bills.some(b => b.payerId === id || (b.items || []).some(it => (it.w || []).includes(id)));
+  const msg = usedInBills
+    ? `Remove "${p.name}" from your members list?\n\nPast bills will still display their name.`
+    : `Remove "${p.name}" from your members list?`;
+  if (!(await showConfirm(msg, "Remove Member", "Remove", true))) return;
+  S.people = S.people.filter(x => x.id !== id);
+  if (D && D.payerId === id) D.payerId = S.people[0] ? S.people[0].id : null;
+  saveState();
+  render();
+};
+
 /* ==========================================================================
    6. BILL SPLITTING & 8% FIXED GST ENGINE
    ========================================================================== */
 function blankBill() {
-  const people = getApprovedPeople();
   return {
     title: "",
     date: today(),
     trip: tripFilter === "All" ? "" : tripFilter,
-    payerId: people[0] ? people[0].id : null,
+    payerId: S.people[0] ? S.people[0].id : null,
     gstEnabled: !!S.settings.defaultGst,
     scAmt: 0,
     scMode: "ord",
@@ -455,8 +395,7 @@ function blankBill() {
 }
 
 function calcBill(b) {
-  const people = getApprovedPeople();
-  const idSet = new Set(people.map(p => p.id));
+  const idSet = new Set(S.people.map(p => p.id));
   if (b.payerId) idSet.add(b.payerId);
   (b.items || []).forEach(it => (it.w || []).forEach(pid => idSet.add(pid)));
   const ids = [...idSet];
@@ -573,146 +512,41 @@ window.settlePairAll = async function(fromId, toId) {
 const head = (t, s) => `<div class="hdr"><h1>${t}</h1><div class="sub">${s}</div></div>`;
 const headB = (attrs, label, t, s) => `<div class="hdr"><button class="pill" ${attrs}>${label}</button><h1>${t}</h1>${s ? `<div class="sub">${s}</div>` : ""}</div>`;
 const sw = (on, fn) => `<label class="sw"><input type="checkbox" ${on ? "checked" : ""} onchange="${fn}"><i></i></label>`;
-const seg = (opts, cur, fn) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur == k ? "on" : ""}" onclick="${fn}('${k}')">${l}</button>`).join("")}</div>`;
+const seg = (opts, cur, fn) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur == k ? "on" : ""}" onclick="${fn}('${k}')">${l}.</button>`).join("")}</div>`;
 
-function personPicker(selectedIds, toggleExpr) {
-  const people = getApprovedPeople();
-  if (!people.length) {
-    return `<div style="padding:8px 0"><div class="mu">No approved users found yet.</div></div>`;
+function personPicker(selectedIds, toggleExpr, addContext) {
+  if (!S.people.length) {
+    return `<div style="padding:8px 0">
+      <div class="mu" style="margin-bottom:10px">No members added yet. Add users to share bills:</div>
+      <button class="btn sec" onclick="promptAddPerson('${addContext}')">+ Add User</button>
+    </div>`;
   }
   return `<div class="pk-dyn">
-    ${people.map(p => {
+    ${S.people.map(p => {
       const on = selectedIds.includes(p.id);
       return `<button type="button" class="nb ${on ? "on" : ""}" style="--c:${p.color}" onclick="${toggleExpr(p.id)}">
         ${!on ? `<span class="sdot" style="--c:${p.color}"></span>` : ""}<span>${esc(p.name)}</span>
       </button>`;
     }).join("")}
+    <button type="button" class="nb add-p" onclick="promptAddPerson('${addContext}')" style="background:var(--ac2);color:var(--ac);border:1.5px dashed var(--ac)">+ User</button>
   </div>`;
 }
 
 /* ==========================================================================
-   8. AUTH VIEWS
-   ========================================================================== */
-function viewLoginScreen() {
-  return `<div class="auth-box">
-    <div style="font-size:56px;margin-bottom:12px">💸</div>
-    <h1 style="margin:0 0 8px">SplitMate</h1>
-    <div class="sub" style="max-width:300px;margin-bottom:28px">
-      Sign in securely with your Gmail account to sync bills and split expenses with your group.
-    </div>
-    <button class="google-btn" onclick="signInWithGmail()">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      <span>Continue with Gmail</span>
-    </button>
-  </div>`;
-}
-
-function viewPendingScreen() {
-  const p = authState.profile || {};
-  const isRejected = p.status === "rejected";
-  return `<div class="auth-box">
-    <div style="font-size:52px;margin-bottom:12px">${isRejected ? "🚫" : "⏳"}</div>
-    <h1 style="margin:0 0 8px">${isRejected ? "Access Denied" : "Pending Approval"}</h1>
-    <div class="sub" style="max-width:320px;margin-bottom:20px">
-      ${isRejected
-        ? "Your account request was declined by the administrator."
-        : "Your account is registered. Please wait for the admin to approve your access—this page will unlock automatically once approved."}
-    </div>
-    <div class="l" style="width:100%;max-width:340px;margin-bottom:20px;text-align:left">
-      <div class="li">
-        <span style="display:flex;align-items:center;gap:10px">
-          ${p.photoURL ? `<img class="avatar" src="${esc(p.photoURL)}">` : `<span class="dot" style="--c:#007aff">${esc(initials(p.name))}</span>`}
-          <span><b>${esc(p.name)}</b><br><small>${esc(p.email)}</small></span>
-        </span>
-        <span class="bd ${isRejected ? "no" : ""}">${isRejected ? "Rejected" : "Pending"}</span>
-      </div>
-    </div>
-    <button class="btn sec" style="max-width:340px" onclick="logoutUser()">Sign Out / Switch Account</button>
-  </div>`;
-}
-
-/* ==========================================================================
-   9. ADMIN APPROVALS TAB
-   ========================================================================== */
-function viewAdminApprovals() {
-  const users = authState.allUsers || [];
-  const pending = users.filter(u => u.status === "pending");
-  const approved = users.filter(u => u.status === "approved");
-  const rejected = users.filter(u => u.status === "rejected");
-
-  let h = head("User Approvals", `${pending.length} pending · ${approved.length} approved`);
-
-  h += `<div class="sh">Pending Requests (${pending.length})</div><div class="l">`;
-  if (!pending.length) {
-    h += `<div class="li mu">No pending user requests right now.</div>`;
-  } else {
-    h += pending.map(u => `
-      <div class="li col">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span style="display:flex;align-items:center;gap:10px;min-width:0">
-            ${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}">` : `<span class="dot" style="--c:#ff9500">${esc(initials(u.name))}</span>`}
-            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">
-              <b>${esc(u.name)}</b><br>
-              <small>${esc(u.email)}</small>
-            </span>
-          </span>
-        </div>
-        <div class="row2" style="margin-top:10px">
-          <button class="pill r" style="border:1px solid var(--bd)" onclick="updateUserApproval('${u.uid}','rejected')">Reject</button>
-          <button class="pill g" onclick="updateUserApproval('${u.uid}','approved','user')">Approve Access</button>
-        </div>
-      </div>
-    `).join("");
-  }
-  h += `</div>`;
-
-  h += `<div class="sh">Approved Users (${approved.length})</div><div class="l">`;
-  h += approved.map(u => {
-    const isMe = u.uid === authState.user?.uid;
-    return `<div class="li">
-      <span style="display:flex;align-items:center;gap:10px">
-        ${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}">` : `<span class="dot" style="--c:#34c759">${esc(initials(u.name))}</span>`}
-        <span>
-          <b>${esc(u.name)}</b>${u.role === "admin" ? '<span class="cp">Admin</span>' : ""}${isMe ? '<span class="cp">You</span>' : ""}<br>
-          <small>${esc(u.email)}</small>
-        </span>
-      </span>
-      ${!isMe ? `<button class="pill r" onclick="updateUserApproval('${u.uid}','rejected')">Revoke</button>` : `<span class="bd ok">Active</span>`}
-    </div>`;
-  }).join("");
-  h += `</div>`;
-
-  if (rejected.length > 0) {
-    h += `<div class="sh">Rejected / Revoked (${rejected.length})</div><div class="l">`;
-    h += rejected.map(u => `
-      <div class="li">
-        <span><b>${esc(u.name)}</b><br><small>${esc(u.email)}</small></span>
-        <button class="pill" onclick="updateUserApproval('${u.uid}','approved','user')">Re-approve</button>
-      </div>
-    `).join("");
-    h += `</div>`;
-  }
-
-  return h;
-}
-
-/* ==========================================================================
-   10. MAIN TABS
+   8. MAIN VIEWS
    ========================================================================== */
 function viewDash() {
-  const people = getApprovedPeople();
   const { filteredBills, pairs, totalUnsettled, totalSpend } = computeAllBalances();
   const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
-  const isAdmin = authState.profile?.role === "admin";
-  const pendingUsersCount = (authState.allUsers || []).filter(u => u.status === "pending").length;
 
-  let h = head("Overview", `${people.length} registered members · ${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"} · Live Sync`);
+  let h = head("Overview", `${S.people.length} members · ${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"} · Live Sync`);
 
-  if (isAdmin && pendingUsersCount > 0) {
-    h += `<div class="l" style="border-left:4px solid #ff9500;margin-bottom:12px">
-      <div class="li" onclick="go('admin')" style="cursor:pointer">
-        <span><b>${pendingUsersCount} New User${pendingUsersCount === 1 ? "" : "s"} Waiting</b><br><small>Tap to review and approve Gmail accounts</small></span>
-        <button class="pill solid">Review</button>
+  if (S.people.length === 0) {
+    h += `<div class="l" style="border-left:4px solid var(--ac);margin-bottom:12px">
+      <div class="li col">
+        <b>Welcome to SplitMate</b>
+        <div class="mu" style="margin:4px 0 12px">Add your first member using emails or names, then create bills with automatic 8% GST.</div>
+        <button class="btn" onclick="promptAddPerson()">+ Add First User</button>
       </div>
     </div>`;
   }
@@ -749,7 +583,7 @@ function viewDash() {
             <small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small>
           </span>
         </span>
-        <button class="pill g" onclick="settlePairAll('${pair.fromId}','${pair.toId}')">Settle</button>
+        <button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Settle</button>
       </div>`;
     }).join("");
   }
@@ -844,7 +678,7 @@ function viewNewBill() {
     <div class="li"><span>Receipt total</span><input type="number" inputmode="decimal" step="any" placeholder="Optional check" value="${D.recTotal || ""}" oninput="D.recTotal=+this.value;renderPreview()"></div>
     <div class="li col">
       <div class="mu">Who paid the bill?</div>
-      ${personPicker(D.payerId ? [D.payerId] : [], id => `D.payerId='${id}';render()`)}
+      ${personPicker(D.payerId ? [D.payerId] : [], id => `D.payerId=${id};render()`, "payer")}
     </div>
   </div>`;
 
@@ -854,9 +688,8 @@ function viewNewBill() {
     h += `<div class="li mu">No items yet. Tap "+ Add item" below.</div>`;
   } else {
     h += D.items.map((it, idx) => {
-      const people = getApprovedPeople();
       const names = (it.w || []).map(id => getPerson(id).name);
-      const whoLabel = people.length > 0 && names.length === people.length
+      const whoLabel = S.people.length > 0 && names.length === S.people.length
         ? "Everyone"
         : (names.join(", ") || "Nobody selected");
       return `<div class="li" onclick="openItemSheet(${idx})" style="cursor:pointer">
@@ -938,8 +771,7 @@ window.renderPreview = function() {
 };
 
 window.saveCurrentBill = async function() {
-  const people = getApprovedPeople();
-  if (!people.length) return showNotice("No approved users available to save a bill.");
+  if (!S.people.length) return showNotice("Add at least one member before saving a bill.");
   if (!D.payerId) return showNotice("Select who paid the bill.");
   if (!D.items.some(i => +i.p > 0)) return showNotice("Add at least one item with a price.");
   if (D.items.some(i => +i.p > 0 && !(i.w && i.w.length))) return showNotice("Select at least one person for every item.");
@@ -980,11 +812,10 @@ window.saveCurrentBill = async function() {
 };
 
 window.openItemSheet = function(idx) {
-  const people = getApprovedPeople();
   const it = idx >= 0 ? D.items[idx] : null;
   const pm = it && it.pm ? it.pm : "bill";
   const q = it ? (it.q || 1) : 1;
-  const defaultSharers = it ? [...it.w] : people.map(p => p.id);
+  const defaultSharers = it ? [...it.w] : S.people.map(p => p.id);
 
   sheet = {
     t: "item",
@@ -1103,7 +934,6 @@ window.deleteSheetItem = function() {
 function renderSheetHtml() {
   if (!sheet || sheet.t !== "item") return "";
   const s = sheet, unit = s.pm === "unit";
-  const people = getApprovedPeople();
   const lastItem = s.k < 0 && D.items.length ? D.items[D.items.length - 1] : null;
   const { der, shares } = itemSheetLiveText();
 
@@ -1126,11 +956,11 @@ function renderSheetHtml() {
 
     <div class="sh">Who shared this item?</div>
     <div class="chips" style="margin:0 0 6px">
-      <button type="button" class="pill" onclick="sheet.w=${JSON.stringify(people.map(p => p.id))};render()">Everyone</button>
+      <button type="button" class="pill" onclick="sheet.w=S.people.map(p=>p.id);render()">Everyone</button>
       ${lastItem ? `<button type="button" class="pill" onclick="sheet.w=[...${JSON.stringify(lastItem.w)}];render()">Same as last</button>` : ""}
       <button type="button" class="pill r" onclick="sheet.w=[];render()">Clear</button>
     </div>
-    ${personPicker(s.w, id => `toggleSheetPerson('${id}')`)}
+    ${personPicker(s.w, id => `toggleSheetPerson(${id})`, "item")}
 
     <div class="sh">Split Preview</div>
     <div class="l" id="itp">${shares}</div>
@@ -1261,7 +1091,7 @@ function viewBillDetail(id) {
       const p = getPerson(d.fromId);
       return `<div class="li">
         <span><b>${esc(p.name)}</b><br><small>${mh(d.amount)}</small></span>
-        <button class="pill ${d.isSettled ? "g" : ""}" onclick="toggleBillPersonSettled(${b.id},'${d.fromId}')">
+        <button class="pill ${d.isSettled ? "g" : ""}" onclick="toggleBillPersonSettled(${b.id},${d.fromId})">
           ${d.isSettled ? "Settled ✓" : "Mark Settled"}
         </button>
       </div>`;
@@ -1351,40 +1181,30 @@ window.exportCsv = function() {
 };
 
 function viewPeopleAndData() {
-  const prof = authState.profile || {};
-  const people = getApprovedPeople();
-  let h = head("People & Account", "Registered group members & your Gmail session");
+  let h = head("People & Members", "Manage group members manually");
 
-  h += `<div class="sh">Signed-in Account</div>
-  <div class="l">
-    <div class="li">
-      <span style="display:flex;align-items:center;gap:10px">
-        ${prof.photoURL ? `<img class="avatar" src="${esc(prof.photoURL)}">` : `<span class="dot" style="--c:#007aff">${esc(initials(prof.name))}</span>`}
-        <span>
-          <b>${esc(prof.name)}</b>${prof.role === "admin" ? '<span class="cp">Admin</span>' : ""}<br>
-          <small>${esc(prof.email)}</small>
-        </span>
-      </span>
-      <button class="pill r" onclick="logoutUser()">Sign Out</button>
-    </div>
-  </div>`;
-
-  h += `<div class="sh">Approved Group Members (${people.length})</div>
+  h += `<div class="sh">Group Members (${S.people.length})</div>
   <div class="l">`;
-  if (!people.length) {
-    h += `<div class="li mu">No approved members yet.</div>`;
+  if (!S.people.length) {
+    h += `<div class="li mu">No members added yet. Tap below to add users.</div>`;
   } else {
-    h += people.map(p => `
+    h += S.people.map(p => `
       <div class="li">
         <span style="display:flex;align-items:center;gap:10px">
-          ${p.photoURL ? `<img class="avatar" src="${esc(p.photoURL)}">` : `<span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span>`}
-          <span><b>${esc(p.name)}</b></span>
+          <span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span>
+          <span><b>${esc(p.name)}</b>${p.email ? `<br><small>${esc(p.email)}</small>` : ""}</span>
         </span>
-        <span class="bd ok">Approved</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <button class="pill" onclick="promptRenamePerson(${p.id})">Rename</button>
+          <button class="x" onclick="removePerson(${p.id})" title="Remove">×</button>
+        </span>
       </div>
     `).join("");
   }
-  h += `</div>`;
+  h += `</div>
+  <div style="margin-top:10px">
+    <button class="btn" onclick="promptAddPerson()">+ Add User</button>
+  </div>`;
 
   h += `<div class="sh">Defaults &amp; Appearance</div>
   <div class="l">
@@ -1429,51 +1249,21 @@ window.render = function() {
   const nav = document.getElementById("nav");
   const ovl = document.getElementById("ovl");
 
-  if (authState.loading) {
-    nav.style.display = "none";
-    v.innerHTML = `<div class="auth-box"><div class="mu">Connecting to SplitMate...</div></div>`;
-    return;
-  }
-
-  if (!authState.user) {
-    nav.style.display = "none";
-    v.innerHTML = viewLoginScreen();
-    return;
-  }
-
-  if (authState.profile?.status !== "approved") {
-    nav.style.display = "none";
-    v.innerHTML = viewPendingScreen();
-    return;
-  }
-
-  nav.style.display = "flex";
   const scrollPos = v ? v.scrollTop : 0;
   const { unsettledRows } = computeAllBalances();
   const badgeCount = unsettledRows.length;
-  const isAdmin = authState.profile?.role === "admin";
-  const pendingUsersCount = (authState.allUsers || []).filter(u => u.status === "pending").length;
 
   const tabs = [
     ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
     ["new", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`, "New Bill"],
     ["hist", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`, "Bills"],
-    ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "People"]
+    ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "Users"]
   ];
-
-  if (isAdmin) {
-    tabs.push([
-      "admin",
-      `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-      "Approvals"
-    ]);
-  }
 
   nav.innerHTML = tabs.map(([k, icon, label]) => `
     <button class="${tab === k ? "on" : ""}" onclick="go('${k}')">
       <span>${icon}</span>${label}
       ${k === "dash" && badgeCount > 0 ? `<em class="bg">${badgeCount > 99 ? "99+" : badgeCount}</em>` : ""}
-      ${k === "admin" && pendingUsersCount > 0 ? `<em class="bg">${pendingUsersCount}</em>` : ""}
     </button>
   `).join("");
 
@@ -1483,8 +1273,6 @@ window.render = function() {
     ? viewNewBill()
     : tab === "hist"
     ? viewHistory()
-    : tab === "admin" && isAdmin
-    ? viewAdminApprovals()
     : viewPeopleAndData();
 
   const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
