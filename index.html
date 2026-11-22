@@ -206,12 +206,17 @@ function buildCanonicalPeople(existingPeople) {
       id: u.id,
       name: u.name,
       color: (match && match.color) || PALETTE[idx % PALETTE.length],
-      pin: normalizePin(match && match.pin, u.defaultPin)
+      pin: normalizePin(match && match.pin, u.defaultPin),
+      acct: String((match && match.acct) || "").slice(0, 40),
+      phone: String((match && match.phone) || "").slice(0, 25)
     };
   });
 }
 
-let currentUserId = null;
+let currentUserId = (() => {
+  try { const v = Number(localStorage.getItem("splitmate_user")); return FIXED_USERS.some(u => u.id === v) ? v : null; }
+  catch (e) { return null; }
+})();
 let selectedAuthUserId = FIXED_USERS[0].id;
 let authPinInput = "";
 let authError = "";
@@ -391,6 +396,7 @@ window.submitPinLogin = function() {
     return;
   }
   currentUserId = user.id;
+  try { localStorage.setItem("splitmate_user", String(user.id)); } catch (e) {}
   authPinInput = "";
   authError = "";
   lastRenderedAuthUserId = null;
@@ -401,6 +407,7 @@ window.submitPinLogin = function() {
 
 window.logoutUser = function() {
   currentUserId = null;
+  try { localStorage.removeItem("splitmate_user"); } catch (e) {}
   authPinInput = "";
   authError = "";
   lastRenderedAuthUserId = null;
@@ -433,6 +440,47 @@ function pinBody(d) {
   <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="submitPinChange()">Save PIN</button></div>`;
 }
 
+window.editMyPayInfo = function() {
+  const me = getPerson(currentUserId);
+  dlg = { type: "acct", title: "Payment details", acct: me.acct || "", phone: me.phone || "", err: "", res: () => {} };
+  renderDlg();
+};
+window.saveMyPayInfo = function() {
+  const me = getPerson(currentUserId), d = dlg;
+  if (!d) return;
+  const a = d.acct.trim(), ph = d.phone.trim();
+  const bad = m => { d.err = m; renderDlg(); };
+  if (a.length > 40) return bad("Account number is too long.");
+  if (ph && !/^\+?[\d\s\-()]{5,20}$/.test(ph)) return bad("Enter a valid phone number.");
+  me.acct = a; me.phone = ph;
+  saveState();
+  closeDlg(true);
+  render();
+};
+function acctBody(d) {
+  return `<div class="l">
+    <div class="li"><span>Account number</span><input maxlength="40" autocomplete="off" placeholder="Your account no." value="${esc(d.acct)}" oninput="dlg.acct=this.value"></div>
+    <div class="li"><span>Phone number</span><input type="tel" maxlength="25" autocomplete="off" placeholder="+960 …" value="${esc(d.phone)}" oninput="dlg.phone=this.value"></div>
+  </div>
+  <div class="mu" style="margin:10px 14px 0;font-size:13px">Shown (with a copy button) to anyone who taps Pay on a bill you paid.</div>
+  ${d.err ? `<div class="neg" style="margin:10px 14px 0;font-size:14px">${esc(d.err)}</div>` : ""}
+  <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="saveMyPayInfo()">Save</button></div>`;
+}
+window.copyTxt = async function(btn) {
+  const t = btn.dataset.c || "";
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (_) {}
+    ta.remove();
+  }
+  const o = btn.textContent;
+  btn.textContent = "Copied ✓";
+  setTimeout(() => { btn.textContent = o; }, 1500);
+};
+
 function renderAuth() {
   const el = document.getElementById("auth-screen");
   if (!el) return;
@@ -454,17 +502,12 @@ function renderAuth() {
 
   el.innerHTML = `<div class="auth-wrap">
     <h1 style="margin:0 0 4px">SplitMate</h1>
-    <div class="sub">Select your profile and enter your PIN to unlock</div>
+    <div class="sub">Choose your name and enter your PIN. You stay signed in until you log out.</div>
 
     <div class="sh" style="margin-left:4px">Select User</div>
-    <div class="user-grid">
-      ${S.people.map(u => `
-        <button type="button" class="user-tile ${u.id === selectedAuthUserId ? "sel" : ""}" onclick="selectAuthUser(${u.id})">
-          <span class="dot" style="--c:${u.color}">${esc(initials(u.name))}</span>
-          <span style="font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.name)}</span>
-        </button>
-      `).join("")}
-    </div>
+    <div class="l"><div class="li"><span>User</span>
+      <select id="auth-user" onchange="selectAuthUser(Number(this.value))">${S.people.map(u => `<option value="${u.id}" ${u.id === selectedAuthUserId ? "selected" : ""}>${esc(u.name)}</option>`).join("")}</select>
+    </div></div>
 
     ${selUser ? `<div class="pin-card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -537,7 +580,7 @@ function renderDlg() {
   if (!dlg) { el.innerHTML = ""; return; }
   const d = dlg;
   const cancelCall = d.type === "alert" ? "closeDlg(true)" : d.type === "confirm" ? "closeDlg(false)" : "closeDlg(null)";
-  const body = d.type === "pin" ? pinBody(d) : d.type === "alert"
+  const body = d.type === "pin" ? pinBody(d) : d.type === "acct" ? acctBody(d) : d.type === "alert"
     ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
        <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
     : d.type === "confirm"
@@ -590,30 +633,35 @@ function calcBill(b) {
   });
 
   const activeIds = ids.filter(id => subMap[id] > 0);
-  const totalSub = sum(Object.values(subMap));
-  const extraPool = (+b.scAmt || 0) + (+b.other || 0);
-  const useProp = b.scMode === "prop" && totalSub > 0;
-
-  const rows = ids.map(id => {
-    const sub = subMap[id] || 0;
-    const gst = b.gstEnabled ? (sub * GST_RATE / 100) : 0;
-    let extra = 0;
-    if (extraPool > 0 && activeIds.length > 0) {
-      extra = useProp
-        ? (extraPool * (sub / totalSub))
-        : (sub > 0 ? (extraPool / activeIds.length) : 0);
-    }
-    const tot = sub + gst + extra;
-    return { personId: id, person: getPerson(id), sub, gst, extra, tot };
-  });
-
+  const totalSubRaw = sum(Object.values(subMap));
+  const extraPool = r2((+b.scAmt || 0) + (+b.other || 0));
+  const useProp = b.scMode === "prop" && totalSubRaw > 0;
+  const subA = alloc(ids.map(id => subMap[id] || 0), r2(totalSubRaw));
+  const gstRaw = subA.map(v => b.gstEnabled ? v * GST_RATE / 100 : 0);
+  const gstA = alloc(gstRaw, r2(sum(gstRaw)));
+  const extRaw = subA.map(v => extraPool > 0 && activeIds.length
+    ? (useProp ? extraPool * v / totalSubRaw : (v > 0 ? extraPool / activeIds.length : 0)) : 0);
+  const extA = alloc(extRaw, r2(sum(extRaw)));
+  const rows = ids.map((id, i) => ({
+    personId: id, person: getPerson(id), sub: subA[i], gst: gstA[i], extra: extA[i],
+    tot: r2(subA[i] + gstA[i] + extA[i])
+  }));
   return {
     rows,
-    totalSub,
-    totalGst: sum(rows.map(r => r.gst)),
-    totalExtra: extraPool,
-    grandTotal: sum(rows.map(r => r.tot))
+    totalSub: r2(sum(subA)),
+    totalGst: r2(sum(gstA)),
+    totalExtra: r2(sum(extA)),
+    grandTotal: r2(sum(rows.map(r => r.tot)))
   };
+}
+
+/* Round to cents so the parts always add up exactly to the target (largest remainder) */
+function alloc(vals, target) {
+  const c = vals.map(v => Math.floor(v * 100 + 1e-7));
+  let rem = Math.round(target * 100) - sum(c);
+  vals.map((v, i) => [v * 100 - c[i], i]).sort((a, b) => b[0] - a[0])
+    .forEach(([fr, i]) => { if (rem > 0 && fr > 1e-7) { c[i]++; rem--; } });
+  return c.map(x => x / 100);
 }
 
 function getBillDues(bill) {
@@ -971,7 +1019,7 @@ window.openItemSheet = function(idx) {
   const it = idx >= 0 ? D.items[idx] : null;
   const pm = it && it.pm ? it.pm : "bill";
   const q = it ? (it.q || 1) : 1;
-  const defaultSharers = it ? [...it.w] : S.people.map(p => p.id);
+  const defaultSharers = it ? [...it.w] : [];
 
   sheet = {
     t: "item",
@@ -1027,17 +1075,15 @@ function itemSheetLiveText() {
 
   const n = sheet.w.length;
   const gstOn = !!D.gstEnabled;
+  const baseA = n ? alloc(Array(n).fill(tot / n), tot) : [];
+  const gstT = gstOn ? r2(tot * GST_RATE / 100) : 0;
+  const gstA = n ? alloc(Array(n).fill(gstT / n), gstT) : [];
   const shares = n === 0
     ? '<div class="li mu">Select who shared this item to preview split.</div>'
-    : sheet.w.map(id => {
-        const p = getPerson(id);
-        const baseShare = tot / n;
-        const gstShare = gstOn ? baseShare * GST_RATE / 100 : 0;
-        return `<div class="li">
-          <span>${esc(p.name)}${gstOn && tot > 0 ? `<br><small>Item ${f(baseShare)} + 8% GST ${f(gstShare)}</small>` : ""}</span>
-          <b>${mh(baseShare + gstShare)}</b>
-        </div>`;
-      }).join("") + `<div class="li"><b>Item Total${gstOn ? " (incl. 8% GST)" : ""}</b><b>${mh(gstOn ? tot * (1 + GST_RATE / 100) : tot)}</b></div>`;
+    : sheet.w.map((id, i) => `<div class="li">
+          <span>${esc(getPerson(id).name)}${gstOn && tot > 0 ? `<br><small>Item ${f(baseA[i])} + 8% GST ${f(gstA[i])}</small>` : ""}</span>
+          <b>${mh(baseA[i] + gstA[i])}</b>
+        </div>`).join("") + `<div class="li"><b>Item Total${gstOn ? " (incl. 8% GST)" : ""}</b><b>${mh(tot + gstT)}</b></div>`;
 
   return { der, shares };
 }
@@ -1066,7 +1112,7 @@ window.saveSheetItem = function(addAnother) {
   else D.items[sheet.k] = item;
 
   if (addAnother) {
-    sheet = { t: "item", k: -1, n: "", pm: sheet.pm, pr: "", q: 1, w: [...item.w] };
+    sheet = { t: "item", k: -1, n: "", pm: sheet.pm, pr: "", q: 1, w: [] };
     window.sheet = sheet;
     render();
     setTimeout(() => {
@@ -1354,8 +1400,12 @@ function viewPeopleAndData() {
       </span>
       <button class="pill" onclick="promptChangeMyPin()">Change PIN</button>
     </div>
+    <div class="li">
+      <span><b>Payment details</b><br><small>${me.acct || me.phone ? esc([me.acct, me.phone].filter(Boolean).join(" · ")) : "Add account &amp; phone so others can pay you"}</small></span>
+      <button class="pill" onclick="editMyPayInfo()">${me.acct || me.phone ? "Edit" : "Add"}</button>
+    </div>
     <div class="li" onclick="logoutUser()" style="cursor:pointer">
-      <span class="neg">Lock / Switch User</span>
+      <span class="neg">Log out / Switch user</span>
       <span class="mu">›</span>
     </div>
   </div>`;
@@ -1505,16 +1555,37 @@ window.pickSlip = function(inp) {
   img.src = url;
 };
 
+function consumedHtml(b, uid) {
+  const r = calcBill(b).rows.find(x => x.personId === uid);
+  if (!r || r.tot <= 0) return "";
+  const its = (b.items || []).filter(it => (it.w || []).includes(uid) && +it.p > 0);
+  const sh = alloc(its.map(it => it.p / it.w.length), r.sub);
+  const ln = (l, v, bold) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:2px 0;${bold ? "font-weight:700;border-top:.5px solid var(--bd);margin-top:4px;padding-top:6px" : ""}"><span>${l}</span><span>${v}</span></div>`;
+  return `<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--bd)">
+    ${its.map((it, i) => ln(`${esc(it.n || "Item")}${(it.q || 1) > 1 ? ` <small class="mu">×${it.q}</small>` : ""}${it.w.length > 1 ? ` <small class="mu">(shared by ${it.w.length})</small>` : ""}`, f(sh[i]))).join("")}
+    ${ln("Items subtotal", f(r.sub))}
+    ${b.gstEnabled ? ln(`GST ${GST_RATE}% <small class="mu">on ${f(r.sub)}</small>`, f(r.gst)) : ""}
+    ${r.extra > 0.004 ? ln("Service / other share", f(r.extra)) : ""}
+    ${ln("Total", f(r.tot), true)}
+  </div>`;
+}
+
 function paySheet(s) {
   const to = getPerson(s.toId);
   const dues = pairDues(currentUserId, s.toId).filter(d => !payOf(d.bill.id, currentUserId));
   const total = r2(sum(dues.filter(d => s.sel.includes(d.bill.id)).map(d => d.amount)));
   const slipReq = s.method !== "cash";
   return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", "Pay " + esc(to.name), "Attach your payment and slip")}
-  <div class="sh">Bills to settle</div>
-  <div class="l">${dues.map(d => { const on = s.sel.includes(d.bill.id); return `<div class="li" onclick="togglePaySel(${d.bill.id})" style="cursor:pointer">
-    <span><b>${esc(d.bill.title)}</b><br><small>${shortDate(d.bill.date)}</small></span>
-    <span style="display:flex;gap:10px;align-items:center"><b>${mh(d.amount)}</b><span class="bd ${on ? "ok" : ""}">${on ? "✓" : "○"}</span></span></div>`; }).join("")}</div>
+  <div class="sh">Send to ${esc(to.name)}</div>
+  <div class="l">${to.acct || to.phone
+    ? [["Account number", to.acct], ["Phone number", to.phone]].filter(x => x[1]).map(([l, v]) => `<div class="li"><span><small>${l}</small><br><b style="-webkit-user-select:text;user-select:text">${esc(v)}</b></span><button type="button" class="pill" data-c="${esc(v)}" onclick="copyTxt(this)">Copy</button></div>`).join("")
+    : `<div class="li mu">${esc(to.name)} hasn't added account details yet. Ask them directly.</div>`}</div>
+  <div class="sh">Bills to settle &amp; what you consumed</div>
+  <div class="l">${dues.map(d => { const on = s.sel.includes(d.bill.id); return `<div class="li col">
+    <div onclick="togglePaySel(${d.bill.id})" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <span><b>${esc(d.bill.title)}</b><br><small>${shortDate(d.bill.date)}</small></span>
+      <span style="display:flex;gap:10px;align-items:center"><b>${mh(d.amount)}</b><span class="bd ${on ? "ok" : ""}">${on ? "✓" : "○"}</span></span>
+    </div>${consumedHtml(d.bill, currentUserId)}</div>`; }).join("")}</div>
   <div class="sh">Payment</div>
   <div class="l">
     <div class="li"><b>Amount to pay</b><b style="font-size:19px">${mh(total)}</b></div>
@@ -1572,7 +1643,7 @@ function reviewSheet(s) {
     ${p.reason ? `<div class="li"><span>Reason</span><span class="neg">${esc(p.reason)}</span></div>` : ""}
   </div>
   <div class="sh">Bills covered</div>
-  <div class="l">${bills.map(b => `<div class="li" onclick="openBill(${b.id},'${tab}')" style="cursor:pointer"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><span class="mu">›</span></div>`).join("") || '<div class="li mu">Bills were deleted.</div>'}</div>
+  <div class="l">${bills.map(b => `<div class="li col"><div onclick="openBill(${b.id},'${tab}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><span class="mu">›</span></div>${consumedHtml(b, p.fromId)}</div>`).join("") || '<div class="li mu">Bills were deleted.</div>'}</div>
   <div class="sh">Payment slip</div>
   <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : s.slip ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block">` : '<div class="mu">No slip attached.</div>'}</div></div>
   ${p.status === "pending" && p.toId === currentUserId ? `<div class="row2" style="margin-top:16px"><button class="btn red" onclick="rejectPay(${p.id})">Reject</button><button class="btn" onclick="confirmPay(${p.id})">Confirm received</button></div>` : ""}
