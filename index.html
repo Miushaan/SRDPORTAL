@@ -53,6 +53,8 @@ input,select,textarea{-webkit-user-select:text;user-select:text}
 .hdr{position:sticky;top:0;z-index:6;background:var(--bg);margin:0 -16px 8px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 8px}
 .hdr .pill{margin-top:0}
 .hdr h1{margin:6px 0 2px}
+.appic{position:absolute;right:16px;top:calc(10px + env(safe-area-inset-top,0px));height:calc(100% - 18px - env(safe-area-inset-top,0px));width:auto;max-width:30%;aspect-ratio:auto;object-fit:contain;object-position:right center;border-radius:12px}
+.hdr:has(.appic) h1,.hdr:has(.appic) .sub{padding-right:84px}
 .hdr .sub{margin-bottom:2px}
 h1{font-size:clamp(26px,8.4vw,34px);font-weight:800;letter-spacing:-.5px;margin:10px 0 2px}
 .sub{color:var(--mu);font-size:14px;margin-bottom:14px}
@@ -75,7 +77,7 @@ input,select{font:inherit;font-size:16px;color:var(--tx);background:transparent;
 button:active,.btn:active{opacity:.65}
 .li[onclick]:active{background:var(--bg)}
 .pill{background:var(--ac2);color:var(--ac);border:0;border-radius:8px;padding:7px 14px;min-height:34px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .12s,background .12s}
-.pill.g{background:var(--grn);color:#fff}
+.pill.g{background:transparent;color:var(--grn);box-shadow:inset 0 0 0 1.5px var(--grn)}
 .pill.r{background:none;color:var(--red)}
 .pill.solid{background:var(--ac);color:#fff}
 .x{background:none;border:0;color:var(--red);font-size:22px;padding:6px 8px;cursor:pointer}
@@ -107,12 +109,19 @@ button:active,.btn:active{opacity:.65}
 #fab .btn{padding:15px;font-size:17px;border-radius:26px;box-shadow:0 8px 22px rgba(0,122,255,.38)}
 .w.nonav{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
 .w.fab-pad{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+.hm{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.hm .hd{font-size:11px;color:var(--mu);text-align:center;font-weight:600}
+.hm .c{aspect-ratio:.82;border-radius:7px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.15;min-width:0;overflow:hidden}
+.hm .c i{font-style:normal;font-weight:700;opacity:1}.hm .c b{font-size:10px;font-weight:600;opacity:.8}
+.mbar{display:flex;align-items:center;gap:8px;padding:6px 16px;cursor:pointer;font-size:13px}
+.mbar .t{flex:1;height:10px;border-radius:99px;background:var(--bg);overflow:hidden}.mbar .t span{display:block;height:100%;background:var(--ac);border-radius:99px}
+.mbar.on{background:var(--ac2)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
 .cp{background:var(--ac2);color:var(--ac);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
 .row2{display:flex;gap:8px;margin-top:10px}.row2>*{flex:1;min-width:0}
 .tile{background:var(--card);border-radius:14px;padding:14px}.tile small{color:var(--mu);font-size:13px}.tile b{display:block;font-size:clamp(17px,5.6vw,22px);margin-top:2px;white-space:nowrap}
-.bd{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--ac2);color:var(--ac)}.bd.ok{background:var(--grn);color:#fff}.bd.no{background:var(--red);color:#fff}
+.bd{font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--ac2);color:var(--ac)}.bd.ok{background:transparent;color:var(--grn);box-shadow:inset 0 0 0 1.5px var(--grn)}.bd.no{background:transparent;color:var(--red);box-shadow:inset 0 0 0 1.5px var(--red)}.bd.pe{background:transparent;color:#ff9500;box-shadow:inset 0 0 0 1.5px #ff9500}
 .step{display:flex;align-items:center;gap:14px}.step b{font-size:24px;min-width:30px;text-align:center}.step .pill{min-width:44px;min-height:40px;font-size:20px}
 .fp{position:absolute;top:0;left:0;right:0;bottom:0;z-index:60;background:var(--bg);overflow:hidden}
 .fp .w{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
@@ -133,7 +142,15 @@ button:active,.btn:active{opacity:.65}
   display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(32px + env(safe-area-inset-bottom,0px));
 }
-.auth-wrap{max-width:460px;width:100%;margin:auto}
+.auth-wrap{max-width:460px;width:100%;margin:0 auto}
+.pin-dots{display:flex;justify-content:center;gap:14px;min-height:20px;margin:6px 0 4px}
+.pin-dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--mu);display:block}
+.pin-dots i.on{background:var(--tx);border-color:var(--tx)}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 18px;max-width:290px;margin:16px auto 0}
+.kp button{aspect-ratio:1;border-radius:50%;border:0;background:var(--card);color:var(--tx);font:inherit;font-size:28px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 .5px var(--bd);transition:background .08s}
+.kp button:active{background:var(--ac2)}
+.kp button.ph{visibility:hidden;pointer-events:none}
+.kp button.dl{background:none;box-shadow:none;font-size:22px;color:var(--mu)}
 .user-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
 .user-tile{
   background:var(--card);border:1.5px solid var(--bd);border-radius:14px;padding:12px 14px;
@@ -227,7 +244,8 @@ function buildCanonicalPeople(existingPeople) {
       color: (match && match.color) || PALETTE[idx % PALETTE.length],
       pin: normalizePin(match && match.pin, u.defaultPin),
       acct: String((match && match.acct) || "").slice(0, 40),
-      phone: String((match && match.phone) || "").slice(0, 25)
+      phone: String((match && match.phone) || "").slice(0, 25),
+      ...(match && match.mustChange ? { mustChange: true } : {})
     };
   });
   const fixedIds = new Set(FIXED_USERS.map(u => u.id));
@@ -243,7 +261,8 @@ function buildCanonicalPeople(existingPeople) {
       color: p.color || PALETTE[(FIXED_USERS.length + extras.length) % PALETTE.length],
       pin: normalizePin(p.pin, "1234"),
       acct: String(p.acct || "").slice(0, 40),
-      phone: String(p.phone || "").slice(0, 25)
+      phone: String(p.phone || "").slice(0, 25),
+      ...(p.mustChange ? { mustChange: true } : {})
     });
   });
   return fixed.concat(extras);
@@ -267,6 +286,7 @@ let S = {
   people: buildCanonicalPeople([]),
   bills: [],
   payments: [],
+  log: [],
   settings: {
     defaultGst: true,
     theme: "auto"
@@ -294,6 +314,32 @@ window.setZoom = function(z) {
   render();
 };
 
+const ACCENTS = [
+  ["blue", "Blue", "#007aff", "#0a84ff"], ["indigo", "Indigo", "#5856d6", "#7d7aff"], ["violet", "Violet", "#9b51e0", "#bf5af2"],
+  ["rose", "Rose", "#f0386b", "#ff5c85"], ["coral", "Coral", "#f2603f", "#ff7f63"], ["amber", "Amber", "#e08a00", "#ffb020"],
+  ["emerald", "Emerald", "#0f9d6e", "#34d399"], ["teal", "Teal", "#0e9aa7", "#2dd4bf"], ["slate", "Slate", "#475569", "#94a3b8"]
+];
+const BGTONES = { def: ["Default", null, null], warm: ["Warm", "#f7f3ee", "#14110f"], cool: ["Cool", "#edf2f8", "#0a1018"], mint: ["Mint", "#edf6f1", "#0a130e"] };
+const lsGet = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+let accentKey = lsGet("splitmate_accent", "blue"), bgKey = lsGet("splitmate_bg", "def");
+if (!ACCENTS.some(a => a[0] === accentKey)) accentKey = "blue";
+if (!BGTONES[bgKey]) bgKey = "def";
+function applyLook() {
+  let st = document.getElementById("look-style");
+  const a = ACCENTS.find(x => x[0] === accentKey), bg = BGTONES[bgKey];
+  const light = [], dark = [];
+  if (accentKey !== "blue") {
+    light.push(`--ac:${a[2]};--ac2:color-mix(in srgb,${a[2]} 13%,#fff)`);
+    dark.push(`--ac:${a[3]};--ac2:color-mix(in srgb,${a[3]} 24%,#1c1c1e)`);
+  }
+  if (bg[1]) { light.push(`--bg:${bg[1]}`); dark.push(`--bg:${bg[2]}`); }
+  if (!light.length) { if (st) st.remove(); return; }
+  if (!st) { st = document.createElement("style"); st.id = "look-style"; document.head.appendChild(st); }
+  st.textContent = `:root{${light.join(";")}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dark.join(";")}}}:root[data-theme="dark"]{${dark.join(";")}}`;
+}
+window.setAccent = k => { if (!ACCENTS.some(a => a[0] === k)) return; accentKey = k; try { localStorage.setItem("splitmate_accent", k); } catch (e) {} applyLook(); render(); };
+window.setBgTone = k => { if (!BGTONES[k]) return; bgKey = k; try { localStorage.setItem("splitmate_bg", k); } catch (e) {} applyLook(); render(); };
+
 function applyTheme() {
   const root = document.documentElement;
   if (S.settings.theme === "light" || S.settings.theme === "dark") {
@@ -315,6 +361,12 @@ function saveState() {
   });
 }
 
+function logAct(text) {
+  S.log = S.log || [];
+  S.log.unshift({ at: Date.now(), by: currentUserId, text });
+  if (S.log.length > 400) S.log.length = 400;
+}
+const liveBills = () => S.bills.filter(b => !b.delReq);
 const toArr = v => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
 const stateRef = ref(db, "splitmate/state");
 onValue(stateRef, (snap) => {
@@ -329,6 +381,7 @@ onValue(stateRef, (snap) => {
     S.people = canonical;
     S.bills = toArr(val.bills);
     S.payments = toArr(val.payments);
+    S.log = toArr(val.log);
     S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
     applyTheme();
     if (currentUserId !== null && !S.people.some(p => p.id === currentUserId)) {
@@ -466,7 +519,8 @@ window.submitPinLogin = function() {
   render();
 };
 
-window.logoutUser = function() {
+window.logoutUser = async function() {
+  if (!(await showConfirm("Are you sure you want to sign out?", "Sign out", "Sign out", true))) return;
   pushUnregisterCurrent();
   currentUserId = null;
   try { localStorage.removeItem("splitmate_user"); } catch (e) {}
@@ -475,6 +529,34 @@ window.logoutUser = function() {
   lastRenderedAuthUserId = null;
   render();
 };
+
+window.promptForcePin = function() {
+  dlg = { type: "forcepin", title: "Set a new PIN", nw: "", cf: "", err: "", res: () => {} };
+  renderDlg();
+};
+window.submitForcePin = function() {
+  const me = getPerson(currentUserId), d = dlg;
+  if (!d || d.type !== "forcepin") return;
+  const bad = m => { d.err = m; renderDlg(); };
+  const nw = d.nw.trim();
+  if (!/^\d{4,6}$/.test(nw)) return bad("PIN must be 4 to 6 digits.");
+  if (nw !== d.cf.trim()) return bad("The PINs don't match.");
+  if (nw === normalizePin(me.pin, "1234")) return bad("Choose a PIN different from the one you were given.");
+  me.pin = nw; delete me.mustChange;
+  logAct("Set a new PIN");
+  saveState(); closeDlg(true); render();
+  showNotice("Your new PIN is saved.", "PIN updated");
+};
+window.forceSignOut = function() { closeDlg(null); logoutUser(); };
+function forcePinBody(d) {
+  return `<div class="l">
+    <div class="li"><span>New PIN (4–6 digits)</span><input type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••" value="${esc(d.nw)}" oninput="dlg.nw=this.value"></div>
+    <div class="li"><span>Confirm new PIN</span><input type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••" value="${esc(d.cf)}" oninput="dlg.cf=this.value" onkeydown="if(event.key==='Enter')submitForcePin()"></div>
+  </div>
+  ${d.err ? `<div class="neg" style="margin:10px 14px 0;font-size:14px">${esc(d.err)}</div>` : ""}
+  <div style="margin-top:18px"><button class="btn" onclick="submitForcePin()">Save PIN</button></div>
+  <div style="margin-top:10px"><button class="btn sec" onclick="forceSignOut()">Sign out</button></div>`;
+}
 
 window.promptChangeMyPin = function() {
   dlg = { type: "pin", title: "Change PIN", cur: "", nw: "", cf: "", err: "", res: () => {} };
@@ -517,7 +599,8 @@ window.submitNewUser = function() {
   if (S.people.some(p => p.name.toLowerCase() === name.toLowerCase())) return bad("A user with that name already exists.");
   if (!/^\d{4,6}$/.test(d.pin.trim())) return bad("PIN must be 4 to 6 digits.");
   const id = Math.max(...S.people.map(p => +p.id || 0)) + 1;
-  S.people.push({ id, name, color: PALETTE[(S.people.length) % PALETTE.length], pin: d.pin.trim(), acct: "", phone: "" });
+  S.people.push({ id, name, color: PALETTE[(S.people.length) % PALETTE.length], pin: d.pin.trim(), acct: "", phone: "", mustChange: true });
+  logAct(`Added user ${name}`);
   saveState();
   closeDlg(true);
   showNotice(`${name} was added. They can sign in with the PIN you set.`, "User added");
@@ -574,6 +657,21 @@ window.copyTxt = async function(btn) {
   setTimeout(() => { btn.textContent = o; }, 1500);
 };
 
+const pinDotsHtml = () => [...Array(Math.max(4, authPinInput.length))].map((_, i) => `<i class="${i < authPinInput.length ? "on" : ""}"></i>`).join("");
+function updPinUi() {
+  const d = document.getElementById("pin-dots"), e = document.getElementById("pin-err");
+  if (d) d.innerHTML = pinDotsHtml();
+  if (e) e.textContent = authError || "";
+}
+window.pinKey = function(n) { if (authPinInput.length >= 6) return; authPinInput += n; authError = ""; updPinUi(); };
+window.pinDel = function() { authPinInput = authPinInput.slice(0, -1); authError = ""; updPinUi(); };
+document.addEventListener("keydown", e => {
+  if (currentUserId !== null || dlg || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^\d$/.test(e.key)) { pinKey(e.key); e.preventDefault(); }
+  else if (e.key === "Backspace") { pinDel(); e.preventDefault(); }
+  else if (e.key === "Enter") { submitPinLogin(); e.preventDefault(); }
+});
+
 function renderAuth() {
   const el = document.getElementById("auth-screen");
   if (!el) return;
@@ -607,23 +705,13 @@ function renderAuth() {
         <span class="dot" style="--c:${selUser.color}">${esc(initials(selUser.name))}</span>
         <div>
           <div style="font-weight:700;font-size:16px">${esc(selUser.name)}</div>
-          <small class="mu">Enter PIN (default: 1234)</small>
+          <small class="mu">Enter your PIN</small>
         </div>
       </div>
-      <input
-        id="auth-pin-inp"
-        class="pin-inp"
-        type="password"
-        inputmode="numeric"
-        pattern="[0-9]*"
-        maxlength="6"
-        placeholder="••••"
-        value="${esc(authPinInput)}"
-        oninput="authPinInput=this.value;authError=''"
-        onkeydown="if(event.key==='Enter')submitPinLogin()"
-      >
-      ${authError ? `<div class="neg" style="font-size:13px;margin-top:8px;text-align:center">${esc(authError)}</div>` : ""}
-      <button type="button" class="btn" style="margin-top:14px" onclick="submitPinLogin()">Unlock as ${esc(selUser.name)}</button>
+      <div class="pin-dots" id="pin-dots">${pinDotsHtml()}</div>
+      <div id="pin-err" class="neg" style="font-size:13px;margin-top:8px;text-align:center;min-height:18px">${esc(authError)}</div>
+      <div class="kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" onclick="pinKey('${n}')">${n}</button>`).join("")}<button type="button" class="ph" tabindex="-1"></button><button type="button" onclick="pinKey('0')">0</button><button type="button" class="dl" aria-label="Delete" onclick="pinDel()">⌫</button></div>
+      <button type="button" class="btn" style="margin-top:18px" onclick="submitPinLogin()">Unlock as ${esc(selUser.name)}</button>
     </div>` : ""}
   </div>`;
 }
@@ -673,7 +761,7 @@ function renderDlg() {
   if (!dlg) { el.innerHTML = ""; return; }
   const d = dlg;
   const cancelCall = d.type === "alert" ? "closeDlg(true)" : d.type === "confirm" ? "closeDlg(false)" : "closeDlg(null)";
-  const body = d.type === "pin" ? pinBody(d) : d.type === "newuser" ? newUserBody(d) : d.type === "acct" ? acctBody(d) : d.type === "alert"
+  const body = d.type === "forcepin" ? forcePinBody(d) : d.type === "pin" ? pinBody(d) : d.type === "newuser" ? newUserBody(d) : d.type === "acct" ? acctBody(d) : d.type === "alert"
     ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
        <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
     : d.type === "confirm"
@@ -683,7 +771,7 @@ function renderDlg() {
        <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="closeDlg(dlg.val)">Save</button></div>`;
 
   el.innerHTML = `<div class="fp" style="z-index:99"><div class="w">
-    ${headB(`style="margin-top:6px" onclick="${cancelCall}"`, "‹ Close", esc(d.title), "")}
+    ${d.type === "forcepin" ? head(esc(d.title), "Your PIN was reset or is new. Choose your own PIN to continue.") : headB(`style="margin-top:6px" onclick="${cancelCall}"`, "‹ Close", esc(d.title), "")}
     ${body}
   </div></div>`;
 }
@@ -782,7 +870,7 @@ function getBillDues(bill) {
 }
 
 function computeAllBalances() {
-  const filteredBills = S.bills.filter(b => tripFilter === "All" || (b.trip || "") === tripFilter);
+  const filteredBills = liveBills().filter(b => tripFilter === "All" || (b.trip || "") === tripFilter);
   const unsettledRows = [];
   const pairMap = {};
 
@@ -823,6 +911,7 @@ window.settlePairAll = async function(fromId, toId) {
   const ok = await showConfirm(`Mark ${f(sum(free.map(d => d.amount)))} from ${fromP.name} as received (no slip)?`, "Mark received", "Mark received", false);
   if (!ok) return;
   free.forEach(d => { const b = S.bills.find(x => x.id === d.bill.id); if (b) { b.settled = b.settled || {}; b.settled[fromId] = true; } });
+  logAct(`Marked Rf ${f(sum(free.map(d => d.amount)))} from ${fromP.name} as received`);
   saveState();
   render();
   pushNotify([fromId], "Marked as received ✓", `${getPerson(currentUserId).name} marked Rf ${f(sum(free.map(d => d.amount)))} from you as received.`);
@@ -852,7 +941,7 @@ function personPicker(selectedIds, toggleExpr) {
    ========================================================================== */
 function dueStatus(d) {
   if (d.isSettled) return ["ok", "Settled ✓"];
-  if (payOf(d.bill.id, d.fromId)) return ["", d.toId === currentUserId ? "Awaiting your confirmation" : "Awaiting confirmation"];
+  if (payOf(d.bill.id, d.fromId)) return ["pe", d.toId === currentUserId ? "Awaiting your confirmation" : "Awaiting confirmation"];
   const rej = S.payments.some(x => x.status === "rejected" && x.fromId === d.fromId && x.billIds.includes(d.bill.id) && !x.ack);
   return ["no", rej ? "Payment rejected" : "Unpaid"];
 }
@@ -869,7 +958,7 @@ function dueRow(d, who, mine) {
 
 function viewDash() {
   const { filteredBills, totalSpend } = computeAllBalances();
-  const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
+  const trips = [...new Set(liveBills().map(b => b.trip).filter(Boolean))];
   const me = getPerson(currentUserId);
   const allDues = filteredBills.flatMap(b => getBillDues(b));
   const mine = allDues.filter(d => d.fromId === me.id)
@@ -880,9 +969,11 @@ function viewDash() {
   const owedTotal = r2(sum(owedToMe.map(d => d.amount)));
   const pairCount = computeAllBalances().pairs.length;
 
-  let h = head("Overview", `Signed in as ${esc(me.name)}${isAdmin() ? " (admin)" : ""}`);
+  let h = head("Overview", `Signed in as ${esc(me.name)}${isAdmin() ? " (admin)" : ""}`)
+    .replace('<div class="hdr">', '<div class="hdr"><img class="appic" src="./apple-touch-icon.png" alt="" onerror="this.style.display=\'none\'">');
 
   h += viewNotifs(me.id);
+  h += delReqHtml();
 
   h += `<div class="row2" style="margin-top:12px">
     <div class="tile"><small>Owing</small><b class="${myOwe > 0.005 ? "neg" : ""}">${mh(myOwe)}</b></div>
@@ -915,12 +1006,15 @@ function viewDash() {
     </div>`;
   }
 
+  h += spendHtml(me.id);
+  h += payHistHtml(me.id);
+
   h += `<div style="margin-top:16px">
     <button class="btn sec" style="padding:16px;font-size:17px" onclick="go('owes')">Who owes who${pairCount ? ` · ${pairCount}` : ""} ›</button>
   </div>`;
-  if (S.bills.length > 0) {
+  if (liveBills().length > 0) {
     h += `<div style="margin-top:10px">
-      <button class="btn sec" onclick="go('hist')">View All Bills · ${S.bills.length}</button>
+      <button class="btn sec" onclick="go('hist')">View All Bills · ${liveBills().length}</button>
     </div>`;
   }
 
@@ -972,7 +1066,7 @@ window.startNewBill = function() {
 
 function pastPlaces() {
   const seen = {}, out = [];
-  S.bills.forEach(b => {
+  liveBills().forEach(b => {
     const n = (b.title || "").trim(), k = n.toLowerCase();
     if (n && n !== "Untitled bill" && !seen[k]) { seen[k] = 1; out.push(n); }
   });
@@ -981,7 +1075,7 @@ function pastPlaces() {
 
 function pastItems() {
   const seen = {}, out = [];
-  S.bills.forEach(b => (b.items || []).forEach(it => {
+  liveBills().forEach(b => (b.items || []).forEach(it => {
     const n = (it.n || "").trim(), k = n.toLowerCase();
     if (n && !seen[k]) { seen[k] = 1; out.push({ n, p: +it.p || 0, pm: it.pm === "incl" ? "incl" : "bill" }); }
   }));
@@ -1011,7 +1105,7 @@ window.toggleBillGst = function() {
 function viewNewBill() {
   if (!D) D = blankBill();
   window.D = D;
-  const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
+  const trips = [...new Set(liveBills().map(b => b.trip).filter(Boolean))];
   const gstOn = !!D.gstEnabled;
 
   let h = headB(
@@ -1083,7 +1177,15 @@ function viewNewBill() {
     ${(+D.scAmt !== 0 || +D.other !== 0) ? `<div class="li col"><div class="mu" style="margin-bottom:6px">Share extra charges</div>${seg([["ord", "Equally (who ordered)"], ["prop", "Proportional to items"]], D.scMode || "ord", "((m)=>{D.scMode=m;renderPreview()})")}</div>` : ""}
   </div>`;
 
-  h += `<div class="sh">Per-Person Breakdown</div>
+  h += `<div class="sh">Receipt photo (optional)</div>
+  <div class="l"><div class="li col">${D.receiptData
+    ? `<img alt="Receipt" src="${D.receiptData}" style="width:100%;border-radius:10px;display:block"><button type="button" class="pill r" style="margin-top:8px" onclick="D.receiptData=null;render()">Remove photo</button>`
+    : (D.hasReceipt && !D.receiptRemove)
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Receipt attached ✓</span><span style="display:flex;gap:6px"><label class="pill" style="margin:0">Replace<input type="file" accept="image/*" style="display:none" onchange="pickReceipt(this)"></label><button type="button" class="pill r" onclick="D.receiptRemove=true;render()">Remove</button></span></div>`
+      : `<label class="btn sec" style="margin:0">📎 Attach receipt photo<input type="file" accept="image/*" style="display:none" onchange="pickReceipt(this)"></label>`}
+    <div class="mu" style="font-size:12px;margin-top:8px">Deleted automatically 2 days after the bill is fully settled.</div></div></div>
+
+  <div class="sh">Per-Person Breakdown</div>
   <div class="l" id="pv"></div>`;
 
   h += `<div style="margin-top:16px">
@@ -1140,6 +1242,21 @@ window.renderPreview = function() {
   pv.innerHTML = html;
 };
 
+window.pickReceipt = function(inp) {
+  const file = inp.files && inp.files[0];
+  if (!file) return;
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const k = Math.min(1, 1200 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    D.receiptData = c.toDataURL("image/jpeg", 0.7); D.receiptRemove = false; render();
+  };
+  img.onerror = () => showNotice("Could not read that image. Please try another photo.", "Receipt error");
+  img.src = url;
+};
+
 window.saveCurrentBill = async function() {
   if (!D.payerId) return showNotice("Select who paid the bill.");
   if (!D.items.some(i => +i.p > 0)) return showNotice("Add at least one item with a price.");
@@ -1160,6 +1277,16 @@ window.saveCurrentBill = async function() {
     items: cl(D.items),
     settled: D.settled ? cl(D.settled) : {}
   };
+  const oldB = editId ? S.bills.find(b => b.id === editId) : null;
+  if (oldB) ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (oldB[k] !== undefined) bill[k] = oldB[k]; });
+  if (D.receiptData) {
+    try { await set(ref(db, "splitmate/receipts/" + bill.id), D.receiptData); }
+    catch (e) { return showNotice("Could not upload the receipt: " + e.message, "Upload failed"); }
+    bill.hasReceipt = true; delete bill.receiptDoneAt; delete bill.receiptDeleted;
+  } else if (D.receiptRemove && bill.hasReceipt) {
+    set(ref(db, "splitmate/receipts/" + bill.id), null).catch(() => {});
+    bill.hasReceipt = false; delete bill.receiptDoneAt;
+  }
 
   if (editId) {
     S.bills = S.bills.map(b => b.id === editId ? bill : b);
@@ -1167,6 +1294,7 @@ window.saveCurrentBill = async function() {
     S.bills.unshift(bill);
   }
 
+  logAct(`${editId ? "Edited" : "Added"} bill "${bill.title}" (Rf ${f(calcBill(bill).grandTotal)})`);
   saveState();
   if (!editId) {
     const payerName = getPerson(bill.payerId).name;
@@ -1309,6 +1437,7 @@ window.deleteSheetItem = function() {
 
 function renderSheetHtml() {
   if (sheet && sheet.t === "pay") return `<div class="fp"><div class="w">${paySheet(sheet)}</div></div>`;
+  if (sheet && sheet.t === "receipt") return `<div class="fp"><div class="w">${receiptSheet(sheet)}</div></div>`;
   if (sheet && sheet.t === "review") return `<div class="fp"><div class="w">${reviewSheet(sheet)}</div></div>`;
   if (!sheet || sheet.t !== "item") return "";
   const s = sheet, unit = s.pm === "unit";
@@ -1366,7 +1495,7 @@ function billStatus(b) {
 function viewHistory() {
   if (openBillId !== null) return viewBillDetail(openBillId);
 
-  let h = headB('style="margin-top:6px" onclick="go(\'dash\')"', "‹ Overview", "Bills", `${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"}`);
+  let h = headB('style="margin-top:6px" onclick="go(\'dash\')"', "‹ Overview", "Bills", `${liveBills().length} saved bill${liveBills().length === 1 ? "" : "s"}`);
   h += `<div class="l"><div class="li"><input type="search" placeholder="Search place, trip, item or person" value="${esc(histQuery)}" oninput="histQuery=this.value;document.getElementById('hl').innerHTML=renderHistoryList()" style="text-align:left"></div></div>`;
   h += `<div id="hl">${renderHistoryList()}</div>`;
   return h;
@@ -1375,11 +1504,11 @@ function viewHistory() {
 window.renderHistoryList = function() {
   const q = histQuery.trim().toLowerCase();
   const filtered = q
-    ? S.bills.filter(b => [
+    ? liveBills().filter(b => [
         b.title, b.trip, getPerson(b.payerId).name,
         ...(b.items || []).map(i => i.n)
       ].join(" ").toLowerCase().includes(q))
-    : S.bills;
+    : liveBills();
 
   if (!filtered.length) {
     return `<div class="l" style="margin-top:14px"><div class="li mu">${q ? "No matching bills found." : "No bills saved yet. Create one from the Overview."}</div></div>`;
@@ -1387,7 +1516,7 @@ window.renderHistoryList = function() {
 
   let h = "";
   const tripTotals = {};
-  S.bills.forEach(b => {
+  liveBills().forEach(b => {
     const k = b.trip || "General";
     tripTotals[k] = (tripTotals[k] || 0) + calcBill(b).grandTotal;
   });
@@ -1427,7 +1556,7 @@ window.renderHistoryList = function() {
 
 function viewBillDetail(id) {
   const b = S.bills.find(x => x.id === id);
-  if (!b) { openBillId = null; return viewHistory(); }
+  if (!b || (b.delReq && !isAdmin())) { openBillId = null; return viewHistory(); }
 
   const c = calcBill(b);
   const payer = getPerson(b.payerId);
@@ -1470,13 +1599,30 @@ function viewBillDetail(id) {
       const p = getPerson(d.fromId), pend = payOf(b.id, d.fromId);
       const rej = !d.isSettled && !pend && S.payments.some(x => x.status === "rejected" && x.fromId === d.fromId && x.billIds.includes(b.id) && !x.ack);
       let act;
-      if (d.isSettled) act = me === b.payerId ? `<button class="pill g" onclick="undoSettled(${b.id},${d.fromId})">Settled ✓</button>` : `<span class="bd ok">Settled ✓</span>`;
+      if (d.isSettled) {
+        const cp = S.payments.find(x => x.status === "confirmed" && x.fromId === d.fromId && x.billIds.includes(b.id));
+        const slipBtn = cp ? `<button class="pill" onclick="openPayment(${cp.id})">View details</button>` : "";
+        act = `<span style="display:flex;gap:6px;align-items:center">${slipBtn}${me === b.payerId ? `<button class="pill g" onclick="undoSettled(${b.id},${d.fromId})">Settled ✓</button>` : `<span class="bd ok">Settled ✓</span>`}</span>`;
+      }
       else if (pend) act = `<button class="pill" onclick="openPayment(${pend.id})">${me === b.payerId ? "Review &amp; confirm" : "Awaiting confirmation"}</button>`;
       else if (me === d.fromId) act = `<button class="pill solid" onclick="openPay(${b.payerId},${b.id})">Pay &amp; attach slip</button>`;
       else if (me === b.payerId) act = `<button class="pill" onclick="markReceived(${b.id},${d.fromId})">Mark received</button>`;
       else act = `<span class="bd no">Unpaid</span>`;
       return `<div class="li"><span><b>${esc(p.name)}</b>${d.fromId === me ? '<span class="cp">you</span>' : ""}<br><small>${mh(d.amount)}</small>${rej ? '<br><small class="neg">Previous payment was rejected</small>' : ""}</span>${act}</div>`;
     }).join("")}</div>`;
+  }
+
+  const remDues = dues.filter(d => !d.isSettled);
+  if (currentUserId === b.payerId && remDues.length) {
+    h += `<div class="sh">Reminders</div><div class="l">
+      <div class="li"><span><b>Send reminder now</b><br><small>${remDues.map(d => esc(getPerson(d.fromId).name)).join(", ")} · ${remindsLeft(b)} of 2 left today</small></span><button class="pill ${remindsLeft(b) > 0 ? "solid" : ""}" ${remindsLeft(b) > 0 ? "" : 'style="opacity:.5"'} onclick="remindNow(${b.id})">Remind</button></div>
+    </div>`;
+  }
+
+  if (b.hasReceipt) {
+    h += `<div class="sh">Receipt photo</div><div class="l"><div class="li"><span>Receipt attached<br><small>Deleted 2 days after the bill is fully settled</small></span><button class="pill" onclick="openReceipt(${b.id})">View</button></div></div>`;
+  } else if (b.receiptDeleted) {
+    h += `<div class="sh">Receipt photo</div><div class="l"><div class="li mu">The receipt photo was deleted 2 days after the bill was settled.</div></div>`;
   }
 
   h += `<div class="sh">Items (${(b.items || []).length})</div>
@@ -1533,12 +1679,68 @@ window.useBillAsTemplate = function(id) {
 };
 
 window.deleteSavedBill = async function(id) {
-  if (!(await showConfirm("Delete this bill permanently?", "Delete Bill", "Delete", true))) return;
-  S.bills = S.bills.filter(b => b.id !== id);
+  const b = S.bills.find(x => x.id === id);
+  if (!b) return;
+  if (isAdmin()) {
+    if (!(await showConfirm("Delete this bill and all its details permanently?", "Delete Bill", "Delete", true))) return;
+    await purgeBill(id);
+    openBillId = null; render();
+    return;
+  }
+  if (!(await showConfirm("Send a request to the admin to delete this bill? It will be hidden until the admin decides.", "Request deletion", "Send request", true))) return;
+  b.delReq = { by: currentUserId, at: Date.now() };
+  logAct(`Requested deletion of bill "${b.title}"`);
   saveState();
-  openBillId = null;
-  render();
+  pushNotify([ADMIN_ID], "Bill deletion request", `${getPerson(currentUserId).name} asked to delete "${b.title}".`, "delreq-" + id);
+  openBillId = null; render();
 };
+
+/* Remove a bill completely: the bill, its share inside any payments, and orphaned payments + slips */
+async function purgeBill(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b) return;
+  const dues = getBillDues(b);
+  logAct(`Deleted bill "${b.title}"`);
+  if (b.hasReceipt) set(ref(db, "splitmate/receipts/" + id), null).catch(() => {});
+  const gone = [];
+  S.payments.forEach(p => {
+    if (!p.billIds.includes(id)) return;
+    const d = dues.find(x => x.fromId === p.fromId);
+    p.billIds = p.billIds.filter(x => x !== id);
+    if (!p.billIds.length) gone.push(p); else p.amount = r2(Math.max(0, p.amount - (d ? d.amount : 0)));
+  });
+  await Promise.all(gone.map(p => p.hasSlip ? set(ref(db, "splitmate/slips/" + p.id), null).catch(() => {}) : null));
+  const goneIds = new Set(gone.map(p => p.id));
+  S.payments = S.payments.filter(p => !goneIds.has(p.id));
+  S.bills = S.bills.filter(x => x.id !== id);
+  saveState();
+}
+window.approveBillDelete = async function(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b || !isAdmin()) return;
+  if (!(await showConfirm(`Permanently delete "${b.title}" with all its details and slips?`, "Delete bill", "Delete", true))) return;
+  const by = b.delReq && b.delReq.by, title = b.title;
+  await purgeBill(id);
+  render();
+  if (by) pushNotify([by], "Bill deleted", `The admin approved deleting "${title}".`, "delreq-" + id);
+};
+window.rejectBillDelete = function(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b || !isAdmin()) return;
+  const by = b.delReq && b.delReq.by;
+  delete b.delReq;
+  logAct(`Declined deletion of bill "${b.title}" (restored)`);
+  saveState(); render();
+  if (by) pushNotify([by], "Deletion declined", `The admin kept "${b.title}". The bill is restored.`, "delreq-" + id);
+};
+function delReqHtml() {
+  if (!isAdmin()) return "";
+  const rs = S.bills.filter(b => b.delReq);
+  if (!rs.length) return "";
+  return `<div class="sh" style="color:var(--red)">Deletion requests (${rs.length})</div><div class="l" style="border:1.5px solid var(--red)">${rs.map(b => `<div class="li col">
+    <div onclick="openBill(${b.id},'dash')" style="cursor:pointer"><b>${esc(b.title)}</b> <span class="mu">${mh(calcBill(b).grandTotal)}</span><br><small>Requested by ${esc(getPerson(b.delReq.by).name)} · ${shortDate(ldate(new Date(b.delReq.at)))}</small></div>
+    <div class="row2"><button class="pill g" onclick="rejectBillDelete(${b.id})">Reject &amp; restore</button><button class="pill r" style="box-shadow:inset 0 0 0 1.5px var(--red)" onclick="approveBillDelete(${b.id})">Agree &amp; delete</button></div></div>`).join("")}</div>`;
+}
 
 function viewPeopleAndData() {
   const me = getPerson(currentUserId);
@@ -1580,10 +1782,31 @@ function viewPeopleAndData() {
       <div class="mu" style="margin-bottom:6px">Display size <small>(this device only)</small></div>
       ${seg(ZOOMS, zoomLv, "setZoom")}
     </div>
+    <div class="li col">
+      <div class="mu" style="margin-bottom:10px">Accent color <small>(this device only)</small></div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">${ACCENTS.map(a => `<button type="button" aria-label="${a[1]}" onclick="setAccent('${a[0]}')" style="width:36px;height:36px;border-radius:50%;border:0;padding:0;background:${a[2]};color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:${accentKey === a[0] ? `0 0 0 2px var(--card),0 0 0 4px ${a[2]}` : "none"}">${accentKey === a[0] ? "✓" : ""}</button>`).join("")}</div>
+    </div>
+    <div class="li col">
+      <div class="mu" style="margin-bottom:6px">Background tone <small>(this device only)</small></div>
+      ${seg(Object.entries(BGTONES).map(([k, v]) => [k, v[0]]), bgKey, "setBgTone")}
+    </div>
   </div>`;
 
   return h;
 }
+
+window.resetUserPin = async function(id) {
+  if (!isAdmin()) return;
+  const u = S.people.find(x => x.id === id);
+  if (!u) return;
+  const def = (FIXED_USERS.find(x => x.id === id) || {}).defaultPin || "1234";
+  if (!(await showConfirm(`Reset ${u.name}'s PIN to the default (${def})? They will be asked to choose a new PIN the next time they open the app.`, "Reset PIN", "Reset", true))) return;
+  u.pin = def; u.mustChange = true;
+  logAct(`Reset PIN for ${u.name}`);
+  saveState(); render();
+  pushNotify([id], "PIN reset", "The admin reset your PIN. You'll set a new one next time you open SplitMate.", "pinreset-" + id);
+  showNotice(`${u.name}'s PIN was reset to ${def}. They must choose a new PIN at next sign-in.`, "PIN reset");
+};
 
 function viewAdmin() {
   let h = headB('style="margin-top:6px" onclick="go(\'people\')"', "‹ Account", "Admin", "Manage members and defaults");
@@ -1599,7 +1822,7 @@ function viewAdmin() {
           <span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span>
           <span><b>${esc(p.name)}</b>${p.id === ADMIN_ID ? '<span class="cp">admin</span>' : ""}${p.id === currentUserId ? '<span class="cp">you</span>' : ""}</span>
         </span>
-        <small class="mu">PIN active</small>
+        <button class="pill r" style="box-shadow:inset 0 0 0 1.5px var(--red)" onclick="resetUserPin(${p.id})">Reset PIN</button>
       </div>
     `).join("")}
   </div>`;
@@ -1611,6 +1834,9 @@ function viewAdmin() {
       ${sw(!!S.settings.defaultGst, "S.settings.defaultGst=this.checked;saveState();render()")}
     </div>
   </div>`;
+
+  const lg = (S.log || []).slice(0, 150);
+  h += `<div class="sh">Activity log · last 2 days</div><div class="l">${lg.length ? lg.map(e => `<div class="li col"><div><b>${esc(getPerson(e.by).name)}</b> ${esc(e.text)}</div><small class="mu">${new Date(e.at).toLocaleString("en", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small></div>`).join("") : '<div class="li mu">No activity yet.</div>'}</div><div class="mu" style="font-size:12px;margin:6px 14px 0">Entries are removed automatically after 2 days.</div>`;
 
   if (!isStandalone() && (installEv || isIOS)) {
     h += `<div class="sh">Install</div><div class="l">${installEv
@@ -1644,13 +1870,13 @@ let billFrom = null;
 const METHODS = { bank: "Bank transfer", cash: "Cash", other: "Other" };
 const payById = id => S.payments.find(p => p.id === id);
 const payOf = (billId, fromId) => S.payments.find(p => p.status === "pending" && p.fromId === fromId && p.billIds.includes(billId));
-const pairDues = (from, to) => S.bills
+const pairDues = (from, to) => liveBills()
   .filter(b => (tripFilter === "All" || (b.trip || "") === tripFilter) && b.payerId === to)
   .flatMap(b => getBillDues(b).filter(d => d.fromId === from && !d.isSettled));
 
 function notifCount() {
   const me = currentUserId;
-  return S.payments.filter(p => (p.toId === me && p.status === "pending") || (p.fromId === me && p.status === "rejected" && !p.ack)).length
+  return (isAdmin() ? S.bills.filter(b => b.delReq).length : 0) + S.payments.filter(p => (p.toId === me && p.status === "pending") || (p.fromId === me && p.status === "rejected" && !p.ack)).length
     + S.people.filter(p => p.id !== me && pairDues(me, p.id).some(d => !payOf(d.bill.id, me))).length;
 }
 
@@ -1740,7 +1966,9 @@ function userShare(b, uid) {
   if (!r || r.tot <= 0) return null;
   const its = (b.items || []).filter(it => (it.w || []).includes(uid) && +it.p > 0);
   const sh = alloc(its.map(it => itemBase(it) / it.w.length), r.sub);
-  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) / it.w.length, shared: it.w.length, amt: sh[i], inc: it.pm === "incl" }));
+  const gRaw = its.map((it, i) => it.pm === "incl" ? r2((+it.p || 0) - itemBase(it)) / it.w.length : (b.gstEnabled ? sh[i] * GST_RATE / 100 : 0));
+  const gA = alloc(gRaw, r.gst);
+  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) / it.w.length, shared: it.w.length, amt: sh[i], gst: gA[i], tot: r2(sh[i] + gA[i]), unit: itemBase(it) / (+it.q || 1), inc: it.pm === "incl" }));
   return { lines, qty: r2(sum(lines.map(l => l.q))), sub: r.sub, gst: r.gst, extra: r.extra, tot: r.tot, gstOn: !!b.gstEnabled };
 }
 const shLn = (l, v, bold) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:2px 0;${bold ? "font-weight:700;border-top:.5px solid var(--bd);margin-top:4px;padding-top:6px" : ""}"><span>${l}</span><span>${v}</span></div>`;
@@ -1749,7 +1977,10 @@ function consumedHtml(b, uid) {
   const u = userShare(b, uid);
   if (!u) return "";
   return `<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--bd)">
-    ${u.lines.map(l => shLn(`${esc(l.n)} <small class="mu">Qty ${fq(l.q)}${l.shared > 1 ? ` · shared by ${l.shared}` : ""}${l.inc ? " · price incl. GST" : ""}</small>`, f(l.amt))).join("")}
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="color:var(--mu);text-align:right"><th style="text-align:left;font-weight:600;padding:3px 4px 3px 0">Item</th><th style="font-weight:600;padding:3px 4px">Qty</th><th style="font-weight:600;padding:3px 4px">Unit price</th><th style="font-weight:600;padding:3px 4px">GST</th><th style="font-weight:600;padding:3px 0 3px 4px">Total</th></tr></thead>
+      <tbody>${u.lines.map(l => `<tr style="text-align:right;border-top:.5px solid var(--bd)"><td style="text-align:left;padding:5px 4px 5px 0">${esc(l.n)}${l.shared > 1 ? `<br><small class="mu">shared by ${l.shared}</small>` : ""}</td><td style="padding:5px 4px">${fq(l.q)}</td><td style="padding:5px 4px">${f(l.unit)}</td><td style="padding:5px 4px">${f(l.gst)}</td><td style="padding:5px 0 5px 4px"><b>${f(l.tot)}</b></td></tr>`).join("")}</tbody>
+    </table></div><div class="mu" style="font-size:11px;margin:2px 0 4px">Unit price is before GST</div>
     ${shLn("Qty consumed", fq(u.qty), true)}
     ${shLn("Items subtotal", f(u.sub))}
     ${shLn(`GST ${GST_RATE}%`, (u.gstOn || u.gst > 0.004) ? f(u.gst) : "Off")}
@@ -1810,12 +2041,25 @@ window.submitPay = async function() {
     catch (e) { s.busy = false; render(); return showNotice("Could not upload the slip: " + e.message, "Upload failed"); }
   }
   S.payments.unshift({ id, fromId: me, toId: s.toId, billIds: dues.map(d => d.bill.id), amount, method: METHODS[s.method], note: (s.note || "").trim(), hasSlip: !!s.slip, status: "pending", at: Date.now() });
+  logAct(`Sent payment of Rf ${f(amount)} to ${toName}`);
   saveState();
   pushNotify([s.toId], "Payment to confirm", `${getPerson(me).name} sent Rf ${f(amount)}. Review and confirm.`, "pay-" + id);
   sheet = null;
   render();
   showNotice(`Payment of ${f(amount)} sent to ${toName}. Your balance clears once ${toName} confirms it.`, "Payment submitted");
 };
+
+window.openReceipt = async function(id) {
+  sheet = { t: "receipt", id, img: null, loading: true };
+  render();
+  try { const snap = await get(ref(db, "splitmate/receipts/" + id)); if (sheet && sheet.id === id) sheet.img = snap.val(); } catch (e) {}
+  if (sheet && sheet.id === id) { sheet.loading = false; render(); }
+};
+function receiptSheet(s) {
+  const b = S.bills.find(x => x.id === s.id);
+  return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Back", "Receipt", b ? esc(b.title) : "")}
+  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading receipt…</div>' : s.img ? `<img alt="Receipt" src="${s.img}" style="width:100%;border-radius:10px;display:block">` : '<div class="mu">Receipt is no longer available.</div>'}</div></div>`;
+}
 
 window.openPayment = async function(id) {
   sheet = { t: "review", id, slip: null, loading: true };
@@ -1832,8 +2076,8 @@ function reviewSheet(s) {
   const back = 'style="margin-top:6px" onclick="sheet=null;render()"';
   if (!p) return `${headB(back, "‹ Back", "Payment", "")}<div class="l"><div class="li mu">This payment no longer exists.</div></div>`;
   const from = getPerson(p.fromId), to = getPerson(p.toId);
-  const st = p.status === "confirmed" ? ["ok", "Confirmed"] : p.status === "rejected" ? ["no", "Rejected"] : ["", "Awaiting confirmation"];
-  const bills = p.billIds.map(id => S.bills.find(b => b.id === id)).filter(Boolean);
+  const st = p.status === "confirmed" ? ["ok", p.completed ? "Completed" : "Confirmed"] : p.status === "rejected" ? ["no", "Rejected"] : ["pe", "Awaiting confirmation"];
+  const bills = p.billIds.map(id => liveBills().find(b => b.id === id)).filter(Boolean);
   return `${headB(back, "‹ Back", `${esc(from.name)} → ${esc(to.name)}`, `${shortDate(ldate(new Date(p.at)))} · ${esc(p.method)}`)}
   <div class="l">
     <div class="li"><b>Amount</b><b style="font-size:20px">${mh(p.amount)}</b></div>
@@ -1844,7 +2088,7 @@ function reviewSheet(s) {
   <div class="sh">Bills covered</div>
   <div class="l">${bills.map(b => `<div class="li col"><div onclick="openBill(${b.id},'${tab}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><span class="mu">›</span></div>${consumedHtml(b, p.fromId)}</div>`).join("") || '<div class="li mu">Bills were deleted.</div>'}</div>
   <div class="sh">Payment slip</div>
-  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : s.slip ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block">` : '<div class="mu">No slip attached.</div>'}</div></div>
+  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : s.slip ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block">` : p.slipDeleted ? '<div class="mu">Slip was deleted 2 days after the decision.</div>' : '<div class="mu">No slip attached.</div>'}</div></div>
   ${p.status === "pending" && p.toId === currentUserId ? `<div class="row2" style="margin-top:16px"><button class="btn red" onclick="rejectPay(${p.id})">Reject</button><button class="btn" onclick="confirmPay(${p.id})">Confirm received</button></div>` : ""}
   ${p.status === "pending" && p.fromId === currentUserId ? `<button class="btn sec" style="margin-top:16px" onclick="cancelPay(${p.id})">Cancel this payment</button>` : ""}`;
 }
@@ -1855,6 +2099,7 @@ window.confirmPay = async function(id) {
   if (!(await showConfirm(`Confirm you received ${f(p.amount)} from ${getPerson(p.fromId).name}?`, "Confirm payment", "Yes, received"))) return;
   p.status = "confirmed"; p.decidedAt = Date.now();
   p.billIds.forEach(bid => { const b = S.bills.find(x => x.id === bid); if (b) { b.settled = b.settled || {}; b.settled[p.fromId] = true; } });
+  logAct(`Confirmed payment of Rf ${f(p.amount)} from ${getPerson(p.fromId).name}`);
   saveState(); sheet = null; render();
   pushNotify([p.fromId], "Payment confirmed ✓", `${getPerson(p.toId).name} confirmed your payment of Rf ${f(p.amount)}.`, "pay-" + p.id);
 };
@@ -1864,6 +2109,7 @@ window.rejectPay = async function(id) {
   const r = await showPrompt("Why are you rejecting this?", "Reject payment", "Optional reason", "");
   if (r === null) return;
   p.status = "rejected"; p.reason = String(r).trim(); p.decidedAt = Date.now();
+  logAct(`Rejected payment of Rf ${f(p.amount)} from ${getPerson(p.fromId).name}`);
   saveState(); sheet = null; render();
   pushNotify([p.fromId], "Payment rejected", `${getPerson(p.toId).name} rejected your payment of Rf ${f(p.amount)}${p.reason ? ": " + p.reason : "."}`, "pay-" + p.id);
 };
@@ -1873,6 +2119,7 @@ window.cancelPay = async function(id) {
   if (!(await showConfirm("Cancel this payment request?", "Cancel payment", "Cancel payment", true))) return;
   S.payments = S.payments.filter(x => x.id !== id);
   set(ref(db, "splitmate/slips/" + id), null).catch(() => {});
+  logAct(`Cancelled own payment of Rf ${f(p.amount)}`);
   saveState(); sheet = null; render();
 };
 window.ackPay = function(id) {
@@ -1886,6 +2133,7 @@ window.markReceived = async function(billId, fromId) {
   if (!d || payOf(billId, fromId)) return;
   if (!(await showConfirm(`Mark ${f(d.amount)} from ${getPerson(fromId).name} as received for "${b.title}"?`, "Mark received", "Mark received"))) return;
   b.settled = b.settled || {}; b.settled[fromId] = true;
+  logAct(`Marked ${getPerson(fromId).name}'s Rf ${f(d.amount)} as received for "${b.title}"`);
   saveState(); render();
   pushNotify([fromId], "Marked as received ✓", `${getPerson(currentUserId).name} marked your Rf ${f(d.amount)} for "${b.title}" as received.`, "bill-" + b.id);
 };
@@ -1894,6 +2142,7 @@ window.undoSettled = async function(billId, fromId) {
   if (!b || b.payerId !== currentUserId) return;
   if (!(await showConfirm(`Mark ${getPerson(fromId).name}'s share of "${b.title}" as unpaid again?`, "Undo settlement", "Mark unpaid", true))) return;
   if (b.settled) delete b.settled[fromId];
+  logAct(`Marked ${getPerson(fromId).name}'s share of "${b.title}" as unpaid again`);
   saveState(); render();
 };
 
@@ -1930,6 +2179,8 @@ window.render = function(opts) {
     return;
   }
   if (tab === "admin" && !isAdmin()) tab = "people";
+  sweepSlips();
+  { const meP = getPerson(currentUserId); if (meP && meP.mustChange && !dlg) promptForcePin(); }
   nav.style.display = tab === "new" ? "none" : "flex";
 
   const scrollPos = v ? v.scrollTop : 0;
@@ -2139,8 +2390,128 @@ function pushSection() {
   <div class="l"><div class="li"><span><b>Phone notifications</b><br><small>${sub}</small></span>${act}</div></div>`;
 }
 
+/* ---- manual reminders (payer -> unpaid people) ---- */
+const REMIND_MAX = 2;
+const remindsLeft = b => REMIND_MAX - ((b.remindSent && b.remindSent.d === today()) ? (b.remindSent.n || 0) : 0);
+let sweeping = false;
+function sweepSlips() {
+  if (!loaded || sweeping) return;
+  const now = Date.now(), cut = now - 2 * 864e5;
+  let changed = false;
+  S.log = S.log || [];
+  if (S.log.some(e => (e.at || 0) < cut)) { S.log = S.log.filter(e => (e.at || 0) >= cut); changed = true; }
+  const old = S.payments.filter(p => (p.decidedAt || p.at || 0) < cut && ((p.status === "confirmed" && !p.completed) || (p.status === "rejected" && p.hasSlip)));
+  const rcDel = [];
+  S.bills.forEach(b => {
+    if (!b.hasReceipt) return;
+    if (!getBillDues(b).every(d => d.isSettled)) { if (b.receiptDoneAt) { delete b.receiptDoneAt; changed = true; } return; }
+    if (!b.receiptDoneAt) { b.receiptDoneAt = now; changed = true; }
+    else if (b.receiptDoneAt < cut) rcDel.push(b);
+  });
+  if (!old.length && !rcDel.length && !changed) return;
+  sweeping = true;
+  Promise.all([
+    ...old.map(p => p.hasSlip ? set(ref(db, "splitmate/slips/" + p.id), null).catch(() => {}) : null),
+    ...rcDel.map(b => set(ref(db, "splitmate/receipts/" + b.id), null).catch(() => {}))
+  ]).then(() => {
+    old.forEach(o => {
+      const p = payById(o.id);
+      if (!p) return;
+      if (p.hasSlip) p.slipDeleted = true;
+      p.hasSlip = false;
+      if (p.status === "confirmed") p.completed = true;
+    });
+    rcDel.forEach(o => { const b = S.bills.find(x => x.id === o.id); if (b) { b.hasReceipt = false; b.receiptDeleted = true; delete b.receiptDoneAt; } });
+    saveState(); sweeping = false;
+  });
+}
+window.remindNow = function(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b || b.payerId !== currentUserId) return;
+  const open = getBillDues(b).filter(d => !d.isSettled && !payOf(id, d.fromId));
+  if (!open.length) return showNotice("Everyone has either paid or has a payment waiting for you to confirm.", "Nothing to remind");
+  if (remindsLeft(b) <= 0) return showNotice("You've already sent 2 reminders for this bill today. You can send more tomorrow.", "Daily limit reached");
+  b.remindSent = { d: today(), n: REMIND_MAX - remindsLeft(b) + 1 };
+  logAct(`Sent payment reminder for "${b.title}"`);
+  saveState();
+  open.forEach(d => pushNotify([d.fromId], "Payment reminder", `You owe Rf ${f(d.amount)} to ${getPerson(b.payerId).name} for "${b.title}".`, "remind-" + id + "-" + d.fromId));
+  showNotice("Reminder sent to " + open.map(d => getPerson(d.fromId).name).join(", ") + `. ${remindsLeft(b)} left today.`, "Reminder sent");
+  render();
+};
+
+/* ---- own spending by month + heat map ---- */
+let spendMonth = null, spendDay = null;
+const mKey = d => String(d || "").slice(0, 7);
+const p2 = n => String(n).padStart(2, "0");
+const mLabel = k => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleString("en", { month: "short", year: "numeric" });
+window.setSpendMonth = k => { spendMonth = k; spendDay = null; render(); };
+window.stepSpendMonth = n => { const [y, m] = spendMonth.split("-").map(Number), d = new Date(y, m - 1 + n, 1); spendMonth = d.getFullYear() + "-" + p2(d.getMonth() + 1); spendDay = null; render(); };
+window.setSpendDay = k => { spendDay = spendDay === k ? null : k; render(); };
+
+function spendHtml(uid) {
+  const byDay = {}, byMonth = {}, dayBills = {};
+  liveBills().filter(b => tripFilter === "All" || (b.trip || "") === tripFilter).forEach(b => {
+    const r = calcBill(b).rows.find(x => x.personId === uid), t = r ? r.tot : 0;
+    if (!(t > 0) || !b.date) return;
+    byDay[b.date] = r2((byDay[b.date] || 0) + t);
+    byMonth[mKey(b.date)] = r2((byMonth[mKey(b.date)] || 0) + t);
+    (dayBills[b.date] = dayBills[b.date] || []).push({ b, t });
+  });
+  const nowK = mKey(today());
+  if (!spendMonth) spendMonth = nowK;
+  const [y, m] = spendMonth.split("-").map(Number);
+  const days = new Date(y, m, 0).getDate(), first = new Date(y, m - 1, 1).getDay();
+  const vals = [...Array(days)].map((_, i) => byDay[`${spendMonth}-${p2(i + 1)}`] || 0);
+  const maxD = Math.max(...vals, 0), tot = r2(sum(vals)), act = vals.filter(v => v > 0).length;
+  const pd = new Date(y, m - 2, 1), prevK = pd.getFullYear() + "-" + p2(pd.getMonth() + 1), prevT = byMonth[prevK] || 0;
+  let cmp = "";
+  if (prevT > 0 || tot > 0) {
+    if (prevT <= 0) cmp = `<span class="mu">No spending in ${mLabel(prevK)}</span>`;
+    else {
+      const dl = r2(tot - prevT), pc = Math.round(Math.abs(dl) / prevT * 100);
+      cmp = Math.abs(dl) < 0.005 ? `<span class="mu">Same as ${mLabel(prevK)}</span>`
+        : `<span class="${dl > 0 ? "neg" : "pos"}">${dl > 0 ? "▲" : "▼"} ${mh(Math.abs(dl))} (${pc}%)</span> <span class="mu">vs ${mLabel(prevK)}</span>`;
+    }
+  }
+  let cells = ["S", "M", "T", "W", "T", "F", "S"].map(d => `<div class="hd">${d}</div>`).join("") + '<div></div>'.repeat(first);
+  vals.forEach((v, i) => {
+    const key = `${spendMonth}-${p2(i + 1)}`;
+    const hue = Math.round(120 - 120 * (maxD > 0 ? v / maxD : 0));
+    const sel = spendDay === key ? "box-shadow:0 0 0 2px var(--tx);" : "";
+    cells += `<div class="c" ${v > 0 ? `onclick="setSpendDay('${key}')"` : ""} style="${sel}${v > 0 ? `cursor:pointer;background:hsl(${hue} 65% 46%);color:${hue > 35 && hue < 85 ? "#000" : "#fff"}` : ""}"><b>${i + 1}</b>${v > 0 ? `<i style="font-size:${f(v).length > 7 ? 10 : f(v).length > 5 ? 11.5 : 13}px">${f(v)}</i>` : ""}</div>`;
+  });
+  const dl = spendDay && spendDay.startsWith(spendMonth) && dayBills[spendDay] ? dayBills[spendDay] : null;
+  const detail = dl ? `<div style="margin-top:12px;border-top:.5px solid var(--bd);padding-top:8px">
+    <div style="display:flex;justify-content:space-between"><b>${shortDate(spendDay)}</b><b>${mh(byDay[spendDay])}</b></div>
+    ${dl.map(x => `<div onclick="openBill(${x.b.id},'dash')" style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px"><span>${esc(x.b.title)} <span class="mu">›</span></span><span>${mh(x.t)}</span></div>`).join("")}
+  </div>` : `<div class="mu" style="font-size:12px;margin-top:10px">Tap a day to see its bills.</div>`;
+  return `<div class="sh">Your spending${tripFilter !== "All" ? " · " + esc(tripFilter) : ""}</div>
+  <div class="l"><div class="li col">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button class="pill" onclick="stepSpendMonth(-1)">‹</button>
+      <span style="text-align:center"><b>${mLabel(spendMonth)}</b><br><small class="mu">${mh(tot)} · ${act} day${act === 1 ? "" : "s"} with spending</small>${cmp ? `<br><small>${cmp}</small>` : ""}</span>
+      <button class="pill" onclick="stepSpendMonth(1)">›</button>
+    </div>
+    <div class="hm">${cells}</div>
+    <div class="mu" style="font-size:11px;margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:flex-end">Low <span style="width:90px;height:10px;border-radius:5px;display:inline-block;background:linear-gradient(90deg,hsl(120 65% 46%),hsl(60 65% 46%),hsl(0 65% 46%))"></span> High</div>
+    ${detail}
+  </div></div>`;
+}
+
+function payHistHtml(uid) {
+  const ps = S.payments.filter(p => p.fromId === uid || p.toId === uid).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10);
+  if (!ps.length) return "";
+  return `<div class="sh">Payments &amp; slips</div><div class="l">${ps.map(p => {
+    const out = p.fromId === uid, o = getPerson(out ? p.toId : p.fromId);
+    const st = p.status === "confirmed" ? ["ok", p.completed ? "Completed" : "Confirmed"] : p.status === "rejected" ? ["no", "Rejected"] : ["pe", "Pending"];
+    return `<div class="li"><span>${out ? "Paid" : "Received from"} <b>${esc(o.name)}</b><br><small>${shortDate(ldate(new Date(p.at)))} · ${esc(p.method)}${p.hasSlip ? " · slip" : ""}</small></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><b>${mh(p.amount)}</b><span style="display:flex;gap:6px;align-items:center"><span class="bd ${st[0]}">${st[1]}</span><button class="pill" onclick="openPayment(${p.id})">View details</button></span></span></div>`;
+  }).join("")}</div>`;
+}
+
 applyTheme();
 applyZoom();
+applyLook();
 D = blankBill();
 render();
 refreshPushState().then(() => {
