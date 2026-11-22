@@ -2475,6 +2475,29 @@ function payHistHtml(uid) {
   }).join("")}</div>`;
 }
 
+/* iPhone Home Screen app: stretch to the physical bottom edge (round corners) when the page reports a shorter height */
+function fitScreen() {
+  const b = document.body;
+  try {
+    if (!(isIOS && isStandalone())) return;
+    const pr = document.createElement("div");
+    pr.style.cssText = "position:fixed;left:0;bottom:0;visibility:hidden;padding-bottom:env(safe-area-inset-bottom,0px)";
+    document.body.appendChild(pr);
+    const safe = parseFloat(getComputedStyle(pr).paddingBottom) || 0;
+    pr.remove();
+    const portrait = window.innerHeight > window.innerWidth;
+    const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    const gap = sh - window.innerHeight;
+    if (safe > 0 && gap > 1 && gap <= safe + 4) { b.style.bottom = "auto"; b.style.height = sh + "px"; }
+    else { b.style.bottom = ""; b.style.height = ""; }
+  } catch (e) {}
+}
+window.addEventListener("resize", fitScreen);
+window.addEventListener("orientationchange", () => setTimeout(fitScreen, 250));
+window.addEventListener("pageshow", fitScreen);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) fitScreen(); });
+fitScreen();
+
 applyTheme();
 applyZoom();
 D = blankBill();
