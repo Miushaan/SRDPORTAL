@@ -105,6 +105,7 @@ button:active,.btn:active{opacity:.65}
 .bg{position:absolute;top:2px;left:75%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 #fab{position:absolute;left:14px;right:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;z-index:9}
 #fab .btn{padding:15px;font-size:17px;border-radius:26px;box-shadow:0 8px 22px rgba(0,122,255,.38)}
+.w.nonav{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
 .w.fab-pad{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
@@ -633,9 +634,9 @@ function showNotice(msg, title) {
   });
 }
 
-function showConfirm(msg, title, okLbl, danger) {
+function showConfirm(msg, title, okLbl, danger, cancelLbl) {
   return new Promise(res => {
-    dlg = { type: "confirm", title: title || "Please confirm", msg: String(msg), okLbl: okLbl || "Confirm", danger: !!danger, res };
+    dlg = { type: "confirm", title: title || "Please confirm", msg: String(msg), okLbl: okLbl || "Confirm", cancelLbl: cancelLbl || "Cancel", danger: !!danger, res };
     renderDlg();
   });
 }
@@ -671,7 +672,7 @@ function renderDlg() {
        <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
     : d.type === "confirm"
     ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
-       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(false)">Cancel</button><button class="btn ${d.danger ? "red" : ""}" onclick="closeDlg(true)">${esc(d.okLbl)}</button></div>`
+       <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(false)">${esc(d.cancelLbl || "Cancel")}</button><button class="btn ${d.danger ? "red" : ""}" onclick="closeDlg(true)">${esc(d.okLbl)}</button></div>`
     : `<div class="l" style="margin-top:8px"><div class="li"><span>${esc(d.msg)}</span><input id="dlginp" autocomplete="off" placeholder="${esc(d.ph)}" value="${esc(d.val)}" oninput="dlg.val=this.value" onkeydown="if(event.key==='Enter')closeDlg(dlg.val)"></div></div>
        <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="closeDlg(dlg.val)">Save</button></div>`;
 
@@ -700,21 +701,31 @@ function blankBill() {
   };
 }
 
+/* An item in "incl" mode is entered WITH 8% GST already inside the price */
+const itemBase = it => it.pm === "incl" ? r2((+it.p || 0) / (1 + GST_RATE / 100)) : (+it.p || 0);
+
 function calcBill(b) {
   const idSet = new Set(S.people.map(p => p.id));
   if (b.payerId) idSet.add(b.payerId);
   (b.items || []).forEach(it => (it.w || []).forEach(pid => idSet.add(pid)));
   const ids = [...idSet];
 
-  const subMap = {};
-  ids.forEach(id => subMap[id] = 0);
+  const subMap = {}, regMap = {}, gstFix = {};
+  ids.forEach(id => { subMap[id] = 0; regMap[id] = 0; gstFix[id] = 0; });
 
   (b.items || []).forEach(it => {
     const sharers = (it.w || []).filter(id => idSet.has(id));
     const price = +it.p || 0;
     if (sharers.length > 0 && price > 0) {
-      const share = price / sharers.length;
-      sharers.forEach(id => { subMap[id] += share; });
+      const incl = it.pm === "incl";
+      const base = itemBase(it);
+      sharers.forEach(id => { subMap[id] += base / sharers.length; });
+      if (incl) {
+        const g = r2(price - base) / sharers.length;
+        sharers.forEach(id => { gstFix[id] += g; });
+      } else {
+        sharers.forEach(id => { regMap[id] += base / sharers.length; });
+      }
     }
   });
 
@@ -723,7 +734,7 @@ function calcBill(b) {
   const extraPool = r2((+b.scAmt || 0) + (+b.other || 0));
   const useProp = b.scMode === "prop" && totalSubRaw > 0;
   const subA = alloc(ids.map(id => subMap[id] || 0), r2(totalSubRaw));
-  const gstRaw = subA.map(v => b.gstEnabled ? v * GST_RATE / 100 : 0);
+  const gstRaw = ids.map(id => (b.gstEnabled ? regMap[id] * GST_RATE / 100 : 0) + gstFix[id]);
   const gstA = alloc(gstRaw, r2(sum(gstRaw)));
   const extRaw = subA.map(v => extraPool !== 0 && activeIds.length
     ? (useProp ? extraPool * v / totalSubRaw : (v > 0 ? extraPool / activeIds.length : 0)) : 0);
@@ -937,8 +948,15 @@ function viewOwes() {
   return h;
 }
 
+let dSnap = "";
+const markClean = () => { try { dSnap = JSON.stringify(D); } catch (e) { dSnap = ""; } };
+const billDirty = () => tab === "new" && !!D && JSON.stringify(D) !== dSnap;
+const confirmLeaveBill = () => showConfirm("You have unsaved changes on this bill. Discard them, or continue editing?", "Discard changes?", "Discard", true, "Continue editing");
+window.addEventListener("beforeunload", e => { if (billDirty()) { e.preventDefault(); e.returnValue = ""; } });
+
 window.startNewBill = function() {
   D = blankBill();
+  markClean();
   openBillId = null;
   tab = "new";
   render();
@@ -958,18 +976,24 @@ function pastItems() {
   const seen = {}, out = [];
   S.bills.forEach(b => (b.items || []).forEach(it => {
     const n = (it.n || "").trim(), k = n.toLowerCase();
-    if (n && !seen[k]) { seen[k] = 1; out.push({ n, p: +it.p || 0 }); }
+    if (n && !seen[k]) { seen[k] = 1; out.push({ n, p: +it.p || 0, pm: it.pm === "incl" ? "incl" : "bill" }); }
   }));
   return out;
 }
 
 let plMatches = [], itMatches = [];
+window.pickPlace = function(i) {
+  const x = plMatches[i];
+  if (x == null) return;
+  D.title = x;
+  render();
+};
 window.updatePlaceSuggestions = function() {
   const q = (D.title || "").trim().toLowerCase(), box = document.getElementById("pls");
   if (!box) return;
   plMatches = q ? pastPlaces().filter(x => x.toLowerCase().includes(q) && x.toLowerCase() !== q).slice(0, 20) : [];
   box.style.display = plMatches.length ? "block" : "none";
-  box.innerHTML = plMatches.map((x, i) => `<div class="li" onclick="D.title=plMatches[${i}];render()" style="cursor:pointer;min-height:44px"><span>${esc(x)}</span></div>`).join("");
+  box.innerHTML = plMatches.map((x, i) => `<div class="li" onclick="pickPlace(${i})" style="cursor:pointer;min-height:44px"><span>${esc(x)}</span></div>`).join("");
 };
 
 window.toggleBillGst = function() {
@@ -997,7 +1021,7 @@ function viewNewBill() {
         8% Fixed GST <span class="gst-badge ${gstOn ? "" : "off"}">${gstOn ? "ENABLED" : "OFF"}</span>
       </div>
       <small class="mu" style="display:block;margin-top:3px">
-        ${gstOn ? "Adds 8% GST to each person's ordered items subtotal" : "Tap to enable 8% GST calculation per person"}
+        ${gstOn ? "Adds 8% GST to each person's items (items entered as “Incl. GST” are never taxed twice)" : "Tap to enable 8% GST calculation per person"}
       </small>
     </div>
     <div onclick="event.stopPropagation()">
@@ -1032,7 +1056,7 @@ function viewNewBill() {
         : (names.join(", ") || "Nobody selected");
       return `<div class="li" onclick="openItemSheet(${idx})" style="cursor:pointer">
         <span>
-          <b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}<br>
+          <b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}${it.pm === "incl" ? '<span class="cp">incl. GST</span>' : ""}<br>
           <small>${esc(whoLabel)}</small>
         </span>
         <span style="display:flex;gap:8px;align-items:center">
@@ -1072,7 +1096,7 @@ window.renderPreview = function() {
   let html = `<div class="li"><span>Items subtotal</span><b>${mh(c.totalSub)}</b></div>`;
   html += `<div class="li">
     <span>8% Fixed GST ${D.gstEnabled ? '<span class="bd ok" style="margin-left:4px">ON</span>' : '<span class="bd" style="margin-left:4px">OFF</span>'}</span>
-    <b>${D.gstEnabled ? mh(c.totalGst) : "Off"}</b>
+    <b>${(D.gstEnabled || c.totalGst > 0) ? mh(c.totalGst) : "Off"}</b>
   </div>`;
   if (c.totalExtra !== 0) {
     html += `<div class="li"><span>Service / Other charges</span><b>${mh(c.totalExtra)}</b></div>`;
@@ -1087,7 +1111,7 @@ window.renderPreview = function() {
           <span class="dot" style="--c:${r.person.color}">${esc(initials(r.person.name))}</span>
           <span>
             <b>${esc(r.person.name)}</b>${r.personId === D.payerId ? '<span class="cp">payer</span>' : ""}<br>
-            <small>Items ${f(r.sub)}${D.gstEnabled ? ` + 8% GST ${f(r.gst)}` : ""}${Math.abs(r.extra) > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
+            <small>Items ${f(r.sub)}${(D.gstEnabled || r.gst > 0.004) ? ` + 8% GST ${f(r.gst)}` : ""}${Math.abs(r.extra) > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
           </span>
         </span>
         <b>${mh(r.tot)}</b>
@@ -1188,7 +1212,7 @@ window.pickPastItem = function(i) {
   const x = itMatches[i];
   if (!x) return;
   sheet.n = x.n;
-  sheet.pm = "bill";
+  sheet.pm = x.pm || "bill";
   sheet.pr = String(x.p);
   sheet.q = 1;
   render();
@@ -1203,21 +1227,26 @@ window.toggleSheetPerson = function(id) {
 
 function itemSheetLiveText() {
   const tot = sheetItemTotal(), q = sheet.q;
+  const incl = sheet.pm === "incl";
+  const gstOn = !!D.gstEnabled;
+  const base = incl ? r2(tot / (1 + GST_RATE / 100)) : tot;
+  const gstT = incl ? r2(tot - base) : (gstOn ? r2(tot * GST_RATE / 100) : 0);
+  const showGst = incl || gstOn;
   const der = sheet.pm === "unit"
     ? (tot > 0 ? `Bill price: <b>${mh(tot)}</b>` : "Bill price = unit price × quantity")
+    : incl
+    ? (tot > 0 ? `Price <b>${mh(tot)}</b> = ${mh(base)} + ${GST_RATE}% GST <b>${mh(gstT)}</b> (already included, not added again)${q > 1 ? ` · ${mh(tot / q)} each` : ""}` : `Enter the price including ${GST_RATE}% GST, as printed on the receipt`)
     : (q > 1 && tot > 0 ? `Unit price: <b>${mh(tot / q)}</b>` : "Enter total item price from receipt");
 
   const n = sheet.w.length;
-  const gstOn = !!D.gstEnabled;
-  const baseA = n ? alloc(Array(n).fill(tot / n), tot) : [];
-  const gstT = gstOn ? r2(tot * GST_RATE / 100) : 0;
+  const baseA = n ? alloc(Array(n).fill(base / n), base) : [];
   const gstA = n ? alloc(Array(n).fill(gstT / n), gstT) : [];
   const shares = n === 0
     ? '<div class="li mu">Select who shared this item to preview split.</div>'
     : sheet.w.map((id, i) => `<div class="li">
-          <span>${esc(getPerson(id).name)}${gstOn && tot > 0 ? `<br><small>Item ${f(baseA[i])} + 8% GST ${f(gstA[i])}</small>` : ""}</span>
+          <span>${esc(getPerson(id).name)}${showGst && tot > 0 ? `<br><small>Item ${f(baseA[i])} + ${GST_RATE}% GST ${f(gstA[i])}</small>` : ""}</span>
           <b>${mh(baseA[i] + gstA[i])}</b>
-        </div>`).join("") + `<div class="li"><b>Item Total${gstOn ? " (incl. 8% GST)" : ""}</b><b>${mh(tot + gstT)}</b></div>`;
+        </div>`).join("") + `<div class="li"><b>Item Total${showGst ? ` (incl. ${GST_RATE}% GST)` : ""}</b><b>${mh(base + gstT)}</b></div>`;
 
   return { der, shares };
 }
@@ -1285,9 +1314,9 @@ function renderSheetHtml() {
     </div>
 
     <div class="sh">Price Mode</div>
-    ${seg([["bill", "Bill Price"], ["unit", "Unit Price × Qty"]], s.pm, "((v)=>{sheet.pm=v;render()})")}
+    ${seg([["bill", "Bill Price"], ["unit", "Unit × Qty"], ["incl", "Incl. GST"]], s.pm, "((v)=>{sheet.pm=v;render()})")}
     <div class="l" style="margin-top:10px">
-      <div class="li"><span>${unit ? "Unit price" : "Bill price"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
+      <div class="li"><span>${unit ? "Unit price" : s.pm === "incl" ? "Price incl. GST" : "Bill price"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
       <div class="li"><span>Quantity</span><span class="step"><button type="button" class="pill" onclick="sheet.q=Math.max(1,sheet.q-1);render()">−</button><b>${s.q}</b><button type="button" class="pill" onclick="sheet.q++;render()">+</button></span></div>
       <div class="li"><span class="mu" id="itd">${der}</span></div>
     </div>
@@ -1403,7 +1432,7 @@ function viewBillDetail(id) {
 
   h += `<div class="l">
     <div class="li"><span>Items subtotal</span><b>${mh(c.totalSub)}</b></div>
-    <div class="li"><span>8% Fixed GST</span><b>${b.gstEnabled ? mh(c.totalGst) : "Disabled"}</b></div>
+    <div class="li"><span>8% Fixed GST</span><b>${(b.gstEnabled || c.totalGst > 0) ? mh(c.totalGst) : "Disabled"}</b></div>
     ${+b.scAmt !== 0 ? `<div class="li"><span>Service charge</span><b>${mh(+b.scAmt)}</b></div>` : ""}
     ${+b.other !== 0 ? `<div class="li"><span>Other charges</span><b>${mh(+b.other)}</b></div>` : ""}
     <div class="li"><b>Grand Total</b><b style="font-size:20px">${mh(c.grandTotal)}</b></div>
@@ -1416,7 +1445,7 @@ function viewBillDetail(id) {
         <span class="dot" style="--c:${r.person.color}">${esc(initials(r.person.name))}</span>
         <span>
           <b>${esc(r.person.name)}</b>${r.personId === b.payerId ? '<span class="cp">paid bill</span>' : ""}<br>
-          <small>Items ${f(r.sub)}${b.gstEnabled ? ` + 8% GST ${f(r.gst)}` : ""}${Math.abs(r.extra) > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
+          <small>Items ${f(r.sub)}${(b.gstEnabled || r.gst > 0.004) ? ` + 8% GST ${f(r.gst)}` : ""}${Math.abs(r.extra) > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
         </span>
       </span>
       <b>${mh(r.tot)}</b>
@@ -1443,7 +1472,7 @@ function viewBillDetail(id) {
   <div class="l">${(b.items || []).map(it => {
     const names = (it.w || []).map(pid => getPerson(pid).name).join(", ") || "Nobody";
     return `<div class="li">
-      <span><b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}<br><small>${esc(names)}</small></span>
+      <span><b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}${it.pm === "incl" ? '<span class="cp">incl. GST</span>' : ""}<br><small>${esc(names)}</small></span>
       <b>${mh(+it.p || 0)}</b>
     </div>`;
   }).join("")}</div>`;
@@ -1465,6 +1494,7 @@ window.editSavedBill = function(id) {
   D = cl(b);
   D.editId = id;
   window.D = D;
+  markClean();
   openBillId = null;
   tab = "new";
   render();
@@ -1484,6 +1514,7 @@ window.useBillAsTemplate = function(id) {
   D.other = +b.other || 0;
   D.items = cl(b.items || []);
   window.D = D;
+  markClean();
   openBillId = null;
   tab = "new";
   render();
@@ -1655,7 +1686,8 @@ window.closeBill = function() {
   render();
   scrollTopMain();
 };
-window.cancelEdit = function() {
+window.cancelEdit = async function() {
+  if (billDirty() && !(await confirmLeaveBill())) return;
   const id = D && D.editId;
   D = blankBill();
   if (id) { tab = "hist"; openBillId = id; } else tab = "dash";
@@ -1694,8 +1726,8 @@ function userShare(b, uid) {
   const r = calcBill(b).rows.find(x => x.personId === uid);
   if (!r || r.tot <= 0) return null;
   const its = (b.items || []).filter(it => (it.w || []).includes(uid) && +it.p > 0);
-  const sh = alloc(its.map(it => it.p / it.w.length), r.sub);
-  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) / it.w.length, shared: it.w.length, amt: sh[i] }));
+  const sh = alloc(its.map(it => itemBase(it) / it.w.length), r.sub);
+  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) / it.w.length, shared: it.w.length, amt: sh[i], inc: it.pm === "incl" }));
   return { lines, qty: r2(sum(lines.map(l => l.q))), sub: r.sub, gst: r.gst, extra: r.extra, tot: r.tot, gstOn: !!b.gstEnabled };
 }
 const shLn = (l, v, bold) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:2px 0;${bold ? "font-weight:700;border-top:.5px solid var(--bd);margin-top:4px;padding-top:6px" : ""}"><span>${l}</span><span>${v}</span></div>`;
@@ -1704,10 +1736,10 @@ function consumedHtml(b, uid) {
   const u = userShare(b, uid);
   if (!u) return "";
   return `<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--bd)">
-    ${u.lines.map(l => shLn(`${esc(l.n)} <small class="mu">Qty ${fq(l.q)}${l.shared > 1 ? ` · shared by ${l.shared}` : ""}</small>`, f(l.amt))).join("")}
+    ${u.lines.map(l => shLn(`${esc(l.n)} <small class="mu">Qty ${fq(l.q)}${l.shared > 1 ? ` · shared by ${l.shared}` : ""}${l.inc ? " · price incl. GST" : ""}</small>`, f(l.amt))).join("")}
     ${shLn("Qty consumed", fq(u.qty), true)}
     ${shLn("Items subtotal", f(u.sub))}
-    ${shLn(u.gstOn ? `GST ${GST_RATE}% <small class="mu">on ${f(u.sub)}</small>` : "GST", u.gstOn ? f(u.gst) : "Off")}
+    ${shLn(`GST ${GST_RATE}%`, (u.gstOn || u.gst > 0.004) ? f(u.gst) : "Off")}
     ${Math.abs(u.extra) > 0.004 ? shLn("Service / other share", f(u.extra)) : ""}
     ${shLn("Total", f(u.tot), true)}
   </div>`;
@@ -1849,7 +1881,12 @@ window.undoSettled = async function(billId, fromId) {
 };
 
 
-window.go = function(k) {
+window.go = async function(k) {
+  if (tab === "new" && k !== "new" && billDirty()) {
+    if (!(await confirmLeaveBill())) return;
+    D = blankBill();
+    markClean();
+  }
   tab = k;
   billFrom = null;
   sheet = null;
@@ -1874,8 +1911,8 @@ window.render = function(opts) {
     ovl.innerHTML = "";
     return;
   }
-  nav.style.display = "flex";
   if (tab === "admin" && !isAdmin()) tab = "people";
+  nav.style.display = tab === "new" ? "none" : "flex";
 
   const scrollPos = v ? v.scrollTop : 0;
   const badgeCount = notifCount();
@@ -1907,6 +1944,7 @@ window.render = function(opts) {
     : viewPeopleAndData();
 
   v.classList.toggle("fab-pad", tab === "dash");
+  v.classList.toggle("nonav", tab === "new");
   if (fab) fab.innerHTML = tab === "dash" ? `<button class="btn" onclick="startNewBill()">+ New Bill</button>` : "";
 
   const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
