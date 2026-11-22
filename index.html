@@ -119,6 +119,28 @@ button:active,.btn:active{opacity:.65}
 .gst-banner.on{border-color:var(--grn);background:color-mix(in srgb,var(--grn) 7%,var(--card))}
 .gst-badge{display:inline-block;background:var(--grn);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
 .gst-badge.off{background:var(--mu)}
+
+/* PIN Auth Overlay */
+#auth-screen{
+  position:fixed;inset:0;z-index:90;background:var(--bg);
+  display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(32px + env(safe-area-inset-bottom,0px));
+}
+.auth-wrap{max-width:460px;width:100%;margin:auto}
+.user-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.user-tile{
+  background:var(--card);border:1.5px solid var(--bd);border-radius:14px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left;color:var(--tx);font:inherit;
+  transition:border-color .15s,background .15s,transform .1s;
+}
+.user-tile.sel{border-color:var(--ac);background:var(--ac2)}
+.user-tile:active{transform:scale(.98)}
+.pin-card{background:var(--card);border-radius:16px;padding:18px;margin-top:14px;border:1px solid var(--bd)}
+.pin-inp{
+  width:100%;text-align:center;font-size:24px;font-weight:700;letter-spacing:10px;
+  background:var(--bg);border-radius:12px;padding:12px;border:1.5px solid var(--bd);color:var(--tx);
+}
+.pin-inp:focus{border-color:var(--ac)}
 </style>
 </head>
 <body>
@@ -126,10 +148,11 @@ button:active,.btn:active{opacity:.65}
 <div class="tabs" id="nav"></div>
 <div id="ovl"></div>
 <div id="dlgov"></div>
+<div id="auth-screen"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
    1. FIREBASE INITIALIZATION
@@ -149,16 +172,57 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 /* ==========================================================================
-   2. APP STATE & FIREBASE SYNC
+   2. FIXED USERS & PIN AUTHENTICATION
    ========================================================================== */
-const GST_RATE = 8;
 const PALETTE = [
   "#007aff", "#ff9500", "#34c759", "#af52de", "#ff2d92",
   "#30b0c7", "#ff3b30", "#5856d6", "#00c7be", "#a2845e"
 ];
 
+const FIXED_USERS = [
+  { id: 1, name: "Miu", color: PALETTE[0], defaultPin: "1234" },
+  { id: 2, name: "Shaheer", color: PALETTE[1], defaultPin: "1234" },
+  { id: 3, name: "Ameer", color: PALETTE[2], defaultPin: "1234" },
+  { id: 4, name: "Hammadh", color: PALETTE[3], defaultPin: "1234" },
+  { id: 5, name: "Mahil", color: PALETTE[4], defaultPin: "1234" },
+  { id: 6, name: "Wisham", color: PALETTE[5], defaultPin: "1234" },
+  { id: 7, name: "Prasad", color: PALETTE[6], defaultPin: "1234" },
+  { id: 8, name: "Kuday", color: PALETTE[7], defaultPin: "1234" },
+  { id: 9, name: "Muneef", color: PALETTE[8], defaultPin: "1234" },
+  { id: 10, name: "Alyan", color: PALETTE[9], defaultPin: "1234" }
+];
+
+function normalizePin(val, fallback) {
+  const s = val !== undefined && val !== null ? String(val).trim() : "";
+  return /^\d{4,6}$/.test(s) ? s : fallback;
+}
+
+function buildCanonicalPeople(existingPeople) {
+  const existing = Array.isArray(existingPeople) ? existingPeople : [];
+  return FIXED_USERS.map((u, idx) => {
+    const match = existing.find(p => p && (Number(p.id) === u.id || String(p.name || "").trim().toLowerCase() === u.name.toLowerCase()));
+    return {
+      id: u.id,
+      name: u.name,
+      color: (match && match.color) || PALETTE[idx % PALETTE.length],
+      pin: normalizePin(match && match.pin, u.defaultPin)
+    };
+  });
+}
+
+let currentUserId = null;
+let selectedAuthUserId = FIXED_USERS[0].id;
+let authPinInput = "";
+let authError = "";
+let lastRenderedAuthUserId = null;
+
+/* ==========================================================================
+   3. APP STATE & FIREBASE SYNC
+   ========================================================================== */
+const GST_RATE = 8;
+
 let S = {
-  people: [],
+  people: buildCanonicalPeople([]),
   bills: [],
   settings: {
     defaultGst: true,
@@ -183,28 +247,39 @@ function applyTheme() {
 }
 
 function saveState() {
+  S.people = buildCanonicalPeople(S.people);
   set(ref(db, "splitmate/state"), S).catch(err => {
     console.error("Firebase sync error:", err);
     showNotice("Could not sync changes to Firebase: " + err.message, "Sync Error");
   });
 }
 
-// Attach real-time database listener on load
 const stateRef = ref(db, "splitmate/state");
 onValue(stateRef, (snap) => {
   const val = snap.val();
   if (val && typeof val === "object") {
-    S.people = Array.isArray(val.people) ? val.people : [];
+    const incomingPeople = Array.isArray(val.people) ? val.people : [];
+    const canonical = buildCanonicalPeople(incomingPeople);
+    const needsSeed = incomingPeople.length !== FIXED_USERS.length ||
+      FIXED_USERS.some((u, i) => !incomingPeople[i] || incomingPeople[i].name !== u.name || !/^\d{4,6}$/.test(String(incomingPeople[i].pin || "")));
+
+    S.people = canonical;
     S.bills = Array.isArray(val.bills) ? val.bills : [];
     S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
     applyTheme();
     if (!D) D = blankBill();
+    if (needsSeed) {
+      saveState();
+    }
+  } else {
+    S.people = buildCanonicalPeople([]);
+    saveState();
   }
   render();
 });
 
 /* ==========================================================================
-   3. UTILITIES & FORMATTING
+   4. UTILITIES & FORMATTING
    ========================================================================== */
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const f = n => {
@@ -241,7 +316,7 @@ function nextId(list) {
 }
 
 function getPerson(id) {
-  return S.people.find(p => p.id === id) || { id, name: "Removed Person", color: "#8e8e93" };
+  return S.people.find(p => p.id === id) || { id, name: "Member", color: "#8e8e93", pin: "1234" };
 }
 
 function initials(name) {
@@ -257,7 +332,158 @@ function scrollTopMain() {
 }
 
 /* ==========================================================================
-   4. CUSTOM DIALOGS
+   5. AUTH SCREEN & PIN HANDLERS
+   ========================================================================== */
+window.selectAuthUser = function(id) {
+  selectedAuthUserId = id;
+  authPinInput = "";
+  authError = "";
+  lastRenderedAuthUserId = null;
+  renderAuth();
+  setTimeout(() => {
+    const inp = document.getElementById("auth-pin-inp");
+    if (inp) inp.focus();
+  }, 50);
+};
+
+window.submitPinLogin = function() {
+  const inpEl = document.getElementById("auth-pin-inp");
+  const liveVal = inpEl ? inpEl.value : authPinInput;
+  const user = S.people.find(p => p.id === selectedAuthUserId);
+  if (!user) {
+    authError = "Please select a user.";
+    lastRenderedAuthUserId = null;
+    renderAuth();
+    return;
+  }
+  const entered = String(liveVal || "").trim();
+  const expected = normalizePin(user.pin, "1234");
+  if (!entered) {
+    authError = "Enter your PIN to continue.";
+    lastRenderedAuthUserId = null;
+    renderAuth();
+    return;
+  }
+  if (entered !== expected && entered !== "1234" && user.pin === undefined) {
+    authError = "Incorrect PIN. Try again.";
+    authPinInput = "";
+    lastRenderedAuthUserId = null;
+    renderAuth();
+    setTimeout(() => {
+      const inp = document.getElementById("auth-pin-inp");
+      if (inp) inp.focus();
+    }, 50);
+    return;
+  }
+  if (entered !== expected) {
+    authError = "Incorrect PIN. Try again.";
+    authPinInput = "";
+    lastRenderedAuthUserId = null;
+    renderAuth();
+    setTimeout(() => {
+      const inp = document.getElementById("auth-pin-inp");
+      if (inp) inp.focus();
+    }, 50);
+    return;
+  }
+  currentUserId = user.id;
+  authPinInput = "";
+  authError = "";
+  lastRenderedAuthUserId = null;
+  if (!D) D = blankBill();
+  D.payerId = user.id;
+  render();
+};
+
+window.logoutUser = function() {
+  currentUserId = null;
+  authPinInput = "";
+  authError = "";
+  lastRenderedAuthUserId = null;
+  render();
+};
+
+window.promptChangeMyPin = async function() {
+  const me = getPerson(currentUserId);
+  if (!me) return;
+  const cur = await showPrompt("Enter current PIN", "Verify PIN", "••••", "");
+  if (cur === null) return;
+  if (String(cur).trim() !== normalizePin(me.pin, "1234")) {
+    return showNotice("Current PIN is incorrect.", "Invalid PIN");
+  }
+  const nextPin = await showPrompt("Enter new 4–6 digit PIN", "New PIN", "••••", "");
+  if (nextPin === null) return;
+  const clean = String(nextPin).trim();
+  if (!/^\d{4,6}$/.test(clean)) {
+    return showNotice("PIN must be 4 to 6 digits.", "Invalid Format");
+  }
+  me.pin = clean;
+  saveState();
+  await showNotice(`PIN updated for ${me.name}.`, "PIN Saved");
+  render();
+};
+
+function renderAuth() {
+  const el = document.getElementById("auth-screen");
+  if (!el) return;
+  if (currentUserId !== null) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    lastRenderedAuthUserId = null;
+    return;
+  }
+  el.style.display = "flex";
+  const selUser = S.people.find(p => p.id === selectedAuthUserId) || S.people[0];
+  if (selUser) selectedAuthUserId = selUser.id;
+
+  const existingInp = document.getElementById("auth-pin-inp");
+  if (existingInp && document.activeElement === existingInp && lastRenderedAuthUserId === selectedAuthUserId) {
+    return;
+  }
+  lastRenderedAuthUserId = selectedAuthUserId;
+
+  el.innerHTML = `<div class="auth-wrap">
+    <h1 style="margin:0 0 4px">SplitMate</h1>
+    <div class="sub">Select your profile and enter your PIN to unlock</div>
+
+    <div class="sh" style="margin-left:4px">Select User</div>
+    <div class="user-grid">
+      ${S.people.map(u => `
+        <button type="button" class="user-tile ${u.id === selectedAuthUserId ? "sel" : ""}" onclick="selectAuthUser(${u.id})">
+          <span class="dot" style="--c:${u.color}">${esc(initials(u.name))}</span>
+          <span style="font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.name)}</span>
+        </button>
+      `).join("")}
+    </div>
+
+    ${selUser ? `<div class="pin-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span class="dot" style="--c:${selUser.color}">${esc(initials(selUser.name))}</span>
+        <div>
+          <div style="font-weight:700;font-size:16px">${esc(selUser.name)}</div>
+          <small class="mu">Enter PIN (default: 1234)</small>
+        </div>
+      </div>
+      <input
+        id="auth-pin-inp"
+        class="pin-inp"
+        type="password"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="6"
+        placeholder="••••"
+        value="${esc(authPinInput)}"
+        oninput="authPinInput=this.value;authError=''"
+        onkeydown="if(event.key==='Enter')submitPinLogin()"
+      >
+      ${authError ? `<div class="neg" style="font-size:13px;margin-top:8px;text-align:center">${esc(authError)}</div>` : ""}
+      <button type="button" class="btn" style="margin-top:14px" onclick="submitPinLogin()">Unlock as ${esc(selUser.name)}</button>
+    </div>` : ""}
+  </div>`;
+}
+
+/* ==========================================================================
+   6. CUSTOM DIALOGS
    ========================================================================== */
 let dlg = null;
 
@@ -317,73 +543,14 @@ function renderDlg() {
 }
 
 /* ==========================================================================
-   5. USER / MEMBER MANAGEMENT
-   ========================================================================== */
-window.promptAddPerson = async function(autoSelectContext) {
-  const nameRaw = await showPrompt("Member Name", "Add User", "e.g. Amina, Ziyan", "");
-  const name = (nameRaw || "").trim();
-  if (!name) return null;
-
-  const emailRaw = await showPrompt("Email Address (Optional)", "Add User", "e.g. user@gmail.com", "");
-  const email = (emailRaw || "").trim();
-
-  if (S.people.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-    await showNotice(`"${name}" is already in your members list.`);
-    return null;
-  }
-  const color = PALETTE[S.people.length % PALETTE.length];
-  const person = { id: nextId(S.people), name, email, color };
-  S.people.push(person);
-  saveState();
-
-  if (autoSelectContext === "payer" && D) {
-    D.payerId = person.id;
-  } else if (autoSelectContext === "item" && sheet && sheet.t === "item") {
-    sheet.w.push(person.id);
-  } else if (D && !D.payerId) {
-    D.payerId = person.id;
-  }
-  render();
-  return person;
-};
-
-window.promptRenamePerson = async function(id) {
-  const p = S.people.find(x => x.id === id);
-  if (!p) return;
-  const raw = await showPrompt("New name", "Rename Member", "Name", p.name);
-  const name = (raw || "").trim();
-  if (!name || name === p.name) return;
-  if (S.people.some(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase())) {
-    return showNotice(`"${name}" already exists.`);
-  }
-  p.name = name;
-  saveState();
-  render();
-};
-
-window.removePerson = async function(id) {
-  const p = S.people.find(x => x.id === id);
-  if (!p) return;
-  const usedInBills = S.bills.some(b => b.payerId === id || (b.items || []).some(it => (it.w || []).includes(id)));
-  const msg = usedInBills
-    ? `Remove "${p.name}" from your members list?\n\nPast bills will still display their name.`
-    : `Remove "${p.name}" from your members list?`;
-  if (!(await showConfirm(msg, "Remove Member", "Remove", true))) return;
-  S.people = S.people.filter(x => x.id !== id);
-  if (D && D.payerId === id) D.payerId = S.people[0] ? S.people[0].id : null;
-  saveState();
-  render();
-};
-
-/* ==========================================================================
-   6. BILL SPLITTING & 8% FIXED GST ENGINE
+   7. BILL SPLITTING & 8% FIXED GST ENGINE
    ========================================================================== */
 function blankBill() {
   return {
     title: "",
     date: today(),
     trip: tripFilter === "All" ? "" : tripFilter,
-    payerId: S.people[0] ? S.people[0].id : null,
+    payerId: currentUserId || (S.people[0] ? S.people[0].id : 1),
     gstEnabled: !!S.settings.defaultGst,
     scAmt: 0,
     scMode: "ord",
@@ -507,20 +674,14 @@ window.settlePairAll = async function(fromId, toId) {
 };
 
 /* ==========================================================================
-   7. UI HELPERS
+   8. UI HELPERS
    ========================================================================== */
 const head = (t, s) => `<div class="hdr"><h1>${t}</h1><div class="sub">${s}</div></div>`;
 const headB = (attrs, label, t, s) => `<div class="hdr"><button class="pill" ${attrs}>${label}</button><h1>${t}</h1>${s ? `<div class="sub">${s}</div>` : ""}</div>`;
 const sw = (on, fn) => `<label class="sw"><input type="checkbox" ${on ? "checked" : ""} onchange="${fn}"><i></i></label>`;
 const seg = (opts, cur, fn) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur == k ? "on" : ""}" onclick="${fn}('${k}')">${l}.</button>`).join("")}</div>`;
 
-function personPicker(selectedIds, toggleExpr, addContext) {
-  if (!S.people.length) {
-    return `<div style="padding:8px 0">
-      <div class="mu" style="margin-bottom:10px">No members added yet. Add users to share bills:</div>
-      <button class="btn sec" onclick="promptAddPerson('${addContext}')">+ Add User</button>
-    </div>`;
-  }
+function personPicker(selectedIds, toggleExpr) {
   return `<div class="pk-dyn">
     ${S.people.map(p => {
       const on = selectedIds.includes(p.id);
@@ -528,28 +689,18 @@ function personPicker(selectedIds, toggleExpr, addContext) {
         ${!on ? `<span class="sdot" style="--c:${p.color}"></span>` : ""}<span>${esc(p.name)}</span>
       </button>`;
     }).join("")}
-    <button type="button" class="nb add-p" onclick="promptAddPerson('${addContext}')" style="background:var(--ac2);color:var(--ac);border:1.5px dashed var(--ac)">+ User</button>
   </div>`;
 }
 
 /* ==========================================================================
-   8. MAIN VIEWS
+   9. MAIN VIEWS
    ========================================================================== */
 function viewDash() {
   const { filteredBills, pairs, totalUnsettled, totalSpend } = computeAllBalances();
   const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
+  const me = getPerson(currentUserId);
 
-  let h = head("Overview", `${S.people.length} members · ${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"} · Live Sync`);
-
-  if (S.people.length === 0) {
-    h += `<div class="l" style="border-left:4px solid var(--ac);margin-bottom:12px">
-      <div class="li col">
-        <b>Welcome to SplitMate</b>
-        <div class="mu" style="margin:4px 0 12px">Add your first member using emails or names, then create bills with automatic 8% GST.</div>
-        <button class="btn" onclick="promptAddPerson()">+ Add First User</button>
-      </div>
-    </div>`;
-  }
+  let h = head("Overview", `Signed in as ${esc(me.name)} · ${S.people.length} members · ${S.bills.length} bill${S.bills.length === 1 ? "" : "s"}`);
 
   h += `<div class="row2" style="margin-top:4px">
     <div class="tile"><small>Total Bills</small><b>${mh(totalSpend)}</b></div>
@@ -678,7 +829,7 @@ function viewNewBill() {
     <div class="li"><span>Receipt total</span><input type="number" inputmode="decimal" step="any" placeholder="Optional check" value="${D.recTotal || ""}" oninput="D.recTotal=+this.value;renderPreview()"></div>
     <div class="li col">
       <div class="mu">Who paid the bill?</div>
-      ${personPicker(D.payerId ? [D.payerId] : [], id => `D.payerId=${id};render()`, "payer")}
+      ${personPicker(D.payerId ? [D.payerId] : [], id => `D.payerId=${id};render()`)}
     </div>
   </div>`;
 
@@ -771,7 +922,6 @@ window.renderPreview = function() {
 };
 
 window.saveCurrentBill = async function() {
-  if (!S.people.length) return showNotice("Add at least one member before saving a bill.");
   if (!D.payerId) return showNotice("Select who paid the bill.");
   if (!D.items.some(i => +i.p > 0)) return showNotice("Add at least one item with a price.");
   if (D.items.some(i => +i.p > 0 && !(i.w && i.w.length))) return showNotice("Select at least one person for every item.");
@@ -960,7 +1110,7 @@ function renderSheetHtml() {
       ${lastItem ? `<button type="button" class="pill" onclick="sheet.w=[...${JSON.stringify(lastItem.w)}];render()">Same as last</button>` : ""}
       <button type="button" class="pill r" onclick="sheet.w=[];render()">Clear</button>
     </div>
-    ${personPicker(s.w, id => `toggleSheetPerson(${id})`, "item")}
+    ${personPicker(s.w, id => `toggleSheetPerson(${id})`)}
 
     <div class="sh">Split Preview</div>
     <div class="l" id="itp">${shares}</div>
@@ -1181,29 +1331,35 @@ window.exportCsv = function() {
 };
 
 function viewPeopleAndData() {
-  let h = head("People & Members", "Manage group members manually");
+  const me = getPerson(currentUserId);
+  let h = head("Users & Account", `Signed in as ${esc(me.name)}`);
+
+  h += `<div class="sh">My Account</div>
+  <div class="l">
+    <div class="li">
+      <span style="display:flex;align-items:center;gap:10px">
+        <span class="dot" style="--c:${me.color}">${esc(initials(me.name))}</span>
+        <span><b>${esc(me.name)}</b><br><small>PIN protected profile</small></span>
+      </span>
+      <button class="pill" onclick="promptChangeMyPin()">Change PIN</button>
+    </div>
+    <div class="li" onclick="logoutUser()" style="cursor:pointer">
+      <span class="neg">Lock / Switch User</span>
+      <span class="mu">›</span>
+    </div>
+  </div>`;
 
   h += `<div class="sh">Group Members (${S.people.length})</div>
-  <div class="l">`;
-  if (!S.people.length) {
-    h += `<div class="li mu">No members added yet. Tap below to add users.</div>`;
-  } else {
-    h += S.people.map(p => `
+  <div class="l">
+    ${S.people.map(p => `
       <div class="li">
         <span style="display:flex;align-items:center;gap:10px">
           <span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span>
-          <span><b>${esc(p.name)}</b>${p.email ? `<br><small>${esc(p.email)}</small>` : ""}</span>
+          <span><b>${esc(p.name)}</b>${p.id === currentUserId ? '<span class="cp">you</span>' : ""}</span>
         </span>
-        <span style="display:flex;gap:6px;align-items:center">
-          <button class="pill" onclick="promptRenamePerson(${p.id})">Rename</button>
-          <button class="x" onclick="removePerson(${p.id})" title="Remove">×</button>
-        </span>
+        <small class="mu">PIN active</small>
       </div>
-    `).join("");
-  }
-  h += `</div>
-  <div style="margin-top:10px">
-    <button class="btn" onclick="promptAddPerson()">+ Add User</button>
+    `).join("")}
   </div>`;
 
   h += `<div class="sh">Defaults &amp; Appearance</div>
@@ -1244,10 +1400,22 @@ window.render = function() {
   window.histQuery = histQuery;
   window.applyTheme = applyTheme;
   window.saveState = saveState;
+  window.authPinInput = authPinInput;
+  window.authError = authError;
+
+  renderAuth();
 
   const v = document.getElementById("v");
   const nav = document.getElementById("nav");
   const ovl = document.getElementById("ovl");
+
+  if (currentUserId === null) {
+    v.innerHTML = "";
+    nav.style.display = "none";
+    ovl.innerHTML = "";
+    return;
+  }
+  nav.style.display = "flex";
 
   const scrollPos = v ? v.scrollTop : 0;
   const { unsettledRows } = computeAllBalances();
