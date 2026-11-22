@@ -184,6 +184,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+/* Phone notifications (Cloudflare Worker). Fill these in after deploying worker.js — see setup notes. */
+const PUSH_API = "https://splitmate-push.sa-noo12247.workers.dev/";          // e.g. "https://splitmate-push.your-name.workers.dev"
+const VAPID_PUBLIC_KEY = "BNDGrYXW5caL0OIeB9cZ69w8faew5TShc1OsxTVedmZjO3x6MuF82p-qoTvjLZy7USliBTdK1RY983SS--AC0ks";  // public key from: npx web-push generate-vapid-keys
+
 /* ==========================================================================
    2. FIXED USERS & PIN AUTHENTICATION
    ========================================================================== */
@@ -453,6 +457,7 @@ window.submitPinLogin = function() {
   }
   currentUserId = user.id;
   try { localStorage.setItem("splitmate_user", String(user.id)); } catch (e) {}
+  setTimeout(() => { if (pushState === "on") pushRegister().catch(() => {}); }, 300);
   authPinInput = "";
   authError = "";
   lastRenderedAuthUserId = null;
@@ -462,6 +467,7 @@ window.submitPinLogin = function() {
 };
 
 window.logoutUser = function() {
+  pushUnregisterCurrent();
   currentUserId = null;
   try { localStorage.removeItem("splitmate_user"); } catch (e) {}
   authPinInput = "";
@@ -819,6 +825,7 @@ window.settlePairAll = async function(fromId, toId) {
   free.forEach(d => { const b = S.bills.find(x => x.id === d.bill.id); if (b) { b.settled = b.settled || {}; b.settled[fromId] = true; } });
   saveState();
   render();
+  pushNotify([fromId], "Marked as received ✓", `${getPerson(currentUserId).name} marked Rf ${f(sum(free.map(d => d.amount)))} from you as received.`);
 };
 
 /* ==========================================================================
@@ -894,7 +901,7 @@ function viewDash() {
     </div>`;
   }
 
-  h += `<div class="sh">Your unsettled &amp; payment status</div><div class="l">`;
+  h += `<div class="sh" style="display:flex;justify-content:space-between;align-items:center"><span>Your unsettled &amp; payment status</span>${myOpen.length ? `<span class="bd no">${myOpen.length}</span>` : ""}</div><div class="l">`;
   if (!myOpen.length) {
     h += `<div class="li mu">${filteredBills.length ? "Nothing unsettled. You're all clear 🎉" : "No bills yet."}</div>`;
   } else {
@@ -1161,6 +1168,10 @@ window.saveCurrentBill = async function() {
   }
 
   saveState();
+  if (!editId) {
+    const payerName = getPerson(bill.payerId).name;
+    getBillDues(bill).forEach(d => pushNotify([d.fromId], "New bill: " + bill.title, `You owe Rf ${f(d.amount)} to ${payerName}.`, "bill-" + bill.id));
+  }
   D = blankBill();
   window.D = D;
   if (editId) {
@@ -1531,7 +1542,7 @@ window.deleteSavedBill = async function(id) {
 
 function viewPeopleAndData() {
   const me = getPerson(currentUserId);
-  let h = head("Users & Account", `Signed in as ${esc(me.name)}`);
+  let h = head("User account and settings", `Signed in as ${esc(me.name)}`);
 
   h += `<div class="sh">My Account</div>
   <div class="l">
@@ -1551,6 +1562,8 @@ function viewPeopleAndData() {
       <span class="mu">›</span>
     </div>
   </div>`;
+
+  h += pushSection();
 
   if (isAdmin()) {
     h += `<div class="sh">Admin</div>
@@ -1573,7 +1586,7 @@ function viewPeopleAndData() {
 }
 
 function viewAdmin() {
-  let h = headB('style="margin-top:6px" onclick="go(\'people\')"', "‹ Users", "Admin", "Manage members and defaults");
+  let h = headB('style="margin-top:6px" onclick="go(\'people\')"', "‹ Account", "Admin", "Manage members and defaults");
 
   h += `<div class="sh">New user</div>
   <div class="l"><div class="li" onclick="promptAddUser()" style="cursor:pointer"><span><b>Add new user</b><br><small>Create a member with a starting PIN</small></span><span class="pill solid">+ Add</span></div></div>`;
@@ -1798,6 +1811,7 @@ window.submitPay = async function() {
   }
   S.payments.unshift({ id, fromId: me, toId: s.toId, billIds: dues.map(d => d.bill.id), amount, method: METHODS[s.method], note: (s.note || "").trim(), hasSlip: !!s.slip, status: "pending", at: Date.now() });
   saveState();
+  pushNotify([s.toId], "Payment to confirm", `${getPerson(me).name} sent Rf ${f(amount)}. Review and confirm.`, "pay-" + id);
   sheet = null;
   render();
   showNotice(`Payment of ${f(amount)} sent to ${toName}. Your balance clears once ${toName} confirms it.`, "Payment submitted");
@@ -1842,6 +1856,7 @@ window.confirmPay = async function(id) {
   p.status = "confirmed"; p.decidedAt = Date.now();
   p.billIds.forEach(bid => { const b = S.bills.find(x => x.id === bid); if (b) { b.settled = b.settled || {}; b.settled[p.fromId] = true; } });
   saveState(); sheet = null; render();
+  pushNotify([p.fromId], "Payment confirmed ✓", `${getPerson(p.toId).name} confirmed your payment of Rf ${f(p.amount)}.`, "pay-" + p.id);
 };
 window.rejectPay = async function(id) {
   const p = payById(id);
@@ -1850,6 +1865,7 @@ window.rejectPay = async function(id) {
   if (r === null) return;
   p.status = "rejected"; p.reason = String(r).trim(); p.decidedAt = Date.now();
   saveState(); sheet = null; render();
+  pushNotify([p.fromId], "Payment rejected", `${getPerson(p.toId).name} rejected your payment of Rf ${f(p.amount)}${p.reason ? ": " + p.reason : "."}`, "pay-" + p.id);
 };
 window.cancelPay = async function(id) {
   const p = payById(id);
@@ -1871,6 +1887,7 @@ window.markReceived = async function(billId, fromId) {
   if (!(await showConfirm(`Mark ${f(d.amount)} from ${getPerson(fromId).name} as received for "${b.title}"?`, "Mark received", "Mark received"))) return;
   b.settled = b.settled || {}; b.settled[fromId] = true;
   saveState(); render();
+  pushNotify([fromId], "Marked as received ✓", `${getPerson(currentUserId).name} marked your Rf ${f(d.amount)} for "${b.title}" as received.`, "bill-" + b.id);
 };
 window.undoSettled = async function(billId, fromId) {
   const b = S.bills.find(x => x.id === billId);
@@ -1906,6 +1923,7 @@ window.render = function(opts) {
   const fab = document.getElementById("fab");
   if (currentUserId === null) {
     v.innerHTML = "";
+    setIconBadge(0);
     if (fab) fab.innerHTML = "";
     nav.style.display = "none";
     ovl.innerHTML = "";
@@ -1916,12 +1934,13 @@ window.render = function(opts) {
 
   const scrollPos = v ? v.scrollTop : 0;
   const badgeCount = notifCount();
+  setIconBadge(badgeCount);
   const ae = document.activeElement;
   const typing = !!(opts && opts.fromRemote && ae && v.contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName));
 
   const tabs = [
     ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
-    ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "Users"]
+    ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "Account"]
   ];
 
   nav.innerHTML = tabs.map(([k, icon, label]) => `
@@ -2002,10 +2021,132 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }
 
+/* ---- phone notifications + app icon badge ---- */
+let pushState = "checking"; // checking | unconfigured | needsInstall | unsupported | denied | off | on | busy
+const pushConfigured = () => !!(PUSH_API && VAPID_PUBLIC_KEY);
+const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const b64uToBytes = str => {
+  const b = (str + "=".repeat((4 - str.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(b), c => c.charCodeAt(0));
+};
+const pushFlag = () => { try { return localStorage.getItem("splitmate_push") === "1"; } catch (e) { return false; } };
+const setPushFlag = on => { try { on ? localStorage.setItem("splitmate_push", "1") : localStorage.removeItem("splitmate_push"); } catch (e) {} };
+
+function setIconBadge(n) {
+  try {
+    if (!("setAppBadge" in navigator)) return;
+    const pr = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+    if (pr && pr.catch) pr.catch(() => {});
+  } catch (e) {}
+}
+
+async function pushPost(path, body) {
+  const r = await fetch(PUSH_API.replace(/\/$/, "") + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error("Server said " + r.status);
+  return r.json().catch(() => ({}));
+}
+
+async function pushRegister() {
+  if (!pushConfigured() || !pushSupported() || currentUserId === null) return;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(VAPID_PUBLIC_KEY) });
+  const me = getPerson(currentUserId);
+  await pushPost("/subscribe", { userId: me.id, pin: me.pin, subscription: sub.toJSON() });
+}
+
+async function pushUnregisterCurrent() {
+  try {
+    if (!pushConfigured() || !pushSupported() || currentUserId === null) return;
+    const me = getPerson(currentUserId);
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) await pushPost("/unsubscribe", { userId: me.id, pin: me.pin, endpoint: sub.endpoint });
+  } catch (e) {}
+}
+
+async function refreshPushState() {
+  if (!pushConfigured()) pushState = "unconfigured";
+  else if (isIOS && !isStandalone()) pushState = "needsInstall";
+  else if (!pushSupported()) pushState = "unsupported";
+  else if (Notification.permission === "denied") pushState = "denied";
+  else {
+    let sub = null;
+    try { const reg = await navigator.serviceWorker.getRegistration(); sub = reg && await reg.pushManager.getSubscription(); } catch (e) {}
+    pushState = sub && Notification.permission === "granted" && pushFlag() ? "on" : "off";
+  }
+}
+
+window.enablePush = async function() {
+  if (!["off", "denied"].includes(pushState)) return;
+  pushState = "busy"; render();
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { await refreshPushState(); render(); return; }
+    await pushRegister();
+    setPushFlag(true);
+    await refreshPushState(); render();
+    showNotice("Notifications are on for this device. You'll be alerted about new bills and payments.", "Notifications on");
+  } catch (e) {
+    await refreshPushState(); render();
+    showNotice("Could not turn on notifications: " + e.message, "Notifications");
+  }
+};
+
+window.disablePush = async function() {
+  pushState = "busy"; render();
+  try {
+    await pushUnregisterCurrent();
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+  } catch (e) {}
+  setPushFlag(false);
+  await refreshPushState(); render();
+};
+
+function pushNotify(toIds, title, body, tag, selfToo) {
+  try {
+    if (!pushConfigured() || currentUserId === null) return;
+    const ids = [...new Set(toIds)].filter(id => id && (selfToo || id !== currentUserId));
+    if (!ids.length) return;
+    const me = getPerson(currentUserId);
+    pushPost("/notify", { fromId: me.id, pin: me.pin, toIds: ids, title, body, tag: tag || undefined }).catch(() => {});
+  } catch (e) {}
+}
+
+window.testPush = function() {
+  pushNotify([currentUserId], "SplitMate test", "Notifications are working on this device 🎉", "test", true);
+};
+
+function pushSection() {
+  const st = pushState;
+  const sub = {
+    checking: "Checking…",
+    unconfigured: "Not set up yet",
+    needsInstall: "On iPhone, add SplitMate to your Home Screen first, then open it from there",
+    unsupported: "This browser doesn't support push notifications",
+    denied: "Blocked. Allow notifications for SplitMate in your phone settings, then tap Retry",
+    off: "Get alerted about new bills and payments",
+    on: "On for this device",
+    busy: "Working…"
+  }[st] || "";
+  const act = st === "off" ? `<button class="pill solid" onclick="enablePush()">Turn on</button>`
+    : st === "denied" ? `<button class="pill" onclick="enablePush()">Retry</button>`
+    : st === "on" ? `<span style="display:flex;gap:6px"><button class="pill" onclick="testPush()">Test</button><button class="pill r" onclick="disablePush()">Turn off</button></span>`
+    : "";
+  return `<div class="sh">Notifications</div>
+  <div class="l"><div class="li"><span><b>Phone notifications</b><br><small>${sub}</small></span>${act}</div></div>`;
+}
+
 applyTheme();
 applyZoom();
 D = blankBill();
 render();
+refreshPushState().then(() => {
+  if (pushState === "on" && currentUserId !== null) pushRegister().catch(() => {});
+  render();
+});
 </script>
 </body>
 </html>

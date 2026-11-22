@@ -1,5 +1,5 @@
 /* SplitMate service worker: caches the app shell + Firebase SDK. Data always comes live from Firebase. */
-const CACHE = "splitmate-shell-v2";
+const CACHE = "splitmate-shell-v3";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./favicon-32.png"];
 
 self.addEventListener("install", e => {
@@ -25,4 +25,34 @@ self.addEventListener("fetch", e => {
     const net = fetch(req).then(r => { if (r.ok) { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); } return r; }).catch(() => hit);
     return hit || net;
   }));
+});
+
+/* ---- Web Push: show the notification, set the app icon badge, open the app on tap ---- */
+self.addEventListener("push", e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : "" }; }
+  e.waitUntil((async () => {
+    await self.registration.showNotification(d.title || "SplitMate", {
+      body: d.body || "",
+      icon: "./icon-192.png",
+      badge: "./favicon-32.png",
+      tag: d.tag || undefined,
+      renotify: !!d.tag,
+      data: { url: d.url || "./index.html" }
+    });
+    try {
+      const n = (await self.registration.getNotifications()).length;
+      if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(n);
+    } catch (_) {}
+  })());
+});
+
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "./index.html";
+  e.waitUntil((async () => {
+    const all = await clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const c of all) { if ("focus" in c) return c.focus(); }
+    return clients.openWindow(url);
+  })());
 });
