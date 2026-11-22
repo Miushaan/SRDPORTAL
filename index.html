@@ -42,11 +42,12 @@ body{
   -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
 }
+@supports (height:100dvh){html,body{height:100dvh}}
 input,select,textarea{-webkit-user-select:text;user-select:text}
 .rf{display:inline-block;width:.95em;height:.6em;background:currentColor;-webkit-mask:var(--rf) center/contain no-repeat;mask:var(--rf) center/contain no-repeat;margin-right:.18em}
 .w{
   max-width:560px;margin:0 auto;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
-  padding:0 max(16px,env(safe-area-inset-left,0px)) calc(114px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));
+  padding:0 max(16px,env(safe-area-inset-left,0px)) calc(96px + env(safe-area-inset-bottom,0px) * .3) max(16px,env(safe-area-inset-right,0px));
   scrollbar-width:none;-ms-overflow-style:none;zoom:var(--zm,1);
 }
 .w::-webkit-scrollbar,::-webkit-scrollbar{display:none;width:0;height:0}
@@ -96,7 +97,7 @@ button:active,.btn:active{opacity:.65}
 .dot{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
 .sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 .tabs{
-  position:absolute;left:14px;right:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;
+  position:absolute;left:14px;right:14px;bottom:calc(2px + env(safe-area-inset-bottom,0px) * .3);max-width:528px;margin:0 auto;
   display:flex;align-items:center;gap:4px;background:var(--glass-bg);
   -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
   border:.5px solid var(--glass-bd);border-radius:32px;box-shadow:var(--glass-sh);padding:5px 6px;z-index:10;
@@ -105,7 +106,7 @@ button:active,.btn:active{opacity:.65}
 .tabs button span{display:flex;justify-content:center;margin-bottom:2px}
 .tabs button.on{color:var(--ac);background:var(--glass-pill)}
 .bg{position:absolute;top:2px;left:75%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-#fab{position:absolute;left:14px;right:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;z-index:9}
+#fab{position:absolute;left:14px;right:14px;bottom:calc(70px + env(safe-area-inset-bottom,0px) * .3);max-width:528px;margin:0 auto;z-index:9}
 #fab .btn{padding:15px;font-size:17px;border-radius:26px;box-shadow:0 8px 22px rgba(0,122,255,.38)}
 .w.nonav{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
 .w.fab-pad{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
@@ -980,9 +981,6 @@ function viewDash() {
     </div>`;
   }
 
-  h += spendHtml(me.id);
-  h += payHistHtml(me.id);
-
   h += `<div style="margin-top:16px">
     <button class="btn sec" style="padding:16px;font-size:17px" onclick="go('owes')">Who owes who${pairCount ? ` · ${pairCount}` : ""} ›</button>
   </div>`;
@@ -991,6 +989,9 @@ function viewDash() {
       <button class="btn sec" onclick="go('hist')">View All Bills · ${liveBills().length}</button>
     </div>`;
   }
+
+  h += spendHtml(me.id);
+  h += payHistHtml(me.id);
 
   return h;
 }
