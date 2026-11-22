@@ -141,6 +141,7 @@ button:active,.btn:active{opacity:.65}
   background:var(--bg);border-radius:12px;padding:12px;border:1.5px solid var(--bd);color:var(--tx);
 }
 .pin-inp:focus{border-color:var(--ac)}
+.btn[disabled]{opacity:.5;pointer-events:none}
 </style>
 </head>
 <body>
@@ -152,7 +153,7 @@ button:active,.btn:active{opacity:.65}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
    1. FIREBASE INITIALIZATION
@@ -224,6 +225,7 @@ const GST_RATE = 8;
 let S = {
   people: buildCanonicalPeople([]),
   bills: [],
+  payments: [],
   settings: {
     defaultGst: true,
     theme: "auto"
@@ -254,6 +256,7 @@ function saveState() {
   });
 }
 
+const toArr = v => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
 const stateRef = ref(db, "splitmate/state");
 onValue(stateRef, (snap) => {
   const val = snap.val();
@@ -264,7 +267,8 @@ onValue(stateRef, (snap) => {
       FIXED_USERS.some((u, i) => !incomingPeople[i] || incomingPeople[i].name !== u.name || !/^\d{4,6}$/.test(String(incomingPeople[i].pin || "")));
 
     S.people = canonical;
-    S.bills = Array.isArray(val.bills) ? val.bills : [];
+    S.bills = toArr(val.bills);
+    S.payments = toArr(val.payments);
     S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
     applyTheme();
     if (!D) D = blankBill();
@@ -275,7 +279,7 @@ onValue(stateRef, (snap) => {
     S.people = buildCanonicalPeople([]);
     saveState();
   }
-  render();
+  render({ fromRemote: true });
 });
 
 /* ==========================================================================
@@ -403,25 +407,31 @@ window.logoutUser = function() {
   render();
 };
 
-window.promptChangeMyPin = async function() {
-  const me = getPerson(currentUserId);
-  if (!me) return;
-  const cur = await showPrompt("Enter current PIN", "Verify PIN", "••••", "");
-  if (cur === null) return;
-  if (String(cur).trim() !== normalizePin(me.pin, "1234")) {
-    return showNotice("Current PIN is incorrect.", "Invalid PIN");
-  }
-  const nextPin = await showPrompt("Enter new 4–6 digit PIN", "New PIN", "••••", "");
-  if (nextPin === null) return;
-  const clean = String(nextPin).trim();
-  if (!/^\d{4,6}$/.test(clean)) {
-    return showNotice("PIN must be 4 to 6 digits.", "Invalid Format");
-  }
-  me.pin = clean;
+window.promptChangeMyPin = function() {
+  dlg = { type: "pin", title: "Change PIN", cur: "", nw: "", cf: "", err: "", res: () => {} };
+  renderDlg();
+};
+
+window.submitPinChange = function() {
+  const me = getPerson(currentUserId), d = dlg;
+  if (!d) return;
+  const bad = m => { d.err = m; renderDlg(); };
+  if (d.cur.trim() !== normalizePin(me.pin, "1234")) return bad("Current PIN is incorrect.");
+  if (!/^\d{4,6}$/.test(d.nw.trim())) return bad("New PIN must be 4 to 6 digits.");
+  if (d.nw.trim() !== d.cf.trim()) return bad("The new PINs don't match.");
+  me.pin = d.nw.trim();
   saveState();
-  await showNotice(`PIN updated for ${me.name}.`, "PIN Saved");
+  closeDlg(true);
+  showNotice("Your PIN was updated.", "PIN Saved");
   render();
 };
+
+function pinBody(d) {
+  const rows = [["cur", "Current PIN"], ["nw", "New PIN (4–6 digits)"], ["cf", "Confirm new PIN"]];
+  return `<div class="l">${rows.map(([k, l]) => `<div class="li"><span>${l}</span><input type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••" value="${esc(d[k])}" oninput="dlg.${k}=this.value" onkeydown="if(event.key==='Enter')submitPinChange()"></div>`).join("")}</div>
+  ${d.err ? `<div class="neg" style="margin:10px 14px 0;font-size:14px">${esc(d.err)}</div>` : ""}
+  <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="submitPinChange()">Save PIN</button></div>`;
+}
 
 function renderAuth() {
   const el = document.getElementById("auth-screen");
@@ -527,7 +537,7 @@ function renderDlg() {
   if (!dlg) { el.innerHTML = ""; return; }
   const d = dlg;
   const cancelCall = d.type === "alert" ? "closeDlg(true)" : d.type === "confirm" ? "closeDlg(false)" : "closeDlg(null)";
-  const body = d.type === "alert"
+  const body = d.type === "pin" ? pinBody(d) : d.type === "alert"
     ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
        <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
     : d.type === "confirm"
@@ -655,20 +665,13 @@ window.toggleBillPersonSettled = function(billId, personId) {
 };
 
 window.settlePairAll = async function(fromId, toId) {
-  const fromP = getPerson(fromId), toP = getPerson(toId);
-  const ok = await showConfirm(
-    `Mark all pending bills from ${fromP.name} to ${toP.name} as settled?`,
-    "Settle Balances",
-    "Mark Settled",
-    false
-  );
+  if (toId !== currentUserId) return;
+  const fromP = getPerson(fromId);
+  const free = pairDues(fromId, toId).filter(d => !payOf(d.bill.id, fromId));
+  if (!free.length) return showNotice("These bills already have a payment waiting for your confirmation. Open it from the notification above.", "Nothing to mark");
+  const ok = await showConfirm(`Mark ${f(sum(free.map(d => d.amount)))} from ${fromP.name} as received (no slip)?`, "Mark received", "Mark received", false);
   if (!ok) return;
-  S.bills.forEach(b => {
-    if ((tripFilter === "All" || (b.trip || "") === tripFilter) && b.payerId === toId) {
-      b.settled = b.settled || {};
-      b.settled[fromId] = true;
-    }
-  });
+  free.forEach(d => { const b = S.bills.find(x => x.id === d.bill.id); if (b) { b.settled = b.settled || {}; b.settled[fromId] = true; } });
   saveState();
   render();
 };
@@ -679,7 +682,7 @@ window.settlePairAll = async function(fromId, toId) {
 const head = (t, s) => `<div class="hdr"><h1>${t}</h1><div class="sub">${s}</div></div>`;
 const headB = (attrs, label, t, s) => `<div class="hdr"><button class="pill" ${attrs}>${label}</button><h1>${t}</h1>${s ? `<div class="sub">${s}</div>` : ""}</div>`;
 const sw = (on, fn) => `<label class="sw"><input type="checkbox" ${on ? "checked" : ""} onchange="${fn}"><i></i></label>`;
-const seg = (opts, cur, fn) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur == k ? "on" : ""}" onclick="${fn}('${k}')">${l}.</button>`).join("")}</div>`;
+const seg = (opts, cur, fn) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur == k ? "on" : ""}" onclick="${fn}('${k}')">${l}</button>`).join("")}</div>`;
 
 function personPicker(selectedIds, toggleExpr) {
   return `<div class="pk-dyn">
@@ -702,7 +705,9 @@ function viewDash() {
 
   let h = head("Overview", `Signed in as ${esc(me.name)} · ${S.people.length} members · ${S.bills.length} bill${S.bills.length === 1 ? "" : "s"}`);
 
-  h += `<div class="row2" style="margin-top:4px">
+  h += viewNotifs(me.id);
+
+  h += `<div class="row2" style="margin-top:12px">
     <div class="tile"><small>Total Bills</small><b>${mh(totalSpend)}</b></div>
     <div class="tile"><small>Unsettled</small><b class="${totalUnsettled > 0.005 ? "neg" : "pos"}">${mh(totalUnsettled)}</b></div>
   </div>`;
@@ -724,17 +729,18 @@ function viewDash() {
     h += `<div class="li mu">${filteredBills.length ? "All bills are settled! 🎉" : "No unsettled balances yet."}</div>`;
   } else {
     h += pairs.map(pair => {
-      const fromP = getPerson(pair.fromId), toP = getPerson(pair.toId);
-      return `<div class="li">
-        <span style="display:flex;align-items:center;gap:10px">
-          <span class="dot" style="--c:${fromP.color}">${esc(initials(fromP.name))}</span>
-          <span>
-            <b>${esc(fromP.name)}</b> owes <b>${esc(toP.name)}</b><br>
-            <span class="neg">${mh(pair.total)}</span>
-            <small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small>
-          </span>
-        </span>
-        <button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Settle</button>
+      const fromP = getPerson(pair.fromId), toP = getPerson(pair.toId), meId = currentUserId;
+      const btn = pair.fromId === meId ? `<button class="pill solid" onclick="openPay(${pair.toId})">Pay</button>`
+        : pair.toId === meId ? `<button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Mark received</button>` : "";
+      return `<div class="li col">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="display:flex;align-items:center;gap:10px">
+            <span class="dot" style="--c:${fromP.color}">${esc(initials(fromP.name))}</span>
+            <span><b>${esc(fromP.name)}</b> owes <b>${esc(toP.name)}</b><br>
+              <span class="neg">${mh(pair.total)}</span><small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small></span>
+          </span>${btn}
+        </div>
+        <div class="chips">${pair.items.map(d => `<span class="chip" style="cursor:pointer" onclick="openBill(${d.bill.id},'dash')">${esc(d.bill.title)} · ${f(d.amount)} ›</span>`).join("")}</div>
       </div>`;
     }).join("");
   }
@@ -870,7 +876,7 @@ function viewNewBill() {
 
   h += `<div style="margin-top:16px">
     <button class="btn" onclick="saveCurrentBill()">${D.editId ? "Save Changes" : "Save Bill"}</button>
-    ${D.editId ? `<button class="btn sec" style="margin-top:8px" onclick="D=blankBill();tab='hist';render()">Cancel Edit</button>` : ""}
+    ${D.editId ? `<button class="btn sec" style="margin-top:8px" onclick="cancelEdit()">Cancel Edit</button>` : ""}
   </div>`;
 
   return h;
@@ -1082,6 +1088,8 @@ window.deleteSheetItem = function() {
 };
 
 function renderSheetHtml() {
+  if (sheet && sheet.t === "pay") return `<div class="fp"><div class="w">${paySheet(sheet)}</div></div>`;
+  if (sheet && sheet.t === "review") return `<div class="fp"><div class="w">${reviewSheet(sheet)}</div></div>`;
   if (!sheet || sheet.t !== "item") return "";
   const s = sheet, unit = s.pm === "unit";
   const lastItem = s.k < 0 && D.items.length ? D.items[D.items.length - 1] : null;
@@ -1178,7 +1186,7 @@ window.renderHistoryList = function() {
     return `<div class="sh" style="display:flex;justify-content:space-between"><span>${dayLabel(d)}</span><span>${mh(daySum)}</span></div>
     <div class="l">${byDate[d].map(b => {
       const c = calcBill(b), st = billStatus(b), payer = getPerson(b.payerId);
-      return `<div class="li col" onclick="openBillId=${b.id};render();scrollTopMain()" style="cursor:pointer">
+      return `<div class="li col" onclick="openBill(${b.id})" style="cursor:pointer">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div style="flex:1;min-width:0">
             <b>${esc(b.title)}</b>${b.trip ? `<span class="cp">${esc(b.trip)}</span>` : ""}${b.gstEnabled ? `<span class="cp">8% GST</span>` : ""}
@@ -1207,8 +1215,8 @@ function viewBillDetail(id) {
   const dues = getBillDues(b);
 
   let h = headB(
-    'style="margin-top:6px" onclick="openBillId=null;render();scrollTopMain()"',
-    "‹ Bills",
+    'style="margin-top:6px" onclick="closeBill()"',
+    billFrom ? "‹ Back" : "‹ Bills",
     esc(b.title),
     `${shortDate(b.date)} · Paid by ${esc(payer.name)}${b.trip ? " · " + esc(b.trip) : ""}`
   );
@@ -1236,15 +1244,18 @@ function viewBillDetail(id) {
   `).join("")}</div>`;
 
   if (dues.length > 0) {
+    const me = currentUserId;
     h += `<div class="sh">Settlement Status (Owed to ${esc(payer.name)})</div>
     <div class="l">${dues.map(d => {
-      const p = getPerson(d.fromId);
-      return `<div class="li">
-        <span><b>${esc(p.name)}</b><br><small>${mh(d.amount)}</small></span>
-        <button class="pill ${d.isSettled ? "g" : ""}" onclick="toggleBillPersonSettled(${b.id},${d.fromId})">
-          ${d.isSettled ? "Settled ✓" : "Mark Settled"}
-        </button>
-      </div>`;
+      const p = getPerson(d.fromId), pend = payOf(b.id, d.fromId);
+      const rej = !d.isSettled && !pend && S.payments.some(x => x.status === "rejected" && x.fromId === d.fromId && x.billIds.includes(b.id) && !x.ack);
+      let act;
+      if (d.isSettled) act = me === b.payerId ? `<button class="pill g" onclick="undoSettled(${b.id},${d.fromId})">Settled ✓</button>` : `<span class="bd ok">Settled ✓</span>`;
+      else if (pend) act = `<button class="pill" onclick="openPayment(${pend.id})">${me === b.payerId ? "Review &amp; confirm" : "Awaiting confirmation"}</button>`;
+      else if (me === d.fromId) act = `<button class="pill solid" onclick="openPay(${b.payerId},${b.id})">Pay &amp; attach slip</button>`;
+      else if (me === b.payerId) act = `<button class="pill" onclick="markReceived(${b.id},${d.fromId})">Mark received</button>`;
+      else act = `<span class="bd no">Unpaid</span>`;
+      return `<div class="li"><span><b>${esc(p.name)}</b>${d.fromId === me ? '<span class="cp">you</span>' : ""}<br><small>${mh(d.amount)}</small>${rej ? '<br><small class="neg">Previous payment was rejected</small>' : ""}</span>${act}</div>`;
     }).join("")}</div>`;
   }
 
@@ -1382,27 +1393,249 @@ function viewPeopleAndData() {
   return h;
 }
 
+/* ==========================================================================
+   10. INLINE-HANDLER BRIDGE (module variables <-> window, so onclick works)
+   ========================================================================== */
+const expose = (n, g, st) => Object.defineProperty(window, n, { get: g, set: st, configurable: true });
+expose("S", () => S, v => { S = v; });
+expose("D", () => D, v => { D = v; });
+expose("sheet", () => sheet, v => { sheet = v; });
+expose("tab", () => tab, v => { tab = v; });
+expose("openBillId", () => openBillId, v => { openBillId = v; });
+expose("tripFilter", () => tripFilter, v => { tripFilter = v; });
+expose("histQuery", () => histQuery, v => { histQuery = v; });
+expose("authPinInput", () => authPinInput, v => { authPinInput = v; });
+expose("authError", () => authError, v => { authError = v; });
+expose("dlg", () => dlg, v => { dlg = v; });
+Object.assign(window, { blankBill, applyTheme, saveState, calcBill, getPerson });
+
+/* ==========================================================================
+   11. PAYMENTS, SLIPS & PAYER CONFIRMATION
+   ========================================================================== */
+let billFrom = null;
+const METHODS = { bank: "Bank transfer", cash: "Cash", other: "Other" };
+const payById = id => S.payments.find(p => p.id === id);
+const payOf = (billId, fromId) => S.payments.find(p => p.status === "pending" && p.fromId === fromId && p.billIds.includes(billId));
+const pairDues = (from, to) => S.bills
+  .filter(b => (tripFilter === "All" || (b.trip || "") === tripFilter) && b.payerId === to)
+  .flatMap(b => getBillDues(b).filter(d => d.fromId === from && !d.isSettled));
+
+function notifCount() {
+  const me = currentUserId;
+  return S.payments.filter(p => (p.toId === me && p.status === "pending") || (p.fromId === me && p.status === "rejected" && !p.ack)).length
+    + S.people.filter(p => p.id !== me && pairDues(me, p.id).some(d => !payOf(d.bill.id, me))).length;
+}
+
+function viewNotifs(me) {
+  let h = "";
+  const owe = S.people.filter(p => p.id !== me).map(p => {
+    const free = pairDues(me, p.id).filter(d => !payOf(d.bill.id, me));
+    return { p, free, amt: r2(sum(free.map(d => d.amount))) };
+  }).filter(x => x.free.length);
+  const totalOwe = r2(sum(owe.map(x => x.amt)));
+  if (totalOwe > 0.004) {
+    h += `<div class="sh" style="color:var(--red)">You owe ${mh(totalOwe)}</div>
+    <div class="l" style="border:1.5px solid var(--red)">${owe.map(x => `<div class="li">
+      <span style="display:flex;align-items:center;gap:10px"><span class="dot" style="--c:${x.p.color}">${esc(initials(x.p.name))}</span>
+        <span>Pay <b>${esc(x.p.name)}</b><br><small>${x.free.length} bill${x.free.length === 1 ? "" : "s"}</small></span></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><b class="neg">${mh(x.amt)}</b>
+        <button class="pill solid" onclick="openPay(${x.p.id})">Pay &amp; attach slip</button></span>
+    </div>`).join("")}</div>`;
+  }
+  const toConfirm = S.payments.filter(p => p.toId === me && p.status === "pending");
+  if (toConfirm.length) {
+    h += `<div class="sh" style="color:var(--ac)">Confirm payments (${toConfirm.length})</div><div class="l" style="border:1.5px solid var(--ac)">${toConfirm.map(p => `<div class="li">
+      <span><b>${esc(getPerson(p.fromId).name)}</b> sent <b>${mh(p.amount)}</b><br><small>${esc(p.method)} · ${p.billIds.length} bill${p.billIds.length === 1 ? "" : "s"}${p.hasSlip ? " · slip attached" : ""}</small></span>
+      <button class="pill g" onclick="openPayment(${p.id})">Review</button></div>`).join("")}</div>`;
+  }
+  const mine = S.payments.filter(p => p.fromId === me && (p.status === "pending" || (p.status === "rejected" && !p.ack)));
+  if (mine.length) {
+    h += `<div class="sh">Your payments</div><div class="l">${mine.map(p => `<div class="li">
+      <span>${p.status === "pending" ? `Waiting for <b>${esc(getPerson(p.toId).name)}</b> to confirm` : `<b>${esc(getPerson(p.toId).name)}</b> rejected`} <b>${mh(p.amount)}</b>${p.reason ? `<br><small class="neg">${esc(p.reason)}</small>` : ""}</span>
+      <span style="display:flex;gap:6px"><button class="pill" onclick="openPayment(${p.id})">View</button>${p.status === "rejected" ? `<button class="pill r" onclick="ackPay(${p.id})">Dismiss</button>` : ""}</span></div>`).join("")}</div>`;
+  }
+  return h;
+}
+
+window.openBill = function(id, from) {
+  sheet = null;
+  billFrom = from && from !== "hist" ? from : null;
+  openBillId = id;
+  tab = "hist";
+  render();
+  scrollTopMain();
+};
+window.closeBill = function() {
+  openBillId = null;
+  if (billFrom) { tab = billFrom; billFrom = null; }
+  render();
+  scrollTopMain();
+};
+window.cancelEdit = function() {
+  const id = D && D.editId;
+  D = blankBill();
+  if (id) { tab = "hist"; openBillId = id; } else tab = "dash";
+  render();
+  scrollTopMain();
+};
+
+window.openPay = function(toId, billId) {
+  const dues = pairDues(currentUserId, toId).filter(d => !payOf(d.bill.id, currentUserId));
+  if (!dues.length) return showNotice("Nothing left to pay here. A payment may already be waiting for confirmation.", "No payment due");
+  sheet = { t: "pay", toId, sel: billId && dues.some(d => d.bill.id === billId) ? [billId] : dues.map(d => d.bill.id), method: "bank", note: "", slip: null, busy: false };
+  render();
+};
+window.togglePaySel = function(id) {
+  const i = sheet.sel.indexOf(id);
+  if (i < 0) sheet.sel.push(id); else sheet.sel.splice(i, 1);
+  render();
+};
+window.pickSlip = function(inp) {
+  const file = inp.files && inp.files[0];
+  if (!file) return;
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const k = Math.min(1, 1000 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    if (sheet && sheet.t === "pay") { sheet.slip = c.toDataURL("image/jpeg", 0.7); render(); }
+  };
+  img.onerror = () => showNotice("Could not read that image. Please try another photo.", "Slip error");
+  img.src = url;
+};
+
+function paySheet(s) {
+  const to = getPerson(s.toId);
+  const dues = pairDues(currentUserId, s.toId).filter(d => !payOf(d.bill.id, currentUserId));
+  const total = r2(sum(dues.filter(d => s.sel.includes(d.bill.id)).map(d => d.amount)));
+  const slipReq = s.method !== "cash";
+  return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", "Pay " + esc(to.name), "Attach your payment and slip")}
+  <div class="sh">Bills to settle</div>
+  <div class="l">${dues.map(d => { const on = s.sel.includes(d.bill.id); return `<div class="li" onclick="togglePaySel(${d.bill.id})" style="cursor:pointer">
+    <span><b>${esc(d.bill.title)}</b><br><small>${shortDate(d.bill.date)}</small></span>
+    <span style="display:flex;gap:10px;align-items:center"><b>${mh(d.amount)}</b><span class="bd ${on ? "ok" : ""}">${on ? "✓" : "○"}</span></span></div>`; }).join("")}</div>
+  <div class="sh">Payment</div>
+  <div class="l">
+    <div class="li"><b>Amount to pay</b><b style="font-size:19px">${mh(total)}</b></div>
+    <div class="li col"><div class="mu" style="margin-bottom:6px">Method</div>${seg([["bank", "Bank transfer"], ["cash", "Cash"], ["other", "Other"]], s.method, "((m)=>{sheet.method=m;render()})")}</div>
+    <div class="li"><span>Reference / note</span><input placeholder="Optional" value="${esc(s.note)}" oninput="sheet.note=this.value"></div>
+  </div>
+  <div class="sh">Payment slip ${slipReq ? "(required)" : "(optional)"}</div>
+  <div class="l"><div class="li col">${s.slip
+    ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block"><button type="button" class="pill r" style="margin-top:8px" onclick="sheet.slip=null;render()">Remove slip</button>`
+    : `<label class="btn sec" style="margin:0">📎 Attach slip photo<input type="file" accept="image/*" style="display:none" onchange="pickSlip(this)"></label>`}</div></div>
+  <div style="margin-top:16px"><button class="btn" onclick="submitPay()" ${s.busy ? "disabled" : ""}>${s.busy ? "Sending…" : "Submit payment"}</button></div>`;
+}
+
+window.submitPay = async function() {
+  const s = sheet, me = currentUserId;
+  if (!s || s.t !== "pay" || s.busy) return;
+  const dues = pairDues(me, s.toId).filter(d => s.sel.includes(d.bill.id) && !payOf(d.bill.id, me));
+  if (!dues.length) return showNotice("Select at least one bill to pay.");
+  if (s.method !== "cash" && !s.slip) return showNotice("Attach your payment slip to continue.", "Slip required");
+  const id = nextId(S.payments), amount = r2(sum(dues.map(d => d.amount))), toName = getPerson(s.toId).name;
+  s.busy = true; render();
+  if (s.slip) {
+    try { await set(ref(db, "splitmate/slips/" + id), s.slip); }
+    catch (e) { s.busy = false; render(); return showNotice("Could not upload the slip: " + e.message, "Upload failed"); }
+  }
+  S.payments.unshift({ id, fromId: me, toId: s.toId, billIds: dues.map(d => d.bill.id), amount, method: METHODS[s.method], note: (s.note || "").trim(), hasSlip: !!s.slip, status: "pending", at: Date.now() });
+  saveState();
+  sheet = null;
+  render();
+  showNotice(`Payment of ${f(amount)} sent to ${toName}. Your balance clears once ${toName} confirms it.`, "Payment submitted");
+};
+
+window.openPayment = async function(id) {
+  sheet = { t: "review", id, slip: null, loading: true };
+  render();
+  const p = payById(id);
+  if (p && p.hasSlip) {
+    try { const snap = await get(ref(db, "splitmate/slips/" + id)); if (sheet && sheet.id === id) sheet.slip = snap.val(); } catch (e) { /* shows "No slip" */ }
+  }
+  if (sheet && sheet.id === id) { sheet.loading = false; render(); }
+};
+
+function reviewSheet(s) {
+  const p = payById(s.id);
+  const back = 'style="margin-top:6px" onclick="sheet=null;render()"';
+  if (!p) return `${headB(back, "‹ Back", "Payment", "")}<div class="l"><div class="li mu">This payment no longer exists.</div></div>`;
+  const from = getPerson(p.fromId), to = getPerson(p.toId);
+  const st = p.status === "confirmed" ? ["ok", "Confirmed"] : p.status === "rejected" ? ["no", "Rejected"] : ["", "Awaiting confirmation"];
+  const bills = p.billIds.map(id => S.bills.find(b => b.id === id)).filter(Boolean);
+  return `${headB(back, "‹ Back", `${esc(from.name)} → ${esc(to.name)}`, `${shortDate(ldate(new Date(p.at)))} · ${esc(p.method)}`)}
+  <div class="l">
+    <div class="li"><b>Amount</b><b style="font-size:20px">${mh(p.amount)}</b></div>
+    <div class="li"><span>Status</span><span class="bd ${st[0]}">${st[1]}</span></div>
+    ${p.note ? `<div class="li"><span>Note</span><span>${esc(p.note)}</span></div>` : ""}
+    ${p.reason ? `<div class="li"><span>Reason</span><span class="neg">${esc(p.reason)}</span></div>` : ""}
+  </div>
+  <div class="sh">Bills covered</div>
+  <div class="l">${bills.map(b => `<div class="li" onclick="openBill(${b.id},'${tab}')" style="cursor:pointer"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><span class="mu">›</span></div>`).join("") || '<div class="li mu">Bills were deleted.</div>'}</div>
+  <div class="sh">Payment slip</div>
+  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : s.slip ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block">` : '<div class="mu">No slip attached.</div>'}</div></div>
+  ${p.status === "pending" && p.toId === currentUserId ? `<div class="row2" style="margin-top:16px"><button class="btn red" onclick="rejectPay(${p.id})">Reject</button><button class="btn" onclick="confirmPay(${p.id})">Confirm received</button></div>` : ""}
+  ${p.status === "pending" && p.fromId === currentUserId ? `<button class="btn sec" style="margin-top:16px" onclick="cancelPay(${p.id})">Cancel this payment</button>` : ""}`;
+}
+
+window.confirmPay = async function(id) {
+  const p = payById(id);
+  if (!p || p.toId !== currentUserId || p.status !== "pending") return;
+  if (!(await showConfirm(`Confirm you received ${f(p.amount)} from ${getPerson(p.fromId).name}?`, "Confirm payment", "Yes, received"))) return;
+  p.status = "confirmed"; p.decidedAt = Date.now();
+  p.billIds.forEach(bid => { const b = S.bills.find(x => x.id === bid); if (b) { b.settled = b.settled || {}; b.settled[p.fromId] = true; } });
+  saveState(); sheet = null; render();
+};
+window.rejectPay = async function(id) {
+  const p = payById(id);
+  if (!p || p.toId !== currentUserId || p.status !== "pending") return;
+  const r = await showPrompt("Why are you rejecting this?", "Reject payment", "Optional reason", "");
+  if (r === null) return;
+  p.status = "rejected"; p.reason = String(r).trim(); p.decidedAt = Date.now();
+  saveState(); sheet = null; render();
+};
+window.cancelPay = async function(id) {
+  const p = payById(id);
+  if (!p || p.fromId !== currentUserId || p.status !== "pending") return;
+  if (!(await showConfirm("Cancel this payment request?", "Cancel payment", "Cancel payment", true))) return;
+  S.payments = S.payments.filter(x => x.id !== id);
+  set(ref(db, "splitmate/slips/" + id), null).catch(() => {});
+  saveState(); sheet = null; render();
+};
+window.ackPay = function(id) {
+  const p = payById(id);
+  if (p) { p.ack = true; saveState(); render(); }
+};
+window.markReceived = async function(billId, fromId) {
+  const b = S.bills.find(x => x.id === billId);
+  if (!b || b.payerId !== currentUserId) return;
+  const d = getBillDues(b).find(x => x.fromId === fromId);
+  if (!d || payOf(billId, fromId)) return;
+  if (!(await showConfirm(`Mark ${f(d.amount)} from ${getPerson(fromId).name} as received for "${b.title}"?`, "Mark received", "Mark received"))) return;
+  b.settled = b.settled || {}; b.settled[fromId] = true;
+  saveState(); render();
+};
+window.undoSettled = async function(billId, fromId) {
+  const b = S.bills.find(x => x.id === billId);
+  if (!b || b.payerId !== currentUserId) return;
+  if (!(await showConfirm(`Mark ${getPerson(fromId).name}'s share of "${b.title}" as unpaid again?`, "Undo settlement", "Mark unpaid", true))) return;
+  if (b.settled) delete b.settled[fromId];
+  saveState(); render();
+};
+
+
 window.go = function(k) {
   tab = k;
+  billFrom = null;
+  sheet = null;
   openBillId = null;
   if (k === "new" && !D) D = blankBill();
   render();
   scrollTopMain();
 };
 
-window.render = function() {
-  window.S = S;
-  window.D = D;
-  window.sheet = sheet;
-  window.tab = tab;
-  window.openBillId = openBillId;
-  window.tripFilter = tripFilter;
-  window.histQuery = histQuery;
-  window.applyTheme = applyTheme;
-  window.saveState = saveState;
-  window.authPinInput = authPinInput;
-  window.authError = authError;
-
+window.render = function(opts) {
   renderAuth();
 
   const v = document.getElementById("v");
@@ -1418,8 +1651,9 @@ window.render = function() {
   nav.style.display = "flex";
 
   const scrollPos = v ? v.scrollTop : 0;
-  const { unsettledRows } = computeAllBalances();
-  const badgeCount = unsettledRows.length;
+  const badgeCount = notifCount();
+  const ae = document.activeElement;
+  const typing = !!(opts && opts.fromRemote && ae && v.contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName));
 
   const tabs = [
     ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
@@ -1435,7 +1669,7 @@ window.render = function() {
     </button>
   `).join("");
 
-  v.innerHTML = tab === "dash"
+  if (!typing) v.innerHTML = tab === "dash"
     ? viewDash()
     : tab === "new"
     ? viewNewBill()
@@ -1444,7 +1678,7 @@ window.render = function() {
     : viewPeopleAndData();
 
   const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
-  ovl.innerHTML = renderSheetHtml();
+  if (!(opts && opts.fromRemote && ovl.contains(ae))) ovl.innerHTML = renderSheetHtml();
   const newSheetEl = document.querySelector("#ovl .w");
   if (newSheetEl) newSheetEl.scrollTop = sheetScroll;
 
