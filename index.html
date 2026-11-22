@@ -47,7 +47,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text}
 .w{
   max-width:560px;margin:0 auto;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   padding:0 max(16px,env(safe-area-inset-left,0px)) calc(114px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));
-  scrollbar-width:none;-ms-overflow-style:none;
+  scrollbar-width:none;-ms-overflow-style:none;zoom:var(--zm,1);
 }
 .w::-webkit-scrollbar,::-webkit-scrollbar{display:none;width:0;height:0}
 .hdr{position:sticky;top:0;z-index:6;background:var(--bg);margin:0 -16px 8px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 8px}
@@ -103,6 +103,9 @@ button:active,.btn:active{opacity:.65}
 .tabs button span{display:flex;justify-content:center;margin-bottom:2px}
 .tabs button.on{color:var(--ac);background:var(--glass-pill)}
 .bg{position:absolute;top:2px;left:75%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+#fab{position:absolute;left:14px;right:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;z-index:9}
+#fab .btn{padding:15px;font-size:17px;border-radius:26px;box-shadow:0 8px 22px rgba(0,122,255,.38)}
+.w.fab-pad{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{background:var(--bg);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
 .cp{background:var(--ac2);color:var(--ac);font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
@@ -153,6 +156,7 @@ button:active,.btn:active{opacity:.65}
 <div id="boot"><img src="./icon-192.png" alt="" width="96" height="96"><div id="boot-msg">Loading SplitMate…</div></div>
 <script>setTimeout(function(){var m=document.getElementById("boot-msg");if(m&&document.getElementById("boot"))m.textContent="Can\u2019t connect. Check your internet connection and reload.";},9000);</script>
 <div class="w" id="v"></div>
+<div id="fab"></div>
 <div class="tabs" id="nav"></div>
 <div id="ovl"></div>
 <div id="dlgov"></div>
@@ -205,10 +209,13 @@ function normalizePin(val, fallback) {
   return /^\d{4,6}$/.test(s) ? s : fallback;
 }
 
+const ADMIN_ID = 1; // Miu is the admin
+const isAdmin = () => currentUserId === ADMIN_ID;
+
 function buildCanonicalPeople(existingPeople) {
-  const existing = Array.isArray(existingPeople) ? existingPeople : [];
-  return FIXED_USERS.map((u, idx) => {
-    const match = existing.find(p => p && (Number(p.id) === u.id || String(p.name || "").trim().toLowerCase() === u.name.toLowerCase()));
+  const existing = Array.isArray(existingPeople) ? existingPeople.filter(Boolean) : [];
+  const fixed = FIXED_USERS.map((u, idx) => {
+    const match = existing.find(p => Number(p.id) === u.id || String(p.name || "").trim().toLowerCase() === u.name.toLowerCase());
     return {
       id: u.id,
       name: u.name,
@@ -218,10 +225,27 @@ function buildCanonicalPeople(existingPeople) {
       phone: String((match && match.phone) || "").slice(0, 25)
     };
   });
+  const fixedIds = new Set(FIXED_USERS.map(u => u.id));
+  const names = new Set(FIXED_USERS.map(u => u.name.toLowerCase()));
+  const seen = new Set();
+  const extras = [];
+  existing.forEach(p => {
+    const id = Number(p.id), name = String(p.name || "").trim().slice(0, 30);
+    if (!id || fixedIds.has(id) || seen.has(id) || !name || names.has(name.toLowerCase())) return;
+    seen.add(id); names.add(name.toLowerCase());
+    extras.push({
+      id, name,
+      color: p.color || PALETTE[(FIXED_USERS.length + extras.length) % PALETTE.length],
+      pin: normalizePin(p.pin, "1234"),
+      acct: String(p.acct || "").slice(0, 40),
+      phone: String(p.phone || "").slice(0, 25)
+    });
+  });
+  return fixed.concat(extras);
 }
 
 let currentUserId = (() => {
-  try { const v = Number(localStorage.getItem("splitmate_user")); return FIXED_USERS.some(u => u.id === v) ? v : null; }
+  try { const v = Number(localStorage.getItem("splitmate_user")); return v > 0 ? v : null; }
   catch (e) { return null; }
 })();
 let selectedAuthUserId = FIXED_USERS[0].id;
@@ -250,6 +274,20 @@ let histQuery = "";
 let openBillId = null;
 let sheet = null;
 let D = null;
+
+const ZOOMS = [["0.9", "Small"], ["1", "Default"], ["1.15", "Large"], ["1.3", "XL"]];
+let zoomLv = (() => {
+  try { const v = localStorage.getItem("splitmate_zoom"); return ZOOMS.some(z => z[0] === v) ? v : "1"; }
+  catch (e) { return "1"; }
+})();
+function applyZoom() { document.documentElement.style.setProperty("--zm", zoomLv); }
+window.setZoom = function(z) {
+  if (!ZOOMS.some(x => x[0] === String(z))) return;
+  zoomLv = String(z);
+  try { localStorage.setItem("splitmate_zoom", zoomLv); } catch (e) {}
+  applyZoom();
+  render();
+};
 
 function applyTheme() {
   const root = document.documentElement;
@@ -280,14 +318,18 @@ onValue(stateRef, (snap) => {
   if (val && typeof val === "object") {
     const incomingPeople = Array.isArray(val.people) ? val.people : [];
     const canonical = buildCanonicalPeople(incomingPeople);
-    const needsSeed = incomingPeople.length !== FIXED_USERS.length ||
-      FIXED_USERS.some((u, i) => !incomingPeople[i] || incomingPeople[i].name !== u.name || !/^\d{4,6}$/.test(String(incomingPeople[i].pin || "")));
+    const needsSeed = incomingPeople.length !== canonical.length ||
+      canonical.some((u, i) => !incomingPeople[i] || incomingPeople[i].name !== u.name || !/^\d{4,6}$/.test(String(incomingPeople[i].pin || "")));
 
     S.people = canonical;
     S.bills = toArr(val.bills);
     S.payments = toArr(val.payments);
     S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
     applyTheme();
+    if (currentUserId !== null && !S.people.some(p => p.id === currentUserId)) {
+      currentUserId = null;
+      try { localStorage.removeItem("splitmate_user"); } catch (e) {}
+    }
     if (!D) D = blankBill();
     if (needsSeed) {
       saveState();
@@ -453,6 +495,37 @@ function pinBody(d) {
   <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="submitPinChange()">Save PIN</button></div>`;
 }
 
+window.promptAddUser = function() {
+  if (!isAdmin()) return;
+  dlg = { type: "newuser", title: "Add user", name: "", pin: "1234", err: "", res: () => {} };
+  renderDlg();
+};
+window.submitNewUser = function() {
+  const d = dlg;
+  if (!d || !isAdmin()) return;
+  const bad = m => { d.err = m; renderDlg(); };
+  const name = d.name.trim().replace(/\s+/g, " ");
+  if (!name) return bad("Enter a name.");
+  if (name.length > 30) return bad("Name is too long (30 characters max).");
+  if (S.people.some(p => p.name.toLowerCase() === name.toLowerCase())) return bad("A user with that name already exists.");
+  if (!/^\d{4,6}$/.test(d.pin.trim())) return bad("PIN must be 4 to 6 digits.");
+  const id = Math.max(...S.people.map(p => +p.id || 0)) + 1;
+  S.people.push({ id, name, color: PALETTE[(S.people.length) % PALETTE.length], pin: d.pin.trim(), acct: "", phone: "" });
+  saveState();
+  closeDlg(true);
+  showNotice(`${name} was added. They can sign in with the PIN you set.`, "User added");
+  render();
+};
+function newUserBody(d) {
+  return `<div class="l">
+    <div class="li"><span>Name</span><input maxlength="30" autocomplete="off" placeholder="e.g. Sam" value="${esc(d.name)}" oninput="dlg.name=this.value"></div>
+    <div class="li"><span>PIN (4–6 digits)</span><input type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••" value="${esc(d.pin)}" oninput="dlg.pin=this.value" onkeydown="if(event.key==='Enter')submitNewUser()"></div>
+  </div>
+  <div class="mu" style="margin:10px 14px 0;font-size:13px">Share the PIN with them. They can change it after signing in.</div>
+  ${d.err ? `<div class="neg" style="margin:10px 14px 0;font-size:14px">${esc(d.err)}</div>` : ""}
+  <div class="row2" style="margin-top:18px"><button class="btn sec" onclick="closeDlg(null)">Cancel</button><button class="btn" onclick="submitNewUser()">Add user</button></div>`;
+}
+
 window.editMyPayInfo = function() {
   const me = getPerson(currentUserId);
   dlg = { type: "acct", title: "Payment details", acct: me.acct || "", phone: me.phone || "", err: "", res: () => {} };
@@ -593,7 +666,7 @@ function renderDlg() {
   if (!dlg) { el.innerHTML = ""; return; }
   const d = dlg;
   const cancelCall = d.type === "alert" ? "closeDlg(true)" : d.type === "confirm" ? "closeDlg(false)" : "closeDlg(null)";
-  const body = d.type === "pin" ? pinBody(d) : d.type === "acct" ? acctBody(d) : d.type === "alert"
+  const body = d.type === "pin" ? pinBody(d) : d.type === "newuser" ? newUserBody(d) : d.type === "acct" ? acctBody(d) : d.type === "alert"
     ? `<div class="l" style="margin-top:8px"><div class="li col"><div style="white-space:pre-line;line-height:1.45">${esc(d.msg)}</div></div></div>
        <div style="margin-top:18px"><button class="btn" onclick="closeDlg(true)">OK</button></div>`
     : d.type === "confirm"
@@ -759,18 +832,43 @@ function personPicker(selectedIds, toggleExpr) {
 /* ==========================================================================
    9. MAIN VIEWS
    ========================================================================== */
+function dueStatus(d) {
+  if (d.isSettled) return ["ok", "Settled ✓"];
+  if (payOf(d.bill.id, d.fromId)) return ["", d.toId === currentUserId ? "Awaiting your confirmation" : "Awaiting confirmation"];
+  const rej = S.payments.some(x => x.status === "rejected" && x.fromId === d.fromId && x.billIds.includes(d.bill.id) && !x.ack);
+  return ["no", rej ? "Payment rejected" : "Unpaid"];
+}
+
+function dueRow(d, who, mine) {
+  const st = dueStatus(d);
+  const canPay = mine && !d.isSettled && !payOf(d.bill.id, d.fromId);
+  const click = canPay ? `openPay(${d.toId},${d.bill.id})` : `openBill(${d.bill.id},'dash')`;
+  return `<div class="li" onclick="${click}" style="cursor:pointer">
+    <span><b>${esc(d.bill.title)}</b><br><small>${shortDate(d.bill.date)} · ${who}</small></span>
+    <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><b class="${d.isSettled ? "" : "neg"}">${mh(d.amount)}</b><span class="bd ${st[0]}">${st[1]}</span></span>
+  </div>`;
+}
+
 function viewDash() {
-  const { filteredBills, pairs, totalUnsettled, totalSpend } = computeAllBalances();
+  const { filteredBills, totalSpend } = computeAllBalances();
   const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
   const me = getPerson(currentUserId);
+  const allDues = filteredBills.flatMap(b => getBillDues(b));
+  const mine = allDues.filter(d => d.fromId === me.id)
+    .sort((a, b) => (a.isSettled - b.isSettled) || (b.bill.date || "").localeCompare(a.bill.date || ""));
+  const myOpen = mine.filter(d => !d.isSettled), mySettled = mine.filter(d => d.isSettled);
+  const myOwe = r2(sum(myOpen.map(d => d.amount)));
+  const owedToMe = allDues.filter(d => d.toId === me.id && !d.isSettled);
+  const owedTotal = r2(sum(owedToMe.map(d => d.amount)));
+  const pairCount = computeAllBalances().pairs.length;
 
-  let h = head("Overview", `Signed in as ${esc(me.name)} · ${S.people.length} members · ${S.bills.length} bill${S.bills.length === 1 ? "" : "s"}`);
+  let h = head("Overview", `Signed in as ${esc(me.name)}${isAdmin() ? " (admin)" : ""}`);
 
   h += viewNotifs(me.id);
 
   h += `<div class="row2" style="margin-top:12px">
-    <div class="tile"><small>Total Bills</small><b>${mh(totalSpend)}</b></div>
-    <div class="tile"><small>Unsettled</small><b class="${totalUnsettled > 0.005 ? "neg" : "pos"}">${mh(totalUnsettled)}</b></div>
+    <div class="tile"><small>Owing</small><b class="${myOwe > 0.005 ? "neg" : ""}">${mh(myOwe)}</b></div>
+    <div class="tile"><small>Owed</small><b class="${owedTotal > 0.005 ? "pos" : ""}">${mh(owedTotal)}</b></div>
   </div>`;
 
   if (trips.length > 0) {
@@ -785,7 +883,37 @@ function viewDash() {
     </div>`;
   }
 
-  h += `<div class="sh">Who owes whom</div><div class="l">`;
+  h += `<div class="sh">Your unsettled &amp; payment status</div><div class="l">`;
+  if (!myOpen.length) {
+    h += `<div class="li mu">${filteredBills.length ? "Nothing unsettled. You're all clear 🎉" : "No bills yet."}</div>`;
+  } else {
+    h += myOpen.map(d => dueRow(d, "to " + esc(getPerson(d.toId).name), true)).join("");
+  }
+  h += `</div>`;
+
+  if (owedToMe.length) {
+    h += `<div class="sh" style="display:flex;justify-content:space-between"><span>Owed to you</span><span>${mh(owedTotal)}</span></div><div class="l">
+      ${owedToMe.map(d => dueRow(d, esc(getPerson(d.fromId).name) + " owes you", false)).join("")}
+    </div>`;
+  }
+
+  h += `<div style="margin-top:16px">
+    <button class="btn sec" style="padding:16px;font-size:17px" onclick="go('owes')">Who owes who${pairCount ? ` · ${pairCount}` : ""} ›</button>
+  </div>`;
+  if (S.bills.length > 0) {
+    h += `<div style="margin-top:10px">
+      <button class="btn sec" onclick="go('hist')">View All Bills · ${S.bills.length}</button>
+    </div>`;
+  }
+
+  return h;
+}
+
+function viewOwes() {
+  const { filteredBills, pairs, totalUnsettled } = computeAllBalances();
+  let h = headB('style="margin-top:6px" onclick="go(\'dash\')"', "‹ Overview", "Who owes who",
+    `${pairs.length} open balance${pairs.length === 1 ? "" : "s"} · ${mh(totalUnsettled)} unsettled${tripFilter !== "All" ? " · " + esc(tripFilter) : ""}`);
+  h += `<div class="l" style="margin-top:12px">`;
   if (pairs.length === 0) {
     h += `<div class="li mu">${filteredBills.length ? "All bills are settled! 🎉" : "No unsettled balances yet."}</div>`;
   } else {
@@ -801,21 +929,11 @@ function viewDash() {
               <span class="neg">${mh(pair.total)}</span><small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small></span>
           </span>${btn}
         </div>
-        <div class="chips">${pair.items.map(d => `<span class="chip" style="cursor:pointer" onclick="openBill(${d.bill.id},'dash')">${esc(d.bill.title)} · ${f(d.amount)} ›</span>`).join("")}</div>
+        <div class="chips">${pair.items.map(d => `<span class="chip" style="cursor:pointer" onclick="openBill(${d.bill.id},'owes')">${esc(d.bill.title)} · ${f(d.amount)} ›</span>`).join("")}</div>
       </div>`;
     }).join("");
   }
   h += `</div>`;
-
-  h += `<div style="margin-top:16px">
-    <button class="btn" style="padding:16px;font-size:17px" onclick="startNewBill()">+ New Bill</button>
-  </div>`;
-  if (S.bills.length > 0) {
-    h += `<div style="margin-top:10px">
-      <button class="btn sec" onclick="go('hist')">View All Bills · ${S.bills.length}</button>
-    </div>`;
-  }
-
   return h;
 }
 
@@ -865,7 +983,9 @@ function viewNewBill() {
   const trips = [...new Set(S.bills.map(b => b.trip).filter(Boolean))];
   const gstOn = !!D.gstEnabled;
 
-  let h = head(
+  let h = headB(
+    `style="margin-top:6px" onclick="${D.editId ? "cancelEdit()" : "go('dash')"}"`,
+    D.editId ? "‹ Cancel" : "‹ Overview",
     D.editId ? "Edit Bill" : "New Bill",
     D.editId ? "Update items, payer, or 8% GST toggle" : "Add items & choose who shared them"
   );
@@ -1206,7 +1326,7 @@ function billStatus(b) {
 function viewHistory() {
   if (openBillId !== null) return viewBillDetail(openBillId);
 
-  let h = head("Bills", `${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"}`);
+  let h = headB('style="margin-top:6px" onclick="go(\'dash\')"', "‹ Overview", "Bills", `${S.bills.length} saved bill${S.bills.length === 1 ? "" : "s"}`);
   h += `<div class="l"><div class="li"><input type="search" placeholder="Search place, trip, item or person" value="${esc(histQuery)}" oninput="histQuery=this.value;document.getElementById('hl').innerHTML=renderHistoryList()" style="text-align:left"></div></div>`;
   h += `<div id="hl">${renderHistoryList()}</div>`;
   return h;
@@ -1222,7 +1342,7 @@ window.renderHistoryList = function() {
     : S.bills;
 
   if (!filtered.length) {
-    return `<div class="l" style="margin-top:14px"><div class="li mu">${q ? "No matching bills found." : "No bills saved yet. Create one in New Bill."}</div></div>`;
+    return `<div class="l" style="margin-top:14px"><div class="li mu">${q ? "No matching bills found." : "No bills saved yet. Create one from the Overview."}</div></div>`;
   }
 
   let h = "";
@@ -1378,29 +1498,6 @@ window.deleteSavedBill = async function(id) {
   render();
 };
 
-window.exportCsv = function() {
-  const rows = [["Date", "Place", "Trip", "Paid By", "8% GST Enabled", "Person", "Items Subtotal", "8% GST", "Extra Charges", "Person Total", "Settled"].join(",")];
-  S.bills.slice().reverse().forEach(b => {
-    const c = calcBill(b), payer = getPerson(b.payerId).name;
-    c.rows.forEach(r => {
-      if (r.tot > 0 || r.sub > 0) {
-        const isSettled = r.personId === b.payerId ? "Payer" : ((b.settled && b.settled[r.personId]) ? "Yes" : "No");
-        rows.push([
-          b.date, b.title, b.trip || "", payer, b.gstEnabled ? "Yes" : "No",
-          r.person.name, r.sub.toFixed(2), r.gst.toFixed(2), r.extra.toFixed(2), r.tot.toFixed(2), isSettled
-        ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(","));
-      }
-    });
-  });
-  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `splitmate-bills-${today()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-};
-
 function viewPeopleAndData() {
   const me = getPerson(currentUserId);
   let h = head("Users & Account", `Signed in as ${esc(me.name)}`);
@@ -1410,7 +1507,7 @@ function viewPeopleAndData() {
     <div class="li">
       <span style="display:flex;align-items:center;gap:10px">
         <span class="dot" style="--c:${me.color}">${esc(initials(me.name))}</span>
-        <span><b>${esc(me.name)}</b><br><small>PIN protected profile</small></span>
+        <span><b>${esc(me.name)}</b>${isAdmin() ? '<span class="cp">admin</span>' : ""}<br><small>PIN protected profile</small></span>
       </span>
       <button class="pill" onclick="promptChangeMyPin()">Change PIN</button>
     </div>
@@ -1424,28 +1521,50 @@ function viewPeopleAndData() {
     </div>
   </div>`;
 
+  if (isAdmin()) {
+    h += `<div class="sh">Admin</div>
+    <div class="l"><div class="li" onclick="go('admin')" style="cursor:pointer"><span><b>Admin</b><br><small>Members, new users and defaults</small></span><span class="mu">›</span></div></div>`;
+  }
+
+  h += `<div class="sh">Appearance</div>
+  <div class="l">
+    <div class="li col">
+      <div class="mu" style="margin-bottom:6px">Theme</div>
+      ${seg([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]], S.settings.theme || "auto", "((t)=>{S.settings.theme=t;applyTheme();saveState();render()})")}
+    </div>
+    <div class="li col">
+      <div class="mu" style="margin-bottom:6px">Display size <small>(this device only)</small></div>
+      ${seg(ZOOMS, zoomLv, "setZoom")}
+    </div>
+  </div>`;
+
+  return h;
+}
+
+function viewAdmin() {
+  let h = headB('style="margin-top:6px" onclick="go(\'people\')"', "‹ Users", "Admin", "Manage members and defaults");
+
+  h += `<div class="sh">New user</div>
+  <div class="l"><div class="li" onclick="promptAddUser()" style="cursor:pointer"><span><b>Add new user</b><br><small>Create a member with a starting PIN</small></span><span class="pill solid">+ Add</span></div></div>`;
+
   h += `<div class="sh">Group Members (${S.people.length})</div>
   <div class="l">
     ${S.people.map(p => `
       <div class="li">
         <span style="display:flex;align-items:center;gap:10px">
           <span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span>
-          <span><b>${esc(p.name)}</b>${p.id === currentUserId ? '<span class="cp">you</span>' : ""}</span>
+          <span><b>${esc(p.name)}</b>${p.id === ADMIN_ID ? '<span class="cp">admin</span>' : ""}${p.id === currentUserId ? '<span class="cp">you</span>' : ""}</span>
         </span>
         <small class="mu">PIN active</small>
       </div>
     `).join("")}
   </div>`;
 
-  h += `<div class="sh">Defaults &amp; Appearance</div>
+  h += `<div class="sh">Defaults</div>
   <div class="l">
     <div class="li">
       <span>Enable 8% GST on new bills</span>
       ${sw(!!S.settings.defaultGst, "S.settings.defaultGst=this.checked;saveState();render()")}
-    </div>
-    <div class="li col">
-      <div class="mu" style="margin-bottom:6px">Theme</div>
-      ${seg([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]], S.settings.theme || "auto", "((t)=>{S.settings.theme=t;applyTheme();saveState();render()})")}
     </div>
   </div>`;
 
@@ -1454,11 +1573,6 @@ function viewPeopleAndData() {
       ? `<div class="li" onclick="installApp()" style="cursor:pointer"><span>Install SplitMate on this device</span><span class="mu">›</span></div>`
       : `<div class="li col"><small class="mu">On iPhone / iPad: tap the Share button, then “Add to Home Screen”.</small></div>`}</div>`;
   }
-
-  h += `<div class="sh">Export</div>
-  <div class="l">
-    <div class="li" onclick="exportCsv()" style="cursor:pointer"><span>Export all bills (CSV)</span><span class="mu">›</span></div>
-  </div>`;
 
   return h;
 }
@@ -1575,18 +1689,27 @@ window.pickSlip = function(inp) {
   img.src = url;
 };
 
-function consumedHtml(b, uid) {
+const fq = q => String(r2(q));
+function userShare(b, uid) {
   const r = calcBill(b).rows.find(x => x.personId === uid);
-  if (!r || r.tot <= 0) return "";
+  if (!r || r.tot <= 0) return null;
   const its = (b.items || []).filter(it => (it.w || []).includes(uid) && +it.p > 0);
   const sh = alloc(its.map(it => it.p / it.w.length), r.sub);
-  const ln = (l, v, bold) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:2px 0;${bold ? "font-weight:700;border-top:.5px solid var(--bd);margin-top:4px;padding-top:6px" : ""}"><span>${l}</span><span>${v}</span></div>`;
+  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) / it.w.length, shared: it.w.length, amt: sh[i] }));
+  return { lines, qty: r2(sum(lines.map(l => l.q))), sub: r.sub, gst: r.gst, extra: r.extra, tot: r.tot, gstOn: !!b.gstEnabled };
+}
+const shLn = (l, v, bold) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:2px 0;${bold ? "font-weight:700;border-top:.5px solid var(--bd);margin-top:4px;padding-top:6px" : ""}"><span>${l}</span><span>${v}</span></div>`;
+
+function consumedHtml(b, uid) {
+  const u = userShare(b, uid);
+  if (!u) return "";
   return `<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--bd)">
-    ${its.map((it, i) => ln(`${esc(it.n || "Item")}${(it.q || 1) > 1 ? ` <small class="mu">×${it.q}</small>` : ""}${it.w.length > 1 ? ` <small class="mu">(shared by ${it.w.length})</small>` : ""}`, f(sh[i]))).join("")}
-    ${ln("Items subtotal", f(r.sub))}
-    ${b.gstEnabled ? ln(`GST ${GST_RATE}% <small class="mu">on ${f(r.sub)}</small>`, f(r.gst)) : ""}
-    ${Math.abs(r.extra) > 0.004 ? ln("Service / other share", f(r.extra)) : ""}
-    ${ln("Total", f(r.tot), true)}
+    ${u.lines.map(l => shLn(`${esc(l.n)} <small class="mu">Qty ${fq(l.q)}${l.shared > 1 ? ` · shared by ${l.shared}` : ""}</small>`, f(l.amt))).join("")}
+    ${shLn("Qty consumed", fq(u.qty), true)}
+    ${shLn("Items subtotal", f(u.sub))}
+    ${shLn(u.gstOn ? `GST ${GST_RATE}% <small class="mu">on ${f(u.sub)}</small>` : "GST", u.gstOn ? f(u.gst) : "Off")}
+    ${Math.abs(u.extra) > 0.004 ? shLn("Service / other share", f(u.extra)) : ""}
+    ${shLn("Total", f(u.tot), true)}
   </div>`;
 }
 
@@ -1595,6 +1718,8 @@ function paySheet(s) {
   const dues = pairDues(currentUserId, s.toId).filter(d => !payOf(d.bill.id, currentUserId));
   const total = r2(sum(dues.filter(d => s.sel.includes(d.bill.id)).map(d => d.amount)));
   const slipReq = s.method !== "cash";
+  const shs = dues.filter(d => s.sel.includes(d.bill.id)).map(d => userShare(d.bill, currentUserId)).filter(Boolean);
+  const agg = { qty: r2(sum(shs.map(x => x.qty))), sub: r2(sum(shs.map(x => x.sub))), gst: r2(sum(shs.map(x => x.gst))), extra: r2(sum(shs.map(x => x.extra))) };
   return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", "Pay " + esc(to.name), "Attach your payment and slip")}
   <div class="sh">Send to ${esc(to.name)}</div>
   <div class="l">${to.acct || to.phone
@@ -1606,6 +1731,14 @@ function paySheet(s) {
       <span><b>${esc(d.bill.title)}</b><br><small>${shortDate(d.bill.date)}</small></span>
       <span style="display:flex;gap:10px;align-items:center"><b>${mh(d.amount)}</b><span class="bd ${on ? "ok" : ""}">${on ? "✓" : "○"}</span></span>
     </div>${consumedHtml(d.bill, currentUserId)}</div>`; }).join("")}</div>
+  <div class="sh">Your share (selected bills)</div>
+  <div class="l">
+    <div class="li"><span>Qty consumed</span><b>${fq(agg.qty)}</b></div>
+    <div class="li"><span>Items subtotal</span><b>${mh(agg.sub)}</b></div>
+    <div class="li"><span>GST (${GST_RATE}%)</span><b>${mh(agg.gst)}</b></div>
+    ${Math.abs(agg.extra) > 0.004 ? `<div class="li"><span>Service / other share</span><b>${mh(agg.extra)}</b></div>` : ""}
+    <div class="li"><b>Total amount</b><b style="font-size:19px">${mh(total)}</b></div>
+  </div>
   <div class="sh">Payment</div>
   <div class="l">
     <div class="li"><b>Amount to pay</b><b style="font-size:19px">${mh(total)}</b></div>
@@ -1733,13 +1866,16 @@ window.render = function(opts) {
   const nav = document.getElementById("nav");
   const ovl = document.getElementById("ovl");
 
+  const fab = document.getElementById("fab");
   if (currentUserId === null) {
     v.innerHTML = "";
+    if (fab) fab.innerHTML = "";
     nav.style.display = "none";
     ovl.innerHTML = "";
     return;
   }
   nav.style.display = "flex";
+  if (tab === "admin" && !isAdmin()) tab = "people";
 
   const scrollPos = v ? v.scrollTop : 0;
   const badgeCount = notifCount();
@@ -1748,13 +1884,11 @@ window.render = function(opts) {
 
   const tabs = [
     ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
-    ["new", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`, "New Bill"],
-    ["hist", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`, "Bills"],
     ["people", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`, "Users"]
   ];
 
   nav.innerHTML = tabs.map(([k, icon, label]) => `
-    <button class="${tab === k ? "on" : ""}" onclick="go('${k}')">
+    <button class="${(tab === "people" || tab === "admin" ? "people" : "dash") === k ? "on" : ""}" onclick="go('${k}')">
       <span>${icon}</span>${label}
       ${k === "dash" && badgeCount > 0 ? `<em class="bg">${badgeCount > 99 ? "99+" : badgeCount}</em>` : ""}
     </button>
@@ -1766,7 +1900,14 @@ window.render = function(opts) {
     ? viewNewBill()
     : tab === "hist"
     ? viewHistory()
+    : tab === "owes"
+    ? viewOwes()
+    : tab === "admin"
+    ? viewAdmin()
     : viewPeopleAndData();
+
+  v.classList.toggle("fab-pad", tab === "dash");
+  if (fab) fab.innerHTML = tab === "dash" ? `<button class="btn" onclick="startNewBill()">+ New Bill</button>` : "";
 
   const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
   if (!(opts && opts.fromRemote && ovl.contains(ae))) ovl.innerHTML = renderSheetHtml();
@@ -1810,7 +1951,7 @@ window.matchReceipt = function() {
 let installEv = null;
 const isStandalone = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEv = e; if (currentUserId !== null && tab === "people") render(); });
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEv = e; if (currentUserId !== null && tab === "admin") render(); });
 window.addEventListener("appinstalled", () => { installEv = null; if (currentUserId !== null) render(); });
 window.installApp = async function() {
   if (!installEv) return;
@@ -1824,6 +1965,7 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 applyTheme();
+applyZoom();
 D = blankBill();
 render();
 </script>
