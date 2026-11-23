@@ -7,6 +7,7 @@
 <title>SplitMate — Cloud Sync</title>
 <meta name="apple-mobile-web-app-title" content="SplitMate">
 <meta name="mobile-web-app-capable" content="yes">
+<script>if(/android/i.test(navigator.userAgent))document.documentElement.classList.add("android");</script>
 <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b12" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
@@ -39,6 +40,14 @@ body{
 }
 input,select,textarea{-webkit-user-select:text;user-select:text}
 .rf{display:inline-block;width:.95em;height:.6em;background:currentColor;-webkit-mask:var(--rf) center/contain no-repeat;mask:var(--rf) center/contain no-repeat;margin-right:.18em}
+.grn{color:var(--grn)}
+html.android,html.android body{min-height:0!important}
+html.android body{height:100dvh}
+html.android .tabs{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+html.android #fab{bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+html.android .w{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+html.android .w.nonav{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+html.android .w.fab-pad{padding-bottom:calc(176px + env(safe-area-inset-bottom,0px))}
 .w{
   max-width:560px;margin:0 auto;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   padding:0 max(16px,env(safe-area-inset-left,0px)) calc(96px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));
@@ -1771,10 +1780,16 @@ async function purgeBill(id) {
   if (b.hasReceipt) set(ref(db, "splitmate/receipts/" + id), null).catch(() => {});
   const gone = [];
   S.payments.forEach(p => {
+    if (p.offsets && p.offsets.some(o => o.billId === id)) {
+      const o = p.offsets.find(x => x.billId === id);
+      p.offsets = p.offsets.filter(x => x.billId !== id);
+      p.offsetTotal = r2(Math.max(0, (p.offsetTotal || 0) - o.amount));
+      p.amount = r2(p.amount + o.amount);
+    }
     if (!p.billIds.includes(id)) return;
     const d = dues.find(x => x.fromId === p.fromId);
     p.billIds = p.billIds.filter(x => x !== id);
-    if (!p.billIds.length) gone.push(p); else p.amount = r2(Math.max(0, p.amount - (d ? d.amount : 0)));
+    if (!p.billIds.length) gone.push(p); else p.amount = r2(Math.max(0, p.amount - (d ? d.amount : 0))); if (p.gross) p.gross = r2(Math.max(0, p.gross - (d ? d.amount : 0)));
   });
   await Promise.all(gone.map(p => p.hasSlip ? set(ref(db, "splitmate/slips/" + p.id), null).catch(() => {}) : null));
   const goneIds = new Set(gone.map(p => p.id));
@@ -1964,7 +1979,9 @@ Object.assign(window, { blankBill, applyTheme, saveState, calcBill, getPerson })
 let billFrom = null;
 const METHODS = { bank: "Bank transfer", cash: "Cash", other: "Other" };
 const payById = id => S.payments.find(p => p.id === id);
-const payOf = (billId, fromId) => S.payments.find(p => p.status === "pending" && p.fromId === fromId && p.billIds.includes(billId));
+const payOf = (billId, fromId) => S.payments.find(p => p.status === "pending" && ((p.fromId === fromId && p.billIds.includes(billId)) || (p.offsets || []).some(o => o.billId === billId && o.personId === fromId)));
+/* bills where `other` owes `me` (can be set off against what I owe `other`) */
+const offsetDues = (me, other) => pairDues(other, me).filter(d => !payOf(d.bill.id, other));
 const pairDues = (from, to) => liveBills()
   .filter(b => (tripFilter === "All" || (b.trip || "") === tripFilter) && b.payerId === to)
   .flatMap(b => getBillDues(b).filter(d => d.fromId === from && !d.isSettled));
@@ -1994,7 +2011,7 @@ function viewNotifs(me) {
   const toConfirm = S.payments.filter(p => p.toId === me && p.status === "pending");
   if (toConfirm.length) {
     h += `<div class="sh" style="color:var(--ac)">Confirm payments (${toConfirm.length})</div><div class="l" style="border:1.5px solid var(--ac)">${toConfirm.map(p => `<div class="li">
-      <span><b>${esc(getPerson(p.fromId).name)}</b> sent <b>${mh(p.amount)}</b><br><small>${esc(p.method)} · ${p.billIds.length} bill${p.billIds.length === 1 ? "" : "s"}${p.hasSlip ? " · slip attached" : ""}</small></span>
+      <span><b>${esc(getPerson(p.fromId).name)}</b> sent <b>${mh(p.amount)}</b>${p.offsets && p.offsets.length ? ` <small>(+ ${mh(p.offsetTotal)} set off)</small>` : ""}<br><small>${esc(p.method)} · ${p.billIds.length} bill${p.billIds.length === 1 ? "" : "s"}${p.hasSlip ? " · slip attached" : ""}</small></span>
       <button class="pill g" onclick="openPayment(${p.id})">Review</button></div>`).join("")}</div>`;
   }
   const mine = S.payments.filter(p => p.fromId === me && (p.status === "pending" || (p.status === "rejected" && !p.ack)));
@@ -2032,7 +2049,12 @@ window.cancelEdit = async function() {
 window.openPay = function(toId, billId) {
   const dues = pairDues(currentUserId, toId).filter(d => !payOf(d.bill.id, currentUserId));
   if (!dues.length) return showNotice("Nothing left to pay here. A payment may already be waiting for confirmation.", "No payment due");
-  sheet = { t: "pay", toId, sel: billId && dues.some(d => d.bill.id === billId) ? [billId] : dues.map(d => d.bill.id), method: "bank", note: "", slip: null, busy: false };
+  sheet = { t: "pay", toId, sel: billId && dues.some(d => d.bill.id === billId) ? [billId] : dues.map(d => d.bill.id), method: "bank", note: "", slip: null, busy: false, off: [] };
+  render();
+};
+window.toggleOffSel = function(id) {
+  const i = sheet.off.indexOf(id);
+  if (i < 0) sheet.off.push(id); else sheet.off.splice(i, 1);
   render();
 };
 window.togglePaySel = function(id) {
@@ -2088,7 +2110,11 @@ function paySheet(s) {
   const to = getPerson(s.toId);
   const dues = pairDues(currentUserId, s.toId).filter(d => !payOf(d.bill.id, currentUserId));
   const total = r2(sum(dues.filter(d => s.sel.includes(d.bill.id)).map(d => d.amount)));
-  const slipReq = s.method !== "cash";
+  const offs = offsetDues(currentUserId, s.toId);
+  const offSel = offs.filter(d => (s.off || []).includes(d.bill.id));
+  const offTotal = r2(sum(offSel.map(d => d.amount)));
+  const net = r2(total - offTotal);
+  const slipReq = s.method !== "cash" && net > 0.004;
   const shs = dues.filter(d => s.sel.includes(d.bill.id)).map(d => userShare(d.bill, currentUserId)).filter(Boolean);
   const agg = { qty: r2(sum(shs.map(x => x.qty))), sub: r2(sum(shs.map(x => x.sub))), gst: r2(sum(shs.map(x => x.gst))), extra: r2(sum(shs.map(x => x.extra))) };
   return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", "Pay " + esc(to.name), "Attach your payment and slip")}
@@ -2110,17 +2136,25 @@ function paySheet(s) {
     ${Math.abs(agg.extra) > 0.004 ? `<div class="li"><span>Service / other share</span><b>${mh(agg.extra)}</b></div>` : ""}
     <div class="li"><b>Total amount</b><b style="font-size:19px">${mh(total)}</b></div>
   </div>
+  ${offs.length ? `<div class="sh">Set off against what ${esc(to.name)} owes you</div>
+  <div class="l">${offs.map(d => { const on = (s.off || []).includes(d.bill.id); return `<div class="li" onclick="toggleOffSel(${d.bill.id})" style="cursor:pointer">
+      <span><b>${esc(d.bill.title)}</b><br><small>${shortDate(d.bill.date)} · ${esc(to.name)}'s share</small></span>
+      <span style="display:flex;gap:10px;align-items:center"><b class="grn">${mh(d.amount)}</b><span class="bd ${on ? "ok" : ""}">${on ? "✓" : "○"}</span></span></div>`; }).join("")}
+    <div class="li mu" style="font-size:13px">Selected amounts are deducted from what you pay. ${esc(to.name)} confirms the set-off, then both balances update.</div></div>` : ""}
   <div class="sh">Payment</div>
   <div class="l">
-    <div class="li"><b>Amount to pay</b><b style="font-size:19px">${mh(total)}</b></div>
-    <div class="li col"><div class="mu" style="margin-bottom:6px">Method</div>${seg([["bank", "Bank transfer"], ["cash", "Cash"], ["other", "Other"]], s.method, "((m)=>{sheet.method=m;render()})")}</div>
+    <div class="li"><span>Bills selected</span><b>${mh(total)}</b></div>
+    ${offTotal > 0 ? `<div class="li"><span>Set-off (${esc(to.name)} owes you)</span><b class="grn">− ${mh(offTotal)}</b></div>` : ""}
+    <div class="li"><b>Amount to pay</b><b style="font-size:19px">${mh(Math.max(0, net))}</b></div>
+    ${offTotal > total + 0.004 ? `<div class="li neg" style="font-size:13px">Set-off is more than you owe. Deselect some set-off bills.</div>` : ""}
+    ${net > 0.004 ? `<div class="li col"><div class="mu" style="margin-bottom:6px">Method</div>${seg([["bank", "Bank transfer"], ["cash", "Cash"], ["other", "Other"]], s.method, "((m)=>{sheet.method=m;render()})")}</div>` : `<div class="li mu">Fully set off. No money needs to be sent.</div>`}
     <div class="li"><span>Reference / note</span><input placeholder="Optional" value="${esc(s.note)}" oninput="sheet.note=this.value"></div>
   </div>
-  <div class="sh">Payment slip ${slipReq ? "(required)" : "(optional)"}</div>
-  <div class="l"><div class="li col">${s.slip
+  ${net > 0.004 ? `<div class="sh">Payment slip ${slipReq ? "(required)" : "(optional)"}</div>` : ""}
+  <div class="l" ${net > 0.004 ? "" : 'style="display:none"'}><div class="li col">${s.slip
     ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block"><button type="button" class="pill r" style="margin-top:8px" onclick="sheet.slip=null;render()">Remove slip</button>`
     : `<label class="btn sec" style="margin:0">📎 Attach slip photo<input type="file" accept="image/*" style="display:none" onchange="pickSlip(this)"></label>`}</div></div>
-  <div style="margin-top:16px"><button class="btn" onclick="submitPay()" ${s.busy ? "disabled" : ""}>${s.busy ? "Sending…" : "Submit payment"}</button></div>`;
+  <div style="margin-top:16px"><button class="btn" onclick="submitPay()" ${s.busy ? "disabled" : ""}>${s.busy ? "Sending…" : (offTotal > 0 ? (net > 0.004 ? "Submit payment + set-off" : "Submit set-off") : "Submit payment")}</button></div>`;
 }
 
 window.submitPay = async function() {
@@ -2128,20 +2162,26 @@ window.submitPay = async function() {
   if (!s || s.t !== "pay" || s.busy) return;
   const dues = pairDues(me, s.toId).filter(d => s.sel.includes(d.bill.id) && !payOf(d.bill.id, me));
   if (!dues.length) return showNotice("Select at least one bill to pay.");
-  if (s.method !== "cash" && !s.slip) return showNotice("Attach your payment slip to continue.", "Slip required");
-  const id = nextId(S.payments), amount = r2(sum(dues.map(d => d.amount))), toName = getPerson(s.toId).name;
+  const offDues = offsetDues(me, s.toId).filter(d => (s.off || []).includes(d.bill.id));
+  const gross = r2(sum(dues.map(d => d.amount))), offTotal = r2(sum(offDues.map(d => d.amount)));
+  if (offTotal > gross + 0.004) return showNotice("The set-off is more than you owe. Deselect some set-off bills.", "Set-off too high");
+  const amount = r2(gross - offTotal), toName = getPerson(s.toId).name;
+  if (amount > 0.004 && s.method !== "cash" && !s.slip) return showNotice("Attach your payment slip to continue.", "Slip required");
+  const id = nextId(S.payments);
   s.busy = true; render();
-  if (s.slip) {
+  if (s.slip && amount > 0.004) {
     try { await set(ref(db, "splitmate/slips/" + id), s.slip); }
     catch (e) { s.busy = false; render(); return showNotice("Could not upload the slip: " + e.message, "Upload failed"); }
   }
-  S.payments.unshift({ id, fromId: me, toId: s.toId, billIds: dues.map(d => d.bill.id), amount, method: METHODS[s.method], note: (s.note || "").trim(), hasSlip: !!s.slip, status: "pending", at: Date.now() });
-  logAct(`Sent payment of Rf ${f(amount)} to ${toName}`);
+  S.payments.unshift({ id, fromId: me, toId: s.toId, billIds: dues.map(d => d.bill.id), amount, method: offTotal > 0 && amount <= 0.004 ? "Set-off" : METHODS[s.method], note: (s.note || "").trim(), hasSlip: !!s.slip && amount > 0.004, status: "pending", at: Date.now(),
+    ...(offDues.length ? { gross, offsetTotal: offTotal, offsets: offDues.map(d => ({ billId: d.bill.id, personId: d.fromId, amount: d.amount })) } : {}) });
+  const what = offTotal > 0 ? (amount > 0.004 ? `Rf ${f(amount)} (after Rf ${f(offTotal)} set-off)` : `a Rf ${f(offTotal)} set-off`) : `Rf ${f(amount)}`;
+  logAct(`Sent ${offTotal > 0 ? "" : "payment of "}${what} to ${toName}`);
   saveState();
-  pushNotify([s.toId], "Payment to confirm", `${getPerson(me).name} sent Rf ${f(amount)}. Review and confirm.`, "pay-" + id);
+  pushNotify([s.toId], offTotal > 0 ? "Set-off to confirm" : "Payment to confirm", `${getPerson(me).name} sent ${what}. Review and confirm.`, "pay-" + id);
   sheet = null;
   render();
-  showNotice(`Payment of ${f(amount)} sent to ${toName}. Your balance clears once ${toName} confirms it.`, "Payment submitted");
+  showNotice(`${offTotal > 0 ? "Payment with set-off" : "Payment"} of ${what} sent to ${toName}. Both balances update once ${toName} confirms it.`, "Submitted");
 };
 
 window.openReceipt = async function(id) {
@@ -2175,25 +2215,34 @@ function reviewSheet(s) {
   const bills = p.billIds.map(id => liveBills().find(b => b.id === id)).filter(Boolean);
   return `${headB(back, "‹ Back", `${esc(from.name)} → ${esc(to.name)}`, `${shortDate(ldate(new Date(p.at)))} · ${esc(p.method)}`)}
   <div class="l">
-    <div class="li"><b>Amount</b><b style="font-size:20px">${mh(p.amount)}</b></div>
+    ${p.offsets && p.offsets.length ? `<div class="li"><span>Bills covered</span><b>${mh(p.gross)}</b></div>
+    <div class="li"><span>Set off (${esc(to.name)} owes ${esc(from.name)})</span><b class="grn">− ${mh(p.offsetTotal)}</b></div>` : ""}
+    <div class="li"><b>${p.offsets && p.offsets.length ? "Net to pay" : "Amount"}</b><b style="font-size:20px">${mh(p.amount)}</b></div>
     <div class="li"><span>Status</span><span class="bd ${st[0]}">${st[1]}</span></div>
     ${p.note ? `<div class="li"><span>Note</span><span>${esc(p.note)}</span></div>` : ""}
     ${p.reason ? `<div class="li"><span>Reason</span><span class="neg">${esc(p.reason)}</span></div>` : ""}
   </div>
   <div class="sh">Bills covered</div>
   <div class="l">${bills.map(b => `<div class="li col"><div onclick="openBill(${b.id},'${tab}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><span class="mu">›</span></div>${consumedHtml(b, p.fromId)}</div>`).join("") || '<div class="li mu">Bills were deleted.</div>'}</div>
+  ${p.offsets && p.offsets.length ? `<div class="sh">Set off (your own bills)</div>
+  <div class="l">${p.offsets.map(o => { const b = liveBills().find(x => x.id === o.billId); return b ? `<div class="li"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><b class="grn">${mh(o.amount)}</b></div>` : ""; }).join("")}</div>` : ""}
   <div class="sh">Payment slip</div>
   <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : s.slip ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block">` : p.slipDeleted ? '<div class="mu">Slip was deleted 2 days after the decision.</div>' : '<div class="mu">No slip attached.</div>'}</div></div>
-  ${p.status === "pending" && p.toId === currentUserId ? `<div class="row2" style="margin-top:16px"><button class="btn red" onclick="rejectPay(${p.id})">Reject</button><button class="btn" onclick="confirmPay(${p.id})">Confirm received</button></div>` : ""}
+  ${p.status === "pending" && p.toId === currentUserId ? `<div class="row2" style="margin-top:16px"><button class="btn red" onclick="rejectPay(${p.id})">Reject</button><button class="btn" onclick="confirmPay(${p.id})">${p.offsets && p.offsets.length ? "Confirm" : "Confirm received"}</button></div>` : ""}
   ${p.status === "pending" && p.fromId === currentUserId ? `<button class="btn sec" style="margin-top:16px" onclick="cancelPay(${p.id})">Cancel this payment</button>` : ""}`;
 }
 
 window.confirmPay = async function(id) {
   const p = payById(id);
   if (!p || p.toId !== currentUserId || p.status !== "pending") return;
-  if (!(await showConfirm(`Confirm you received ${f(p.amount)} from ${getPerson(p.fromId).name}?`, "Confirm payment", "Yes, received"))) return;
+  const offT = r2(sum((p.offsets || []).map(o => o.amount)));
+  const msg = offT > 0
+    ? `Confirm ${p.amount > 0.004 ? `you received ${f(p.amount)} from ${getPerson(p.fromId).name}, and` : `${getPerson(p.fromId).name}'s payment is fully covered by a set-off.`} that ${f(offT)} of your own share(s) is set off against it?`
+    : `Confirm you received ${f(p.amount)} from ${getPerson(p.fromId).name}?`;
+  if (!(await showConfirm(msg, offT > 0 ? "Confirm set-off" : "Confirm payment", "Yes, confirm"))) return;
   p.status = "confirmed"; p.decidedAt = Date.now();
   p.billIds.forEach(bid => { const b = S.bills.find(x => x.id === bid); if (b) { b.settled = b.settled || {}; b.settled[p.fromId] = true; } });
+  (p.offsets || []).forEach(o => { const b = S.bills.find(x => x.id === o.billId); if (b) { b.settled = b.settled || {}; b.settled[o.personId] = true; } });
   logAct(`Confirmed payment of Rf ${f(p.amount)} from ${getPerson(p.fromId).name}`);
   saveState(); sheet = null; render();
   pushNotify([p.fromId], "Payment confirmed ✓", `${getPerson(p.toId).name} confirmed your payment of Rf ${f(p.amount)}.`, "pay-" + p.id);
@@ -2628,6 +2677,11 @@ function detectIphone() {
 function fitScreen() {
   try {
     const de = document.documentElement, b = document.body;
+    if (de.classList.contains("android")) {
+      const AH = Math.round((window.visualViewport && visualViewport.height) || innerHeight);
+      b.style.height = AH + "px"; b.style.bottom = "auto"; de.style.height = AH + "px";
+      return;
+    }
     /* Always reach the physical bottom edge: use the largest of the reported heights */
     const probe = document.createElement("div");
     probe.style.cssText = "position:fixed;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none";
