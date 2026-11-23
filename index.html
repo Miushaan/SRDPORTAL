@@ -2275,16 +2275,6 @@ window.render = function(opts) {
 ["gesturestart", "gesturechange", "gestureend"].forEach(ev =>
   document.addEventListener(ev, e => e.preventDefault())
 );
-if (window.visualViewport) {
-  const fitViewport = () => {
-    document.body.style.height = visualViewport.height + "px";
-    document.body.style.width = visualViewport.width + "px";
-    document.body.style.bottom = "auto";
-    window.scrollTo(0, 0);
-  };
-  visualViewport.addEventListener("resize", fitViewport);
-  fitViewport();
-}
 
 window.matchReceipt = function() {
   const rec = +D.recTotal || 0;
@@ -2605,14 +2595,15 @@ function fitScreen() {
     const envSafe = measureSafe();
     if (fitMode === "off") { fitH = 0; b.style.bottom = ""; b.style.height = ""; return setSab(envSafe, 0); }
     /* Same method the previous SplitMate app used: size the app box to what is really visible (visualViewport) */
-    const vvH = window.visualViewport ? visualViewport.height : 0;
-    let H = Math.max(innerHeight, vvH);
+    // Use the actual dynamic viewport. Avoid model-based stretching and
+    // competing visualViewport handlers that can produce blank areas on iOS.
+    const dynamicViewport = document.createElement("div");
+    dynamicViewport.style.cssText = "position:fixed;top:0;left:0;height:100dvh;visibility:hidden;pointer-events:none";
+    document.body.appendChild(dynamicViewport);
+    let H = dynamicViewport.getBoundingClientRect().height || innerHeight;
+    dynamicViewport.remove();
     const standaloneIphone = /iphone|ipod/i.test(navigator.userAgent) && isStandalone();
     const prof = detectIphone(), portrait = innerWidth < innerHeight;
-    if (standaloneIphone && prof) {
-      const full = portrait ? prof.h : prof.w;
-      if (full > H && full - H <= 110) H = full;
-    }
     if (fitMode === "manual") H += fitExt;
     fitH = Math.round(H);
     b.style.bottom = "auto"; b.style.height = fitH + "px";
