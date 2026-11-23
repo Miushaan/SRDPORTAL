@@ -97,7 +97,7 @@ button:active,.btn:active{opacity:.65}
 .dot{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
 .sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 .tabs{
-  position:absolute;left:14px;right:14px;bottom:calc(2px + var(--sab,env(safe-area-inset-bottom,0px)) * .3);max-width:528px;margin:0 auto;
+  position:absolute;left:14px;right:14px;bottom:calc(2px + var(--nl,0px) + var(--sab,env(safe-area-inset-bottom,0px)) * .3);max-width:528px;margin:0 auto;
   display:flex;align-items:center;gap:4px;background:var(--glass-bg);
   -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
   border:.5px solid var(--glass-bd);border-radius:32px;box-shadow:var(--glass-sh);padding:5px 6px;z-index:10;
@@ -106,7 +106,7 @@ button:active,.btn:active{opacity:.65}
 .tabs button span{display:flex;justify-content:center;margin-bottom:2px}
 .tabs button.on{color:var(--ac);background:var(--glass-pill)}
 .bg{position:absolute;top:2px;left:75%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-#fab{position:absolute;left:14px;right:14px;bottom:calc(70px + var(--sab,env(safe-area-inset-bottom,0px)) * .3);max-width:528px;margin:0 auto;z-index:9}
+#fab{position:absolute;left:14px;right:14px;bottom:calc(70px + var(--nl,0px) + var(--sab,env(safe-area-inset-bottom,0px)) * .3);max-width:528px;margin:0 auto;z-index:9}
 #fab .btn{padding:15px;font-size:17px;border-radius:26px;box-shadow:0 8px 22px rgba(0,122,255,.38)}
 .w.nonav{padding-bottom:calc(40px + var(--sab,env(safe-area-inset-bottom,0px)))}
 .w.fab-pad{padding-bottom:calc(170px + var(--sab,env(safe-area-inset-bottom,0px)))}
@@ -1817,6 +1817,13 @@ function viewPeopleAndData() {
       <div class="mu" style="margin-bottom:6px">Display size <small>(this device only)</small></div>
       ${seg(ZOOMS, zoomLv, "setZoom")}
     </div>
+    <div class="li col">
+      <div class="mu" style="margin-bottom:6px">Bottom fit <small>(this device only)</small></div>
+      ${seg([["auto", "Auto"], ["off", "Off"], ["manual", "Manual"]], fitMode, "setFitMode")}
+      ${fitMode === "manual" ? `<div class="step" style="margin-top:12px;justify-content:space-between"><span>Extend app down<br><small class="mu">Added below the page, in px</small></span><span class="step"><button class="pill" onclick="stepFitExt(-2)">−</button><b>${fitExt}</b><button class="pill" onclick="stepFitExt(2)">+</button></span></div>` : ""}
+      <div class="step" style="margin-top:12px;justify-content:space-between"><span>Nav bar height<br><small class="mu">Lift the bar up, in px</small></span><span class="step"><button class="pill" onclick="stepNavLift(-2)">−</button><b>${navLift}</b><button class="pill" onclick="stepNavLift(2)">+</button></span></div>
+      <div style="margin-top:12px"><button class="pill" onclick="resetFit()">Reset to automatic</button></div>
+    </div>
     <div class="li"><span>Screen info<br><small>For fixing screen-fit problems</small></span><button class="pill" onclick="showScreenInfo()">Show</button></div>
   </div>`;
 
@@ -2539,13 +2546,27 @@ function payHistHtml(uid) {
 }
 
 /* iPhone Home Screen app: stretch to the physical bottom edge (round corners) when the page reports a shorter height */
+const lsRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsWrite = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (e) {} };
+const numOr = (v, d) => (v !== null && v !== "" && isFinite(+v)) ? +v : d;
+let fitMode = ["auto", "off", "manual"].includes(lsRead("splitmate_fitmode")) ? lsRead("splitmate_fitmode") : "auto";
+let fitExt = numOr(lsRead("splitmate_fitext"), 34);
+let navLift = numOr(lsRead("splitmate_navlift"), 0);
 let fitH = 0;
 function fitScreen() {
   const b = document.body, de = document.documentElement;
   const off = () => { fitH = 0; b.style.bottom = ""; b.style.height = ""; de.style.removeProperty("--sab"); };
   try {
+    de.style.setProperty("--nl", navLift + "px");
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "");
-    if (!(/iphone|ipod/i.test(navigator.userAgent) && isStandalone()) || typing) return off();
+    if (fitMode === "off" || typing) return off();
+    if (fitMode === "manual") {
+      fitH = Math.round(innerHeight + fitExt);
+      b.style.bottom = "auto"; b.style.height = fitH + "px";
+      de.style.setProperty("--sab", fitExt + "px");
+      return;
+    }
+    if (!(/iphone|ipod/i.test(navigator.userAgent) && isStandalone())) return off();
     const portrait = innerWidth < innerHeight;
     const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
     const vv = window.visualViewport ? visualViewport.height + visualViewport.offsetTop : 0;
@@ -2561,6 +2582,11 @@ function fitScreen() {
     de.style.setProperty("--sab", Math.max(safe, gap) + "px");
   } catch (e) {}
 }
+const fitUi = () => { fitScreen(); render(); };
+window.setFitMode = k => { if (!["auto", "off", "manual"].includes(k)) return; fitMode = k; lsWrite("splitmate_fitmode", k); fitUi(); };
+window.stepFitExt = d => { fitExt = Math.max(0, Math.min(120, fitExt + d)); lsWrite("splitmate_fitext", fitExt); fitUi(); };
+window.stepNavLift = d => { navLift = Math.max(-10, Math.min(60, navLift + d)); lsWrite("splitmate_navlift", navLift); fitUi(); };
+window.resetFit = () => { fitMode = "auto"; fitExt = 34; navLift = 0; ["splitmate_fitmode", "splitmate_fitext", "splitmate_navlift"].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} }); fitUi(); };
 window.showScreenInfo = function() {
   const m = css => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:0;top:0;width:1px;visibility:hidden;" + css; document.body.appendChild(d); const h = Math.round(d.getBoundingClientRect().height * 10) / 10; d.remove(); return h; };
   const L = [
@@ -2573,7 +2599,7 @@ window.showScreenInfo = function() {
     `Safe top: ${m("height:env(safe-area-inset-top,0px)")} · bottom: ${m("height:env(safe-area-inset-bottom,0px)")}`,
     `Body height: ${Math.round(document.body.getBoundingClientRect().height)} · bottom: ${Math.round(document.body.getBoundingClientRect().bottom)}`,
     `Display size: ${zoomLv}`,
-    `App fit: ${fitH ? "stretched to " + fitH + "px" : "off (normal layout)"}`
+    `App fit (${fitMode}): ${fitH ? "stretched to " + fitH + "px" : "off (normal layout)"} · nav lift ${navLift}px`
   ];
   showNotice(L.join("\n"), "Screen info");
 };
