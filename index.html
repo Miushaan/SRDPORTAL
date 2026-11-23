@@ -46,7 +46,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text}
 .rf{display:inline-block;width:.95em;height:.6em;background:currentColor;-webkit-mask:var(--rf) center/contain no-repeat;mask:var(--rf) center/contain no-repeat;margin-right:.18em}
 .w{
   max-width:560px;margin:0 auto;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
-  padding:0 max(16px,env(safe-area-inset-left,0px)) calc(96px + env(safe-area-inset-bottom,0px) * .3) max(16px,env(safe-area-inset-right,0px));
+  padding:0 max(16px,env(safe-area-inset-left,0px)) calc(96px + var(--sab,env(safe-area-inset-bottom,0px)) * .3) max(16px,env(safe-area-inset-right,0px));
   scrollbar-width:none;-ms-overflow-style:none;
 }
 .w>*{zoom:var(--zm,1)}
@@ -97,7 +97,7 @@ button:active,.btn:active{opacity:.65}
 .dot{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
 .sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 .tabs{
-  position:fixed;left:14px;right:14px;bottom:calc(2px + env(safe-area-inset-bottom,0px) * .3);max-width:528px;margin:0 auto;
+  position:absolute;left:14px;right:14px;bottom:calc(2px + var(--sab,env(safe-area-inset-bottom,0px)) * .3);max-width:528px;margin:0 auto;
   display:flex;align-items:center;gap:4px;background:var(--glass-bg);
   -webkit-backdrop-filter:blur(28px) saturate(190%);backdrop-filter:blur(28px) saturate(190%);
   border:.5px solid var(--glass-bd);border-radius:32px;box-shadow:var(--glass-sh);padding:5px 6px;z-index:10;
@@ -106,10 +106,10 @@ button:active,.btn:active{opacity:.65}
 .tabs button span{display:flex;justify-content:center;margin-bottom:2px}
 .tabs button.on{color:var(--ac);background:var(--glass-pill)}
 .bg{position:absolute;top:2px;left:75%;background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-#fab{position:fixed;left:14px;right:14px;bottom:calc(70px + env(safe-area-inset-bottom,0px) * .3);max-width:528px;margin:0 auto;z-index:9}
+#fab{position:absolute;left:14px;right:14px;bottom:calc(70px + var(--sab,env(safe-area-inset-bottom,0px)) * .3);max-width:528px;margin:0 auto;z-index:9}
 #fab .btn{padding:15px;font-size:17px;border-radius:26px;box-shadow:0 8px 22px rgba(0,122,255,.38)}
-.w.nonav{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
-.w.fab-pad{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+.w.nonav{padding-bottom:calc(40px + var(--sab,env(safe-area-inset-bottom,0px)))}
+.w.fab-pad{padding-bottom:calc(170px + var(--sab,env(safe-area-inset-bottom,0px)))}
 .hm{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .hm .hd{font-size:11px;color:var(--mu);text-align:center;font-weight:600}
 .hm .c{padding:0 1px;aspect-ratio:.82;border-radius:7px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.15;min-width:0;overflow:hidden}
@@ -125,7 +125,7 @@ button:active,.btn:active{opacity:.65}
 .bd{font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--ac2);color:var(--ac)}.bd.ok{background:transparent;color:var(--grn);box-shadow:inset 0 0 0 1.5px var(--grn)}.bd.no{background:transparent;color:var(--red);box-shadow:inset 0 0 0 1.5px var(--red)}.bd.pe{background:transparent;color:#ff9500;box-shadow:inset 0 0 0 1.5px #ff9500}
 .step{display:flex;align-items:center;gap:14px}.step b{font-size:24px;min-width:30px;text-align:center}.step .pill{min-width:44px;min-height:40px;font-size:20px}
 .fp{position:absolute;top:0;left:0;right:0;bottom:0;z-index:60;background:var(--bg);overflow:hidden}
-.fp .w{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.fp .w{padding-bottom:calc(110px + var(--sab,env(safe-area-inset-bottom,0px)))}
 .dd{display:none;position:absolute;left:8px;right:8px;top:100%;z-index:25;background:var(--card);border:.5px solid var(--bd);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.2);max-height:230px;overflow-y:auto;scrollbar-width:none}
 .dd::-webkit-scrollbar{display:none}
 .gst-banner{
@@ -141,7 +141,7 @@ button:active,.btn:active{opacity:.65}
 #auth-screen{
   position:fixed;inset:0;z-index:90;background:var(--bg);
   display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(32px + env(safe-area-inset-bottom,0px));
+  padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(32px + var(--sab,env(safe-area-inset-bottom,0px)));
 }
 .auth-wrap{max-width:460px;width:100%;margin:0 auto}
 .pin-dots{display:flex;justify-content:center;gap:14px;min-height:20px;margin:6px 0 4px}
@@ -1817,6 +1817,7 @@ function viewPeopleAndData() {
       <div class="mu" style="margin-bottom:6px">Display size <small>(this device only)</small></div>
       ${seg(ZOOMS, zoomLv, "setZoom")}
     </div>
+    <div class="li"><span>Screen info<br><small>For fixing screen-fit problems</small></span><button class="pill" onclick="showScreenInfo()">Show</button></div>
   </div>`;
 
   return h;
@@ -2538,21 +2539,52 @@ function payHistHtml(uid) {
 }
 
 /* iPhone Home Screen app: stretch to the physical bottom edge (round corners) when the page reports a shorter height */
+let fitH = 0;
 function fitScreen() {
-  const b = document.body;
+  const b = document.body, de = document.documentElement;
+  const off = () => { fitH = 0; b.style.bottom = ""; b.style.height = ""; de.style.removeProperty("--sab"); };
   try {
-    if (!(isIOS && isStandalone())) return;
-    const portrait = window.innerHeight > window.innerWidth;
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "");
+    if (!(/iphone|ipod/i.test(navigator.userAgent) && isStandalone()) || typing) return off();
+    const portrait = innerWidth < innerHeight;
     const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-    if (sh > window.innerHeight) { b.style.bottom = "auto"; b.style.height = sh + "px"; }
-    else { b.style.bottom = ""; b.style.height = ""; }
+    const vv = window.visualViewport ? visualViewport.height + visualViewport.offsetTop : 0;
+    const gap = sh - Math.max(innerHeight, vv);
+    if (gap <= 0 || gap > 90) return off();
+    const pr = document.createElement("div");
+    pr.style.cssText = "position:fixed;left:0;bottom:0;visibility:hidden;padding-bottom:env(safe-area-inset-bottom,0px)";
+    b.appendChild(pr);
+    const safe = parseFloat(getComputedStyle(pr).paddingBottom) || 0;
+    pr.remove();
+    fitH = sh;
+    b.style.bottom = "auto"; b.style.height = sh + "px";
+    de.style.setProperty("--sab", Math.max(safe, gap) + "px");
   } catch (e) {}
 }
+window.showScreenInfo = function() {
+  const m = css => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:0;top:0;width:1px;visibility:hidden;" + css; document.body.appendChild(d); const h = Math.round(d.getBoundingClientRect().height * 10) / 10; d.remove(); return h; };
+  const L = [
+    `Standalone: ${isStandalone() ? "yes" : "no"} (iOS: ${isIOS ? "yes" : "no"})`,
+    `Window: ${innerWidth} × ${innerHeight}`,
+    `Screen: ${screen.width} × ${screen.height}`,
+    `Visual viewport height: ${window.visualViewport ? Math.round(visualViewport.height * 10) / 10 : "n/a"}`,
+    `100vh: ${m("height:100vh")} · 100dvh: ${m("height:100dvh")}`,
+    `100svh: ${m("height:100svh")} · 100lvh: ${m("height:100lvh")}`,
+    `Safe top: ${m("height:env(safe-area-inset-top,0px)")} · bottom: ${m("height:env(safe-area-inset-bottom,0px)")}`,
+    `Body height: ${Math.round(document.body.getBoundingClientRect().height)} · bottom: ${Math.round(document.body.getBoundingClientRect().bottom)}`,
+    `Display size: ${zoomLv}`,
+    `App fit: ${fitH ? "stretched to " + fitH + "px" : "off (normal layout)"}`
+  ];
+  showNotice(L.join("\n"), "Screen info");
+};
 window.addEventListener("resize", fitScreen);
 window.addEventListener("orientationchange", () => setTimeout(fitScreen, 250));
 window.addEventListener("pageshow", fitScreen);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fitScreen(); });
-fitScreen();
+document.addEventListener("focusin", fitScreen);
+document.addEventListener("focusout", () => setTimeout(fitScreen, 120));
+if (window.visualViewport) visualViewport.addEventListener("resize", fitScreen);
+fitScreen(); setTimeout(fitScreen, 300); setTimeout(fitScreen, 1200);
 
 applyTheme();
 applyZoom();
