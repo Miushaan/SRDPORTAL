@@ -1822,6 +1822,7 @@ function viewPeopleAndData() {
       ${seg([["auto", "Auto"], ["off", "Off"], ["manual", "Manual"]], fitMode, "setFitMode")}
       ${fitMode === "manual" ? `<div class="step" style="margin-top:12px;justify-content:space-between"><span>Extend app down<br><small class="mu">Added below the page, in px</small></span><span class="step"><button class="pill" onclick="stepFitExt(-2)">−</button><b>${fitExt}</b><button class="pill" onclick="stepFitExt(2)">+</button></span></div>` : ""}
       <div class="step" style="margin-top:12px;justify-content:space-between"><span>Nav bar height<br><small class="mu">Lift the bar up, in px</small></span><span class="step"><button class="pill" onclick="stepNavLift(-2)">−</button><b>${navLift}</b><button class="pill" onclick="stepNavLift(2)">+</button></span></div>
+      <div class="step" style="margin-top:12px;justify-content:space-between"><span>Safe bottom<br><small class="mu">Space kept above the home bar, adjust in px</small></span><span class="step"><button class="pill" onclick="stepSafeAdj(-2)">−</button><b>${safeAdj > 0 ? "+" : ""}${safeAdj}</b><button class="pill" onclick="stepSafeAdj(2)">+</button></span></div>
       <div style="margin-top:12px"><button class="pill" onclick="resetFit()">Reset to automatic</button></div>
     </div>
     <div class="li"><span>Screen info<br><small>For fixing screen-fit problems</small></span><button class="pill" onclick="showScreenInfo()">Show</button></div>
@@ -2552,10 +2553,23 @@ const numOr = (v, d) => (v !== null && v !== "" && isFinite(+v)) ? +v : d;
 let fitMode = ["auto", "off", "manual"].includes(lsRead("splitmate_fitmode")) ? lsRead("splitmate_fitmode") : "auto";
 let fitExt = numOr(lsRead("splitmate_fitext"), 34);
 let navLift = numOr(lsRead("splitmate_navlift"), 0);
+let safeAdj = numOr(lsRead("splitmate_safeadj"), 0);
 let fitH = 0;
+function measureSafe() {
+  const pr = document.createElement("div");
+  pr.style.cssText = "position:fixed;left:0;bottom:0;visibility:hidden;padding-bottom:env(safe-area-inset-bottom,0px)";
+  document.body.appendChild(pr);
+  const v = parseFloat(getComputedStyle(pr).paddingBottom) || 0;
+  pr.remove();
+  return v;
+}
 function fitScreen() {
   const b = document.body, de = document.documentElement;
-  const off = () => { fitH = 0; b.style.bottom = ""; b.style.height = ""; de.style.removeProperty("--sab"); };
+  const applySab = base => {
+    if (!fitH && !safeAdj) de.style.removeProperty("--sab");
+    else de.style.setProperty("--sab", Math.max(0, base + safeAdj) + "px");
+  };
+  const off = () => { fitH = 0; b.style.bottom = ""; b.style.height = ""; applySab(measureSafe()); };
   try {
     de.style.setProperty("--nl", navLift + "px");
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "");
@@ -2563,8 +2577,7 @@ function fitScreen() {
     if (fitMode === "manual") {
       fitH = Math.round(innerHeight + fitExt);
       b.style.bottom = "auto"; b.style.height = fitH + "px";
-      de.style.setProperty("--sab", fitExt + "px");
-      return;
+      return applySab(fitExt);
     }
     if (!(/iphone|ipod/i.test(navigator.userAgent) && isStandalone())) return off();
     const portrait = innerWidth < innerHeight;
@@ -2572,21 +2585,18 @@ function fitScreen() {
     const vv = window.visualViewport ? visualViewport.height + visualViewport.offsetTop : 0;
     const gap = sh - Math.max(innerHeight, vv);
     if (gap <= 0 || gap > 90) return off();
-    const pr = document.createElement("div");
-    pr.style.cssText = "position:fixed;left:0;bottom:0;visibility:hidden;padding-bottom:env(safe-area-inset-bottom,0px)";
-    b.appendChild(pr);
-    const safe = parseFloat(getComputedStyle(pr).paddingBottom) || 0;
-    pr.remove();
+    const safe = measureSafe();
     fitH = sh;
     b.style.bottom = "auto"; b.style.height = sh + "px";
-    de.style.setProperty("--sab", Math.max(safe, gap) + "px");
+    applySab(Math.max(safe, gap));
   } catch (e) {}
 }
 const fitUi = () => { fitScreen(); render(); };
 window.setFitMode = k => { if (!["auto", "off", "manual"].includes(k)) return; fitMode = k; lsWrite("splitmate_fitmode", k); fitUi(); };
 window.stepFitExt = d => { fitExt = Math.max(0, Math.min(120, fitExt + d)); lsWrite("splitmate_fitext", fitExt); fitUi(); };
 window.stepNavLift = d => { navLift = Math.max(-10, Math.min(60, navLift + d)); lsWrite("splitmate_navlift", navLift); fitUi(); };
-window.resetFit = () => { fitMode = "auto"; fitExt = 34; navLift = 0; ["splitmate_fitmode", "splitmate_fitext", "splitmate_navlift"].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} }); fitUi(); };
+window.stepSafeAdj = d => { safeAdj = Math.max(-30, Math.min(60, safeAdj + d)); lsWrite("splitmate_safeadj", safeAdj); fitUi(); };
+window.resetFit = () => { fitMode = "auto"; fitExt = 34; navLift = 0; safeAdj = 0; ["splitmate_fitmode", "splitmate_fitext", "splitmate_navlift", "splitmate_safeadj"].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} }); fitUi(); };
 window.showScreenInfo = function() {
   const m = css => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:0;top:0;width:1px;visibility:hidden;" + css; document.body.appendChild(d); const h = Math.round(d.getBoundingClientRect().height * 10) / 10; d.remove(); return h; };
   const L = [
@@ -2599,7 +2609,7 @@ window.showScreenInfo = function() {
     `Safe top: ${m("height:env(safe-area-inset-top,0px)")} · bottom: ${m("height:env(safe-area-inset-bottom,0px)")}`,
     `Body height: ${Math.round(document.body.getBoundingClientRect().height)} · bottom: ${Math.round(document.body.getBoundingClientRect().bottom)}`,
     `Display size: ${zoomLv}`,
-    `App fit (${fitMode}): ${fitH ? "stretched to " + fitH + "px" : "off (normal layout)"} · nav lift ${navLift}px`
+    `App fit (${fitMode}): ${fitH ? "stretched to " + fitH + "px" : "off (normal layout)"} · nav lift ${navLift}px · safe bottom adj ${safeAdj}px`
   ];
   showNotice(L.join("\n"), "Screen info");
 };
