@@ -959,6 +959,7 @@ function viewDash() {
     .replace('<div class="hdr">', '<div class="hdr"><img class="appic" src="./apple-touch-icon.png" alt="" onerror="this.style.display=\'none\'">');
 
   h += viewNotifs(me.id);
+  h += installBanner();
   h += approvalsBanner();
 
   h += `<div class="row2" style="margin-top:12px">
@@ -1819,11 +1820,12 @@ function viewPeopleAndData() {
     </div>
     <div class="li col">
       <div class="mu" style="margin-bottom:6px">Bottom fit <small>(this device only)</small></div>
+      <div style="font-size:13px;margin-bottom:10px">${(() => { const m = detectIphone(); return m ? `Detected: <b>${esc(m.name)}</b><br><small class="mu">${m.w}×${m.h} · status bar ${m.top}pt · home bar ${m.bottom}pt · ${isStandalone() ? (fitH ? "auto-fit active" : "no adjustment needed") : "<b>not running as a Home Screen app</b>"}</small>` : `<span class="mu">Model not recognised (${screen.width}×${screen.height}), using measured values.${isStandalone() ? "" : " Not running as a Home Screen app."}</span>`; })()}</div>
       ${seg([["auto", "Auto"], ["off", "Off"], ["manual", "Manual"]], fitMode, "setFitMode")}
       ${fitMode === "manual" ? `<div class="step" style="margin-top:12px;justify-content:space-between"><span>Extend app down<br><small class="mu">Added below the page, in px</small></span><span class="step"><button class="pill" onclick="stepFitExt(-2)">−</button><b>${fitExt}</b><button class="pill" onclick="stepFitExt(2)">+</button></span></div>` : ""}
       <div class="step" style="margin-top:12px;justify-content:space-between"><span>Nav bar height<br><small class="mu">Lift the bar up, in px</small></span><span class="step"><button class="pill" onclick="stepNavLift(-2)">−</button><b>${navLift}</b><button class="pill" onclick="stepNavLift(2)">+</button></span></div>
       <div class="step" style="margin-top:12px;justify-content:space-between"><span>Safe bottom<br><small class="mu">Space kept above the home bar, adjust in px</small></span><span class="step"><button class="pill" onclick="stepSafeAdj(-2)">−</button><b>${safeAdj > 0 ? "+" : ""}${safeAdj}</b><button class="pill" onclick="stepSafeAdj(2)">+</button></span></div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="pill solid" onclick="preset12Pro()">iPhone 12 Pro preset</button><button class="pill" onclick="resetFit()">Reset to automatic</button></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="pill solid" onclick="presetDetected()">Set from detected model</button><button class="pill" onclick="resetFit()">Reset to automatic</button></div>
     </div>
     <div class="li"><span>Screen info<br><small>For fixing screen-fit problems</small></span><button class="pill" onclick="showScreenInfo()">Show</button></div>
   </div>`;
@@ -2554,6 +2556,33 @@ let fitMode = ["auto", "off", "manual"].includes(lsRead("splitmate_fitmode")) ? 
 let fitExt = numOr(lsRead("splitmate_fitext"), 34);
 let navLift = numOr(lsRead("splitmate_navlift"), 0);
 let safeAdj = numOr(lsRead("splitmate_safeadj"), 0);
+/* iPhone models can't be read directly; the screen size identifies the model family (portrait CSS px) */
+window.hideInstallBanner = () => { lsWrite("splitmate_nobanner", "1"); render(); };
+function installBanner() {
+  if (!isIOS || isStandalone() || lsRead("splitmate_nobanner") === "1") return "";
+  return `<div class="l" style="margin-top:12px;border:1.5px solid var(--ac)"><div class="li col" style="align-items:stretch;gap:6px">
+    <b>You're viewing this in Safari, not as a full-screen app</b>
+    <div style="font-size:14px;line-height:1.5">1. Tap the Share button in Safari<br>2. Choose <b>Add to Home Screen</b>, make sure <b>Open as Web App</b> is on, then tap Add<br>3. Delete any old SplitMate icon, then open the new one</div>
+    <div><button class="pill" onclick="hideInstallBanner()">Hide</button></div></div></div>`;
+}
+const IPHONES = [
+  { name: "iPhone SE / 5s", w: 320, h: 568, top: 20, bottom: 0 },
+  { name: "iPhone 6 / 7 / 8 / SE (2nd, 3rd gen)", w: 375, h: 667, top: 20, bottom: 0 },
+  { name: "iPhone 6 / 7 / 8 Plus", w: 414, h: 736, top: 20, bottom: 0 },
+  { name: "iPhone X / XS / 11 Pro / 12 mini / 13 mini", w: 375, h: 812, top: 47, bottom: 34 },
+  { name: "iPhone XR / XS Max / 11 / 11 Pro Max", w: 414, h: 896, top: 48, bottom: 34 },
+  { name: "iPhone 12 / 12 Pro / 13 / 13 Pro / 14", w: 390, h: 844, top: 47, bottom: 34 },
+  { name: "iPhone 12 / 13 Pro Max / 14 Plus", w: 428, h: 926, top: 47, bottom: 34 },
+  { name: "iPhone 14 Pro / 15 / 15 Pro / 16", w: 393, h: 852, top: 59, bottom: 34 },
+  { name: "iPhone 14 Pro Max / 15 Plus / 15 Pro Max / 16 Plus", w: 430, h: 932, top: 59, bottom: 34 },
+  { name: "iPhone 16 Pro / 17 Pro", w: 402, h: 874, top: 62, bottom: 34 },
+  { name: "iPhone 16 Pro Max / 17 Pro Max", w: 440, h: 956, top: 62, bottom: 34 }
+];
+function detectIphone() {
+  if (!/iphone|ipod/i.test(navigator.userAgent)) return null;
+  const w = Math.min(screen.width, screen.height), h = Math.max(screen.width, screen.height);
+  return IPHONES.find(m => m.w === w && m.h === h) || null;
+}
 let fitH = 0;
 function measureSafe() {
   const pr = document.createElement("div");
@@ -2580,15 +2609,15 @@ function fitScreen() {
       return applySab(measureSafe() || Math.min(fitExt, 34));
     }
     if (!(/iphone|ipod/i.test(navigator.userAgent) && isStandalone())) return off();
-    const portrait = innerWidth < innerHeight;
-    const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    const prof = detectIphone(), portrait = innerWidth < innerHeight;
+    const sh = prof ? (portrait ? prof.h : prof.w) : (portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height));
     const vv = window.visualViewport ? visualViewport.height + visualViewport.offsetTop : 0;
     const gap = sh - Math.max(innerHeight, vv);
-    if (gap <= 0 || gap > 90) return off();
+    if (gap <= 0 || gap > 110) return off();
     const safe = measureSafe();
     fitH = sh;
     b.style.bottom = "auto"; b.style.height = sh + "px";
-    applySab(safe > 0 ? safe : Math.min(gap, 34));
+    applySab(safe > 0 ? safe : (prof ? (portrait ? prof.bottom : Math.min(prof.bottom, 21)) : Math.min(gap, 34)));
   } catch (e) {}
 }
 const fitUi = () => { fitScreen(); render(); };
@@ -2596,11 +2625,17 @@ window.setFitMode = k => { if (!["auto", "off", "manual"].includes(k)) return; f
 window.stepFitExt = d => { fitExt = Math.max(0, Math.min(120, fitExt + d)); lsWrite("splitmate_fitext", fitExt); fitUi(); };
 window.stepNavLift = d => { navLift = Math.max(-10, Math.min(60, navLift + d)); lsWrite("splitmate_navlift", navLift); fitUi(); };
 window.stepSafeAdj = d => { safeAdj = Math.max(-30, Math.min(60, safeAdj + d)); lsWrite("splitmate_safeadj", safeAdj); fitUi(); };
-window.preset12Pro = () => { fitMode = "manual"; fitExt = 47; safeAdj = 0; navLift = 0; lsWrite("splitmate_fitmode", "manual"); lsWrite("splitmate_fitext", 47); lsWrite("splitmate_safeadj", 0); lsWrite("splitmate_navlift", 0); fitUi(); };
+window.presetDetected = () => {
+  const prof = detectIphone(), ext = prof ? Math.max(0, Math.round((innerWidth < innerHeight ? prof.h : prof.w) - innerHeight)) || prof.top : 47;
+  fitMode = "manual"; fitExt = Math.min(120, ext); safeAdj = 0; navLift = 0;
+  lsWrite("splitmate_fitmode", "manual"); lsWrite("splitmate_fitext", fitExt); lsWrite("splitmate_safeadj", 0); lsWrite("splitmate_navlift", 0);
+  fitUi();
+};
 window.resetFit = () => { fitMode = "auto"; fitExt = 34; navLift = 0; safeAdj = 0; ["splitmate_fitmode", "splitmate_fitext", "splitmate_navlift", "splitmate_safeadj"].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} }); fitUi(); };
 window.showScreenInfo = function() {
   const m = css => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:0;top:0;width:1px;visibility:hidden;" + css; document.body.appendChild(d); const h = Math.round(d.getBoundingClientRect().height * 10) / 10; d.remove(); return h; };
   const L = [
+    `Model: ${(detectIphone() || {}).name || "not recognised"}`,
     `Standalone: ${isStandalone() ? "yes" : "no"} (iOS: ${isIOS ? "yes" : "no"})`,
     `Window: ${innerWidth} × ${innerHeight}`,
     `Screen: ${screen.width} × ${screen.height}`,
