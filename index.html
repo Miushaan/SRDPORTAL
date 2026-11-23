@@ -168,6 +168,15 @@ button:active,.btn:active{opacity:.65}
 .btn[disabled]{opacity:.5;pointer-events:none}
 #boot{position:fixed;inset:0;z-index:200;background:#fff;color:#214565;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-weight:600;text-align:center;padding:24px}
 #boot img{border-radius:22px;box-shadow:0 6px 20px rgba(33,69,101,.18)}
+/* ---- device friendly ---- */
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@media (hover:hover){.btn:hover{opacity:.9}.pill:hover{filter:brightness(.95)}.li[onclick]:hover,.chip:hover{background:var(--ac2)}.tabs button:hover{color:var(--ac)}}
+@media (pointer:coarse){.pill{min-height:40px;padding:9px 16px}.li{min-height:54px}.tabs button{padding:8px 2px}input,select,textarea{font-size:16px}}
+@media (max-width:360px){body{font-size:16px}.pill{padding:7px 10px;font-size:13px}.li{padding:11px 12px}.kp{gap:10px 12px;max-width:250px}}
+@media (min-width:700px){.w{max-width:720px}.tabs{max-width:600px}#fab{max-width:672px}.hm{gap:6px}.kp{max-width:320px}}
+@media (min-width:1100px){.w{max-width:860px}.tabs{max-width:640px}#fab{max-width:812px}}
+@media (max-height:480px) and (orientation:landscape){.tabs{padding:2px}.tabs button span{display:none}.kp{max-width:200px;gap:6px 10px;margin-top:8px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -801,21 +810,22 @@ function calcBill(b) {
   const totalSubRaw = sum(Object.values(subMap));
   const extraPool = r2((+b.scAmt || 0) + (+b.other || 0));
   const useProp = b.scMode === "prop" && totalSubRaw > 0;
-  const subA = alloc(ids.map(id => subMap[id] || 0), r2(totalSubRaw));
   const gstRaw = ids.map(id => (b.gstEnabled ? regMap[id] * GST_RATE / 100 : 0) + gstFix[id]);
-  const gstA = alloc(gstRaw, r2(sum(gstRaw)));
-  const extRaw = subA.map(v => extraPool !== 0 && activeIds.length
-    ? (useProp ? extraPool * v / totalSubRaw : (v > 0 ? extraPool / activeIds.length : 0)) : 0);
-  const extA = alloc(extRaw, r2(sum(extRaw)));
-  const rows = ids.map((id, i) => ({
-    personId: id, person: getPerson(id), sub: subA[i], gst: gstA[i], extra: extA[i],
-    tot: r2(subA[i] + gstA[i] + extA[i])
-  }));
+  const extRaw = ids.map(id => extraPool !== 0 && activeIds.length
+    ? (useProp ? extraPool * subMap[id] / totalSubRaw : (subMap[id] > 0 ? extraPool / activeIds.length : 0)) : 0);
+  /* Round each PERSON'S TOTAL once (equal shares stay equal), then split that total into sub / GST / extra */
+  const totRaw = ids.map((id, i) => (subMap[id] || 0) + gstRaw[i] + extRaw[i]);
+  const totA = alloc(totRaw, r2(sum(totRaw)));
+  const rc = x => Math.sign(x) * Math.round(Math.abs(x) * 100 + 1e-6) / 100;
+  const rows = ids.map((id, i) => {
+    const g = rc(gstRaw[i]), e = rc(extRaw[i]);
+    return { personId: id, person: getPerson(id), sub: r2(totA[i] - g - e), gst: g, extra: e, tot: totA[i] };
+  });
   return {
     rows,
-    totalSub: r2(sum(subA)),
-    totalGst: r2(sum(gstA)),
-    totalExtra: r2(sum(extA)),
+    totalSub: r2(sum(rows.map(r => r.sub))),
+    totalGst: r2(sum(rows.map(r => r.gst))),
+    totalExtra: r2(sum(rows.map(r => r.extra))),
     grandTotal: r2(sum(rows.map(r => r.tot)))
   };
 }
@@ -824,8 +834,9 @@ function calcBill(b) {
 function alloc(vals, target) {
   const c = vals.map(v => Math.floor(v * 100 + 1e-7));
   let rem = Math.round(target * 100) - sum(c);
-  vals.map((v, i) => [v * 100 - c[i], i]).sort((a, b) => b[0] - a[0])
-    .forEach(([fr, i]) => { if (rem > 0 && fr > 1e-7) { c[i]++; rem--; } });
+  const fr = vals.map((v, i) => [v * 100 - c[i], i]);
+  fr.slice().sort((x, y) => y[0] - x[0]).forEach(([q, i]) => { if (rem > 0 && q > 1e-7) { c[i]++; rem--; } });
+  fr.slice().sort((x, y) => x[0] - y[0]).forEach(([q, i]) => { if (rem < 0 && c[i] > 0) { c[i]--; rem++; } });
   return c.map(x => x / 100);
 }
 
@@ -947,7 +958,7 @@ function viewDash() {
     .replace('<div class="hdr">', '<div class="hdr"><img class="appic" src="./apple-touch-icon.png" alt="" onerror="this.style.display=\'none\'">');
 
   h += viewNotifs(me.id);
-  h += delReqHtml();
+  h += approvalsBanner();
 
   h += `<div class="row2" style="margin-top:12px">
     <div class="tile"><small>Owing</small><b class="${myOwe > 0.005 ? "neg" : ""}">${mh(myOwe)}</b></div>
@@ -1003,19 +1014,27 @@ function viewOwes() {
   if (pairs.length === 0) {
     h += `<div class="li mu">${filteredBills.length ? "All bills are settled! 🎉" : "No unsettled balances yet."}</div>`;
   } else {
-    h += pairs.map(pair => {
-      const fromP = getPerson(pair.fromId), toP = getPerson(pair.toId), meId = currentUserId;
-      const btn = pair.fromId === meId ? `<button class="pill solid" onclick="openPay(${pair.toId})">Pay</button>`
-        : pair.toId === meId ? `<button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Mark received</button>` : "";
-      return `<div class="li col">
+    const byFrom = {};
+    pairs.forEach(pr => (byFrom[pr.fromId] = byFrom[pr.fromId] || []).push(pr));
+    const order = Object.keys(byFrom).map(Number).sort((x, y) => ((y === currentUserId) - (x === currentUserId)) || getPerson(x).name.localeCompare(getPerson(y).name));
+    h += order.map(fid => {
+      const fromP = getPerson(fid), list = byFrom[fid], tot = r2(sum(list.map(x => x.total)));
+      return `<div class="li col" style="gap:10px;align-items:stretch">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <span style="display:flex;align-items:center;gap:10px">
-            <span class="dot" style="--c:${fromP.color}">${esc(initials(fromP.name))}</span>
-            <span><b>${esc(fromP.name)}</b> owes <b>${esc(toP.name)}</b><br>
-              <span class="neg">${mh(pair.total)}</span><small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small></span>
-          </span>${btn}
+          <span style="display:flex;align-items:center;gap:10px"><span class="dot" style="--c:${fromP.color}">${esc(initials(fromP.name))}</span><span><b>${esc(fromP.name)}</b>${fid === currentUserId ? '<span class="cp">you</span>' : ""}<br><small class="mu">owes ${list.length} ${list.length === 1 ? "person" : "people"}</small></span></span>
+          <b class="neg">${mh(tot)}</b>
         </div>
-        <div class="chips">${pair.items.map(d => `<span class="chip" style="cursor:pointer" onclick="openBill(${d.bill.id},'owes')">${esc(d.bill.title)} · ${f(d.amount)} ›</span>`).join("")}</div>
+        ${list.map(pair => {
+          const toP = getPerson(pair.toId), meId = currentUserId;
+          const btn = pair.fromId === meId ? `<button class="pill solid" onclick="openPay(${pair.toId})">Pay</button>`
+            : pair.toId === meId ? `<button class="pill g" onclick="settlePairAll(${pair.fromId},${pair.toId})">Mark received</button>` : "";
+          return `<div style="border:.5px solid var(--bd);border-radius:12px;padding:10px 12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span>→ <b>${esc(toP.name)}</b><br><span class="neg">${mh(pair.total)}</span><small> · ${pair.items.length} bill${pair.items.length === 1 ? "" : "s"}</small></span>${btn}
+            </div>
+            <div class="chips">${pair.items.map(d => `<span class="chip" style="cursor:pointer" onclick="openBill(${d.bill.id},'owes')">${esc(d.bill.title)} · ${f(d.amount)} ›</span>`).join("")}</div>
+          </div>`;
+        }).join("")}
       </div>`;
     }).join("");
   }
@@ -1252,6 +1271,7 @@ window.saveCurrentBill = async function() {
     settled: D.settled ? cl(D.settled) : {}
   };
   const oldB = editId ? S.bills.find(b => b.id === editId) : null;
+  if (oldB && oldB.editReq) return showNotice("An edit for this bill is already waiting for admin approval.", "Edit pending");
   if (oldB) ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (oldB[k] !== undefined) bill[k] = oldB[k]; });
   if (D.receiptData) {
     try { await set(ref(db, "splitmate/receipts/" + bill.id), D.receiptData); }
@@ -1263,13 +1283,16 @@ window.saveCurrentBill = async function() {
   }
 
   if (editId) {
-    S.bills = S.bills.map(b => b.id === editId ? bill : b);
+    if (!oldB) return;
+    ["hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (bill[k] !== undefined) oldB[k] = bill[k]; else delete oldB[k]; });
+    oldB.editReq = { by: currentUserId, at: Date.now(), data: cl(bill) };
+    logAct(`Requested edit of bill "${bill.title}"`);
   } else {
     S.bills.unshift(bill);
+    logAct(`Added bill "${bill.title}" (Rf ${f(calcBill(bill).grandTotal)})`);
   }
-
-  logAct(`${editId ? "Edited" : "Added"} bill "${bill.title}" (Rf ${f(calcBill(bill).grandTotal)})`);
   saveState();
+  if (editId) pushNotify([ADMIN_ID], "Bill edit request", `${getPerson(currentUserId).name} edited "${bill.title}" and needs your approval.`, "editreq-" + editId);
   if (!editId) {
     const payerName = getPerson(bill.payerId).name;
     getBillDues(bill).forEach(d => pushNotify([d.fromId], "New bill: " + bill.title, `You owe Rf ${f(d.amount)} to ${payerName}.`, "bill-" + bill.id));
@@ -1279,6 +1302,7 @@ window.saveCurrentBill = async function() {
   if (editId) {
     tab = "hist";
     openBillId = bill.id;
+    showNotice("Your changes were sent to the admin for approval. The bill stays as it is until then.", "Edit sent");
   } else {
     tab = "dash";
   }
@@ -1586,6 +1610,7 @@ function viewBillDetail(id) {
     }).join("")}</div>`;
   }
 
+  if (b.editReq) h += `<div class="l" style="margin-top:10px"><div class="li"><span>⏳ <b>Edit waiting for admin approval</b><br><small>This bill keeps its current values until approved.</small></span></div></div>`;
   const remDues = dues.filter(d => !d.isSettled);
   if (currentUserId === b.payerId && remDues.length) {
     h += `<div class="sh">Reminders</div><div class="l">
@@ -1655,13 +1680,8 @@ window.useBillAsTemplate = function(id) {
 window.deleteSavedBill = async function(id) {
   const b = S.bills.find(x => x.id === id);
   if (!b) return;
-  if (isAdmin()) {
-    if (!(await showConfirm("Delete this bill and all its details permanently?", "Delete Bill", "Delete", true))) return;
-    await purgeBill(id);
-    openBillId = null; render();
-    return;
-  }
-  if (!(await showConfirm("Send a request to the admin to delete this bill? It will be hidden until the admin decides.", "Request deletion", "Send request", true))) return;
+  if (b.delReq) return showNotice("A deletion request for this bill is already waiting for approval.", "Already requested");
+  if (!(await showConfirm("Send a request to delete this bill? It will be hidden until the admin approves or rejects it on the Admin page.", "Request deletion", "Send request", true))) return;
   b.delReq = { by: currentUserId, at: Date.now() };
   logAct(`Requested deletion of bill "${b.title}"`);
   saveState();
@@ -1707,13 +1727,51 @@ window.rejectBillDelete = function(id) {
   saveState(); render();
   if (by) pushNotify([by], "Deletion declined", `The admin kept "${b.title}". The bill is restored.`, "delreq-" + id);
 };
-function delReqHtml() {
+window.approveBillEdit = async function(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b || !b.editReq || !isAdmin()) return;
+  if (!(await showConfirm(`Apply the requested changes to "${b.title}"?`, "Approve edit", "Approve", false))) return;
+  const q = b.editReq, nb = { ...cl(q.data), id: b.id, settled: b.settled ? cl(b.settled) : {} };
+  ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (b[k] !== undefined) nb[k] = b[k]; });
+  S.bills = S.bills.map(x => x.id === id ? nb : x);
+  logAct(`Approved edit of bill "${nb.title}"`);
+  saveState(); render();
+  if (q.by) pushNotify([q.by], "Edit approved", `Your changes to "${nb.title}" were approved.`, "editreq-" + id);
+};
+window.rejectBillEdit = function(id) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b || !b.editReq || !isAdmin()) return;
+  const by = b.editReq.by;
+  delete b.editReq;
+  logAct(`Rejected edit of bill "${b.title}"`);
+  saveState(); render();
+  if (by) pushNotify([by], "Edit rejected", `The admin kept "${b.title}" unchanged.`, "editreq-" + id);
+};
+const pendingCount = () => S.bills.filter(b => b.delReq || b.editReq).length;
+function approvalsBanner() {
+  if (!isAdmin() || !pendingCount()) return "";
+  return `<div class="l" style="margin-top:12px;border:1.5px solid var(--red)"><div class="li" onclick="go('admin')" style="cursor:pointer"><span><b class="neg">${pendingCount()} approval${pendingCount() === 1 ? "" : "s"} waiting</b><br><small>Bill edits and deletions need your decision</small></span><span class="pill r" style="box-shadow:inset 0 0 0 1.5px var(--red)">Review ›</span></div></div>`;
+}
+function approvalsHtml() {
   if (!isAdmin()) return "";
-  const rs = S.bills.filter(b => b.delReq);
-  if (!rs.length) return "";
-  return `<div class="sh" style="color:var(--red)">Deletion requests (${rs.length})</div><div class="l" style="border:1.5px solid var(--red)">${rs.map(b => `<div class="li col">
+  const dels = S.bills.filter(b => b.delReq), eds = S.bills.filter(b => b.editReq);
+  if (!dels.length && !eds.length) return `<div class="sh">Pending approvals</div><div class="l"><div class="li mu">Nothing is waiting for approval.</div></div>`;
+  let h = "";
+  if (eds.length) h += `<div class="sh" style="color:var(--red)">Edit requests (${eds.length})</div><div class="l" style="border:1.5px solid var(--red)">${eds.map(b => {
+    const q = b.editReq, d = q.data, chg = [];
+    if (d.title !== b.title) chg.push(`Title: ${esc(b.title)} → ${esc(d.title)}`);
+    if (d.date !== b.date) chg.push(`Date: ${esc(b.date)} → ${esc(d.date)}`);
+    if (d.payerId !== b.payerId) chg.push(`Paid by: ${esc(getPerson(b.payerId).name)} → ${esc(getPerson(d.payerId).name)}`);
+    if ((d.items || []).length !== (b.items || []).length) chg.push(`Items: ${(b.items || []).length} → ${(d.items || []).length}`);
+    const o = calcBill(b).grandTotal, n = calcBill(d).grandTotal;
+    return `<div class="li col" style="align-items:stretch;gap:8px">
+      <div onclick="openBill(${b.id},'dash')" style="cursor:pointer"><b>${esc(b.title)}</b><br><small>Edited by ${esc(getPerson(q.by).name)} · ${shortDate(ldate(new Date(q.at)))}</small><br><span>${mh(o)} → <b>${mh(n)}</b></span>${chg.length ? `<br><small class="mu">${chg.join(" · ")}</small>` : ""}</div>
+      <div class="row2"><button class="pill r" style="box-shadow:inset 0 0 0 1.5px var(--red)" onclick="rejectBillEdit(${b.id})">Reject</button><button class="pill g" onclick="approveBillEdit(${b.id})">Approve</button></div></div>`;
+  }).join("")}</div>`;
+  if (dels.length) h += `<div class="sh" style="color:var(--red)">Deletion requests (${dels.length})</div><div class="l" style="border:1.5px solid var(--red)">${dels.map(b => `<div class="li col" style="align-items:stretch;gap:8px">
     <div onclick="openBill(${b.id},'dash')" style="cursor:pointer"><b>${esc(b.title)}</b> <span class="mu">${mh(calcBill(b).grandTotal)}</span><br><small>Requested by ${esc(getPerson(b.delReq.by).name)} · ${shortDate(ldate(new Date(b.delReq.at)))}</small></div>
     <div class="row2"><button class="pill g" onclick="rejectBillDelete(${b.id})">Reject &amp; restore</button><button class="pill r" style="box-shadow:inset 0 0 0 1.5px var(--red)" onclick="approveBillDelete(${b.id})">Agree &amp; delete</button></div></div>`).join("")}</div>`;
+  return h;
 }
 
 function viewPeopleAndData() {
@@ -1775,7 +1833,8 @@ window.resetUserPin = async function(id) {
 };
 
 function viewAdmin() {
-  let h = headB('style="margin-top:6px" onclick="go(\'people\')"', "‹ Account", "Admin", "Manage members and defaults");
+  let h = headB('style="margin-top:6px" onclick="go(\'people\')"', "‹ Account", "Admin", "Approvals, members and defaults");
+  h += approvalsHtml();
 
   h += `<div class="sh">New user</div>
   <div class="l"><div class="li" onclick="promptAddUser()" style="cursor:pointer"><span><b>Add new user</b><br><small>Create a member with a starting PIN</small></span><span class="pill solid">+ Add</span></div></div>`;
@@ -1842,7 +1901,7 @@ const pairDues = (from, to) => liveBills()
 
 function notifCount() {
   const me = currentUserId;
-  return (isAdmin() ? S.bills.filter(b => b.delReq).length : 0) + S.payments.filter(p => (p.toId === me && p.status === "pending") || (p.fromId === me && p.status === "rejected" && !p.ack)).length
+  return (isAdmin() ? pendingCount() : 0) + S.payments.filter(p => (p.toId === me && p.status === "pending") || (p.fromId === me && p.status === "rejected" && !p.ack)).length
     + S.people.filter(p => p.id !== me && pairDues(me, p.id).some(d => !payOf(d.bill.id, me))).length;
 }
 
