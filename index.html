@@ -1820,7 +1820,7 @@ function viewPeopleAndData() {
     </div>
     <div class="li col">
       <div class="mu" style="margin-bottom:6px">Bottom fit <small>(this device only)</small></div>
-      <div style="font-size:13px;margin-bottom:10px">${(() => { const m = detectIphone(); return m ? `Detected: <b>${esc(m.name)}</b><br><small class="mu">${m.w}×${m.h} · status bar ${m.top}pt · home bar ${m.bottom}pt · ${isStandalone() ? (fitH ? "auto-fit active" : "no adjustment needed") : "<b>not running as a Home Screen app</b>"}</small>` : `<span class="mu">Model not recognised (${screen.width}×${screen.height}), using measured values.${isStandalone() ? "" : " Not running as a Home Screen app."}</span>`; })()}</div>
+      <div style="font-size:13px;margin-bottom:10px">${(() => { const m = detectIphone(); return m ? `Detected: <b>${esc(m.name)}</b><br><small class="mu">${m.w}×${m.h} · status bar ${m.top}pt · home bar ${m.bottom}pt · ${isStandalone() ? (fitH ? "fitted to " + fitH + "px" : "fit off") : "<b>not running as a Home Screen app</b>"}</small>` : `<span class="mu">Model not recognised (${screen.width}×${screen.height}), using measured values.${isStandalone() ? "" : " Not running as a Home Screen app."}</span>`; })()}</div>
       ${seg([["auto", "Auto"], ["off", "Off"], ["manual", "Manual"]], fitMode, "setFitMode")}
       ${fitMode === "manual" ? `<div class="step" style="margin-top:12px;justify-content:space-between"><span>Extend app down<br><small class="mu">Added below the page, in px</small></span><span class="step"><button class="pill" onclick="stepFitExt(-2)">−</button><b>${fitExt}</b><button class="pill" onclick="stepFitExt(2)">+</button></span></div>` : ""}
       <div class="step" style="margin-top:12px;justify-content:space-between"><span>Nav bar height<br><small class="mu">Lift the bar up, in px</small></span><span class="step"><button class="pill" onclick="stepNavLift(-2)">−</button><b>${navLift}</b><button class="pill" onclick="stepNavLift(2)">+</button></span></div>
@@ -2594,30 +2594,30 @@ function measureSafe() {
 }
 function fitScreen() {
   const b = document.body, de = document.documentElement;
-  const applySab = base => {
-    if (!fitH && !safeAdj) de.style.removeProperty("--sab");
+  const setSab = (envSafe, fallback) => {
+    const base = envSafe > 0 ? envSafe : fallback;
+    if (!safeAdj && envSafe > 0) de.style.removeProperty("--sab");
+    else if (!safeAdj && !(fallback > 0)) de.style.removeProperty("--sab");
     else de.style.setProperty("--sab", Math.max(0, base + safeAdj) + "px");
   };
-  const off = () => { fitH = 0; b.style.bottom = ""; b.style.height = ""; applySab(measureSafe()); };
   try {
     de.style.setProperty("--nl", navLift + "px");
-    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "");
-    if (fitMode === "off" || typing) return off();
-    if (fitMode === "manual") {
-      fitH = Math.round(innerHeight + fitExt);
-      b.style.bottom = "auto"; b.style.height = fitH + "px";
-      return applySab(measureSafe() || Math.min(fitExt, 34));
-    }
-    if (!(/iphone|ipod/i.test(navigator.userAgent) && isStandalone())) return off();
+    const envSafe = measureSafe();
+    if (fitMode === "off") { fitH = 0; b.style.bottom = ""; b.style.height = ""; return setSab(envSafe, 0); }
+    /* Same method the previous SplitMate app used: size the app box to what is really visible (visualViewport) */
+    const vvH = window.visualViewport ? visualViewport.height : 0;
+    let H = Math.max(innerHeight, vvH);
+    const standaloneIphone = /iphone|ipod/i.test(navigator.userAgent) && isStandalone();
     const prof = detectIphone(), portrait = innerWidth < innerHeight;
-    const sh = prof ? (portrait ? prof.h : prof.w) : (portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height));
-    const vv = window.visualViewport ? visualViewport.height + visualViewport.offsetTop : 0;
-    const gap = sh - Math.max(innerHeight, vv);
-    if (gap <= 0 || gap > 110) return off();
-    const safe = measureSafe();
-    fitH = sh;
-    b.style.bottom = "auto"; b.style.height = sh + "px";
-    applySab(safe > 0 ? safe : (prof ? (portrait ? prof.bottom : Math.min(prof.bottom, 21)) : Math.min(gap, 34)));
+    if (standaloneIphone && prof) {
+      const full = portrait ? prof.h : prof.w;
+      if (full > H && full - H <= 110) H = full;
+    }
+    if (fitMode === "manual") H += fitExt;
+    fitH = Math.round(H);
+    b.style.bottom = "auto"; b.style.height = fitH + "px";
+    setSab(envSafe, standaloneIphone && prof ? (portrait ? prof.bottom : Math.min(prof.bottom, 21)) : 0);
+    window.scrollTo(0, 0);
   } catch (e) {}
 }
 const fitUi = () => { fitScreen(); render(); };
@@ -2655,7 +2655,7 @@ window.addEventListener("pageshow", fitScreen);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fitScreen(); });
 document.addEventListener("focusin", fitScreen);
 document.addEventListener("focusout", () => setTimeout(fitScreen, 120));
-if (window.visualViewport) visualViewport.addEventListener("resize", fitScreen);
+if (window.visualViewport) { visualViewport.addEventListener("resize", fitScreen); visualViewport.addEventListener("scroll", () => window.scrollTo(0, 0)); }
 fitScreen(); setTimeout(fitScreen, 300); setTimeout(fitScreen, 1200);
 
 applyTheme();
