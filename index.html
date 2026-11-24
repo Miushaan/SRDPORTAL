@@ -424,6 +424,8 @@ function normalizePin(val, fallback) {
 
 const ADMIN_ID = 1; // Miu is the admin
 const isAdmin = () => currentUserId === ADMIN_ID;
+/* Edit / delete a bill: admin, or the user who added it (older bills without an owner fall back to the payer) */
+const canManageBill = b => !!b && (isAdmin() || (b.by != null ? b.by : b.payerId) === currentUserId);
 
 function buildCanonicalPeople(existingPeople) {
   const existing = Array.isArray(existingPeople) ? existingPeople.filter(Boolean) : [];
@@ -951,6 +953,7 @@ function blankBill() {
     scMode: "ord",
     other: 0,
     recTotal: 0,
+    recGst: 0,
     items: [],
     settled: {}
   };
@@ -1325,6 +1328,7 @@ function viewNewBill() {
     <div class="li"><span>Trip / Tag</span><input list="tl" value="${esc(D.trip)}" placeholder="Optional" oninput="D.trip=this.value"><datalist id="tl">${trips.map(t => `<option value="${esc(t)}">`).join("")}</datalist></div>
     <div class="li"><span>Date</span><input type="date" value="${esc(D.date)}" oninput="D.date=this.value"></div>
     <div class="li"><span>Receipt total</span><input type="number" inputmode="decimal" step="any" placeholder="Optional check" value="${D.recTotal || ""}" oninput="D.recTotal=+this.value;renderPreview()"></div>
+    <div class="li"><span>Receipt GST</span><input type="number" inputmode="decimal" step="any" placeholder="Optional check" value="${D.recGst || ""}" oninput="D.recGst=+this.value;renderPreview()"></div>
     <div class="li col">
       <div class="mu">Who paid the bill?</div>
       ${personPicker(D.payerId ? [D.payerId] : [], id => `D.payerId=${id};render()`)}
@@ -1435,6 +1439,19 @@ window.renderPreview = function() {
     }
   }
 
+  const recG = +D.recGst || 0;
+  if (recG > 0) {
+    const gd = r2(c.totalGst - recG);
+    if (Math.abs(gd) <= 0.10) {
+      html += Math.abs(gd) > 0.004
+        ? `<div class="li"><span>GST check <small class="mu">(${gd > 0 ? "+" : "−"}${f(Math.abs(gd))} rounding)</small></span><b class="pos">Matches receipt ✓</b></div>`
+        : `<div class="li"><span>GST check</span><b class="pos">Matches receipt ✓</b></div>`;
+    } else {
+      html += `<div class="li"><span>Receipt GST (${f(recG)})</span><b class="neg">${gd > 0 ? "+" : "−"}${f(Math.abs(gd))} difference</b></div>
+         <div class="li"><span class="mu">Calculated GST is ${f(c.totalGst)}. Check the GST setting, items entered as “Incl. GST”, or the receipt figure.</span></div>`;
+    }
+  }
+
   pv.innerHTML = html;
 };
 
@@ -1470,11 +1487,14 @@ window.saveCurrentBill = async function() {
     scMode: D.scMode || "ord",
     other: +D.other || 0,
     recTotal: +D.recTotal || 0,
+    recGst: +D.recGst || 0,
     items: cl(D.items),
     settled: D.settled ? cl(D.settled) : {}
   };
   const oldB = editId ? S.bills.find(b => b.id === editId) : null;
+  if (oldB && !canManageBill(oldB)) return showNotice("Only the user who added this bill or the admin can edit it.", "Not allowed");
   if (oldB && oldB.editReq) return showNotice("An edit for this bill is already waiting for admin approval.", "Edit pending");
+  if (oldB) { if (oldB.by != null) bill.by = oldB.by; } else bill.by = currentUserId;
   if (oldB) ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (oldB[k] !== undefined) bill[k] = oldB[k]; });
   if (D.receiptData) {
     try { await set(ref(db, "splitmate/receipts/" + bill.id), D.receiptData); }
@@ -1850,29 +1870,37 @@ function viewBillDetail(id) {
     h += `<div class="sh">Receipt photo</div><div class="l"><div class="li mu">The receipt photo was deleted 2 days after the bill was settled.</div></div>`;
   }
 
-  h += `<div class="sh">Items (${(b.items || []).length})</div>
-  <div class="l">${(b.items || []).map(it => {
-    const names = (it.w || []).map(pid => getPerson(pid).name).join(", ") || "Nobody";
-    return `<div class="li">
-      <span><b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}${it.pm === "incl" ? '<span class="cp">incl. GST</span>' : ""}<br><small>${esc(names)}</small></span>
-      <b>${mh(+it.p || 0)}</b>
-    </div>`;
-  }).join("")}</div>`;
+  h += `<div class="sh">Items by person (${(b.items || []).length} items)</div>`;
+  const grp = c.rows.map(r => ({ r, u: userShare(b, r.personId) })).filter(x => x.u && x.u.lines.length);
+  h += grp.length ? grp.map(({ r, u }) => `<div class="l" style="margin-bottom:10px">
+    <div class="li">
+      <span style="display:flex;gap:10px;align-items:center"><span class="dot" style="--c:${r.person.color}">${esc(initials(r.person.name))}</span><b>${esc(r.person.name)}</b></span>
+      <b>${mh(u.tot)}</b>
+    </div>
+    ${u.lines.map(l => `<div class="li">
+      <span><b>${esc(l.n)}</b> <small>×${fq(l.q)}</small>${l.inc ? '<span class="cp">incl. GST</span>' : ""}${l.shared > 1 ? `<br><small class="mu">shared by ${l.shared}</small>` : ""}</span>
+      <b>${mh(l.tot)}</b>
+    </div>`).join("")}
+  </div>`).join("") : `<div class="l"><div class="li mu">No items assigned yet.</div></div>`;
 
-  h += `<div class="row2" style="margin-top:18px">
+  if (canManageBill(b)) {
+    h += `<div class="row2" style="margin-top:18px">
     <button class="btn sec" onclick="useBillAsTemplate(${b.id})">Use as Template</button>
     <button class="btn sec" onclick="editSavedBill(${b.id})">Edit Bill</button>
   </div>
   <div style="margin-top:10px">
     <button class="btn sec" style="color:var(--red)" onclick="deleteSavedBill(${b.id})">Delete Bill</button>
   </div>`;
+  } else {
+    h += `<div style="margin-top:18px"><button class="btn sec" onclick="useBillAsTemplate(${b.id})">Use as Template</button></div>`;
+  }
 
   return h;
 }
 
 window.editSavedBill = function(id) {
   const b = S.bills.find(x => x.id === id);
-  if (!b) return;
+  if (!b || !canManageBill(b)) return;
   D = cl(b);
   D.editId = id;
   window.D = D;
@@ -1905,7 +1933,7 @@ window.useBillAsTemplate = function(id) {
 
 window.deleteSavedBill = async function(id) {
   const b = S.bills.find(x => x.id === id);
-  if (!b) return;
+  if (!b || !canManageBill(b)) return;
   if (b.delReq) return showNotice("A deletion request for this bill is already waiting for approval.", "Already requested");
   if (!(await showConfirm("Send a request to delete this bill? It will be hidden until the admin approves or rejects it on the Admin page.", "Request deletion", "Send request", true))) return;
   b.delReq = { by: currentUserId, at: Date.now() };
@@ -2042,7 +2070,6 @@ function viewPeopleAndData() {
       <div class="mu" style="margin-bottom:6px">Display size <small>(this device only)</small></div>
       ${seg(ZOOMS, zoomLv, "setZoom")}
     </div>
-    <div class="li"><span>Screen info<br><small>For fixing screen-fit problems</small></span><button class="pill" onclick="showScreenInfo()">Show</button></div>
   </div>`;
 
   return h;
@@ -2079,14 +2106,6 @@ function viewAdmin() {
         <button class="pill r" style="box-shadow:inset 0 0 0 1.5px var(--red)" onclick="resetUserPin(${p.id})">Reset PIN</button>
       </div>
     `).join("")}
-  </div>`;
-
-  h += `<div class="sh">Defaults</div>
-  <div class="l">
-    <div class="li">
-      <span>Enable 8% GST on new bills</span>
-      ${sw(!!S.settings.defaultGst, "S.settings.defaultGst=this.checked;saveState();render()")}
-    </div>
   </div>`;
 
   const lg = (S.log || []).slice(0, 150);
