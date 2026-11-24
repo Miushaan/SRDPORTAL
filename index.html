@@ -956,7 +956,7 @@ function blankBill() {
   };
 }
 
-/* An item in "incl" mode is entered WITH 8% GST already inside the price */
+/* An item in "incl" (Extended Price) mode is entered WITH 8% GST already inside the line total */
 const itemBase = it => it.pm === "incl" ? r2((+it.p || 0) / (1 + GST_RATE / 100)) : (+it.p || 0);
 
 function calcBill(b) {
@@ -974,12 +974,17 @@ function calcBill(b) {
     if (sharers.length > 0 && price > 0) {
       const incl = it.pm === "incl";
       const base = itemBase(it);
-      sharers.forEach(id => { subMap[id] += base / sharers.length; });
+      /* If per-person quantities (it.wq) are specified, weight each person's share by their quantity */
+      const qMap = it.wq || {};
+      const totalQ = sum(sharers.map(id => Math.max(0, +qMap[id] || 1)));
+      const weightFor = id => totalQ > 0 ? (Math.max(0, +qMap[id] || 1) / totalQ) : (1 / sharers.length);
+
+      sharers.forEach(id => { subMap[id] += base * weightFor(id); });
       if (incl) {
-        const g = r2(price - base) / sharers.length;
-        sharers.forEach(id => { gstFix[id] += g; });
+        const g = r2(price - base);
+        sharers.forEach(id => { gstFix[id] += g * weightFor(id); });
       } else {
-        sharers.forEach(id => { regMap[id] += base / sharers.length; });
+        sharers.forEach(id => { regMap[id] += base * weightFor(id); });
       }
     }
   });
@@ -991,9 +996,16 @@ function calcBill(b) {
   const gstRaw = ids.map(id => (b.gstEnabled ? regMap[id] * GST_RATE / 100 : 0) + gstFix[id]);
   const extRaw = ids.map(id => extraPool !== 0 && activeIds.length
     ? (useProp ? extraPool * subMap[id] / totalSubRaw : (subMap[id] > 0 ? extraPool / activeIds.length : 0)) : 0);
-  /* Round each PERSON'S TOTAL once (equal shares stay equal), then split that total into sub / GST / extra */
+
+  /* Round each PERSON'S TOTAL once and absorb minor receipt rounding (±0.10 MVR) into the bill */
   const totRaw = ids.map((id, i) => (subMap[id] || 0) + gstRaw[i] + extRaw[i]);
-  const totA = alloc(totRaw, r2(sum(totRaw)));
+  const rawGrand = r2(sum(totRaw));
+  const rec = +b.recTotal || 0;
+  const rawDiff = rec > 0 ? r2(rec - rawGrand) : 0;
+  const autoAbsorb = rec > 0 && rawGrand > 0 && Math.abs(rawDiff) <= 0.10;
+  const targetGrand = autoAbsorb ? rec : rawGrand;
+  const totA = alloc(totRaw, targetGrand);
+
   const rc = x => Math.sign(x) * Math.round(Math.abs(x) * 100 + 1e-6) / 100;
   const rows = ids.map((id, i) => {
     const g = rc(gstRaw[i]), e = rc(extRaw[i]);
@@ -1004,7 +1016,8 @@ function calcBill(b) {
     totalSub: r2(sum(rows.map(r => r.sub))),
     totalGst: r2(sum(rows.map(r => r.gst))),
     totalExtra: r2(sum(rows.map(r => r.extra))),
-    grandTotal: r2(sum(rows.map(r => r.tot)))
+    grandTotal: r2(sum(rows.map(r => r.tot))),
+    roundingAdj: autoAbsorb ? rawDiff : 0
   };
 }
 
@@ -1324,13 +1337,17 @@ function viewNewBill() {
     h += `<div class="li mu">No items yet. Tap "+ Add item" below.</div>`;
   } else {
     h += D.items.map((it, idx) => {
-      const names = (it.w || []).map(id => getPerson(id).name);
-      const whoLabel = S.people.length > 0 && names.length === S.people.length
+      const names = (it.w || []).map(id => {
+        const nm = getPerson(id).name;
+        const pq = it.wq && it.wq[id] ? +it.wq[id] : 0;
+        return pq > 0 ? `${nm} ×${pq}` : nm;
+      });
+      const whoLabel = S.people.length > 0 && (it.w || []).length === S.people.length && !it.wq
         ? "Everyone"
         : (names.join(", ") || "Nobody selected");
       return `<div class="li" onclick="openItemSheet(${idx})" style="cursor:pointer">
         <span>
-          <b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}${it.pm === "incl" ? '<span class="cp">incl. GST</span>' : ""}<br>
+          <b>${esc(it.n || "Item")}</b>${(it.q || 1) > 1 ? ` <small>×${it.q}</small>` : ""}${it.pm === "incl" ? '<span class="cp">ext. incl. GST</span>' : ""}<br>
           <small>${esc(whoLabel)}</small>
         </span>
         <span style="display:flex;gap:8px;align-items:center">
@@ -1341,7 +1358,10 @@ function viewNewBill() {
     }).join("");
   }
   h += `</div>
-  <div style="margin-top:10px"><button class="btn" onclick="openItemSheet(-1)">+ Add item</button></div>`;
+  <div class="row2" style="margin-top:10px">
+    <button class="btn" onclick="openItemSheet(-1)">+ Add item</button>
+    <button class="btn sec" onclick="openPhotoBillSheet()">📷 Scan Bill Photo</button>
+  </div>`;
 
   h += `<div class="sh">Optional Extra Charges</div>
   <div class="l">
@@ -1405,11 +1425,15 @@ window.renderPreview = function() {
 
   const rec = +D.recTotal || 0;
   if (rec > 0) {
-    const diff = c.grandTotal - rec;
-    html += Math.abs(diff) <= 0.015
-      ? `<div class="li"><span>Receipt check</span><b class="pos">Matches receipt ✓</b></div>`
-      : `<div class="li"><span>Receipt total (${f(rec)})</span><b class="neg">${diff > 0 ? "+" : "−"}${f(Math.abs(diff))} difference</b></div>
-         <div class="li"><span class="mu">The receipt may round or tax differently. Add the difference to Other charges so totals match.</span><button type="button" class="pill solid" onclick="matchReceipt()">Match receipt</button></div>`;
+    const diff = r2(c.grandTotal - rec);
+    if (Math.abs(diff) <= 0.005) {
+      html += c.roundingAdj !== 0
+        ? `<div class="li"><span>Receipt check <small class="mu">(absorbed ${c.roundingAdj > 0 ? "+" : "−"}${f(Math.abs(c.roundingAdj))} rounding)</small></span><b class="pos">Matches receipt ✓</b></div>`
+        : `<div class="li"><span>Receipt check</span><b class="pos">Matches receipt ✓</b></div>`;
+    } else {
+      html += `<div class="li"><span>Receipt total (${f(rec)})</span><b class="neg">${diff > 0 ? "+" : "−"}${f(Math.abs(diff))} difference</b></div>
+         <div class="li"><span class="mu">Difference exceeds 0.10 MVR rounding. Add it to Other charges to match.</span><button type="button" class="pill solid" onclick="matchReceipt()">Match receipt</button></div>`;
+    }
   }
 
   pv.innerHTML = html;
@@ -1501,9 +1525,11 @@ window.openItemSheet = function(idx) {
     k: idx,
     n: it ? it.n : "",
     pm,
-    pr: it ? String(r2((+it.p || 0) / q)) : "",
+    /* In 'incl' mode, pr holds the Extended Price (line total incl. 8% GST); in 'unit' mode, pr holds Unit Price */
+    pr: it ? String(pm === "incl" ? r2(+it.p || 0) : r2((+it.p || 0) / q)) : "",
     q,
-    w: defaultSharers
+    w: defaultSharers,
+    wq: it && it.wq ? { ...it.wq } : {}
   };
   window.sheet = sheet;
   render();
@@ -1515,7 +1541,18 @@ window.openItemSheet = function(idx) {
   }
 };
 
-const sheetItemTotal = () => r2((+sheet.pr || 0) * sheet.q);
+/* Extended Price mode uses the entered line total directly; Unit mode multiplies Unit × Qty */
+const sheetItemTotal = () => sheet.pm === "incl" ? r2(+sheet.pr || 0) : r2((+sheet.pr || 0) * sheet.q);
+
+window.switchSheetPriceMode = function(newMode) {
+  if (!sheet || sheet.pm === newMode) return;
+  const cur = +sheet.pr || 0;
+  if (cur > 0 && sheet.q > 1) {
+    sheet.pr = newMode === "incl" ? String(r2(cur * sheet.q)) : String(r2(cur / sheet.q));
+  }
+  sheet.pm = newMode;
+  render();
+};
 
 window.updateItemSuggestions = function() {
   const q = (sheet.n || "").trim().toLowerCase(), box = document.getElementById("its");
@@ -1529,15 +1566,20 @@ window.pickPastItem = function(i) {
   const x = itMatches[i];
   if (!x) return;
   sheet.n = x.n;
-  sheet.pr = String(sheet.pm === "incl" ? x.unitIncl : x.unit);
   sheet.q = 1;
+  sheet.pr = String(sheet.pm === "incl" ? x.unitIncl : x.unit);
   render();
 };
 
 window.toggleSheetPerson = function(id) {
   const idx = sheet.w.indexOf(id);
-  if (idx < 0) sheet.w.push(id);
-  else sheet.w.splice(idx, 1);
+  if (idx < 0) {
+    sheet.w.push(id);
+    if (sheet.wq) sheet.wq[id] = 1;
+  } else {
+    sheet.w.splice(idx, 1);
+    if (sheet.wq) delete sheet.wq[id];
+  }
   render();
 };
 
@@ -1548,19 +1590,23 @@ function itemSheetLiveText() {
   const base = incl ? r2(tot / (1 + GST_RATE / 100)) : tot;
   const gstT = incl ? r2(tot - base) : (gstOn ? r2(tot * GST_RATE / 100) : 0);
   const showGst = incl || gstOn;
+  const unitDisp = q > 0 ? r2(tot / q) : tot;
   const der = incl
-    ? (tot > 0 ? `Total <b>${mh(tot)}</b>${q > 1 ? ` (${mh(tot / q)} × ${q})` : ""} = ${mh(base)} + ${GST_RATE}% GST <b>${mh(gstT)}</b> (already included, not added again)` : `Enter the unit price including ${GST_RATE}% GST`)
-    : (tot > 0 ? `Total: <b>${mh(tot)}</b>${q > 1 ? ` (${mh(tot / q)} × ${q})` : ""}${gstOn ? ` + ${GST_RATE}% GST` : ""}` : "Total = unit price × quantity");
+    ? (tot > 0 ? `Ext. Total <b>${mh(tot)}</b>${q > 1 ? ` (${mh(unitDisp)}/ea × ${q})` : ""} = ${mh(base)} + ${GST_RATE}% GST <b>${mh(gstT)}</b> (already included)` : `Enter the line total (Ext Price) including ${GST_RATE}% GST`)
+    : (tot > 0 ? `Line Total: <b>${mh(tot)}</b>${q > 1 ? ` (${mh(tot / q)} × ${q})` : ""}${gstOn ? ` + ${GST_RATE}% GST` : ""}` : "Line Total = unit price × quantity");
 
   const n = sheet.w.length;
   const gRawT = incl ? r2(tot - base) : (gstOn ? base * GST_RATE / 100 : 0);
-  const totA = n ? alloc(Array(n).fill((base + gRawT) / n), r2(base + gRawT)) : [];
-  const gstA = totA.map(() => Math.round(gRawT / n * 100 + 1e-6) / 100);
+  const qMap = sheet.wq || {};
+  const totalQ = sum(sheet.w.map(id => Math.max(0, +qMap[id] || 1)));
+  const weights = sheet.w.map(id => totalQ > 0 ? (Math.max(0, +qMap[id] || 1) / totalQ) : (1 / Math.max(1, n)));
+  const totA = n ? alloc(weights.map(w => (base + gRawT) * w), r2(base + gRawT)) : [];
+  const gstA = weights.map(w => Math.round(gRawT * w * 100 + 1e-6) / 100);
   const baseA = totA.map((v, i) => r2(v - gstA[i]));
   const shares = n === 0
     ? '<div class="li mu">Select who shared this item to preview split.</div>'
     : sheet.w.map((id, i) => `<div class="li">
-          <span>${esc(getPerson(id).name)}${showGst && tot > 0 ? `<br><small>Item ${f(baseA[i])} + ${GST_RATE}% GST ${f(gstA[i])}</small>` : ""}</span>
+          <span>${esc(getPerson(id).name)}${qMap[id] && qMap[id] > 1 ? ` <small class="cp">×${qMap[id]}</small>` : ""}${showGst && tot > 0 ? `<br><small>Item ${f(baseA[i])} + ${GST_RATE}% GST ${f(gstA[i])}</small>` : ""}</span>
           <b>${mh(totA[i])}</b>
         </div>`).join("") + `<div class="li"><b>Item Total${showGst ? ` (incl. ${GST_RATE}% GST)` : ""}</b><b>${mh(r2(base + gRawT))}</b></div>`;
 
@@ -1579,19 +1625,21 @@ window.saveSheetItem = function(addAnother) {
   if (!(total > 0)) return showNotice("Enter a valid price greater than 0.");
   if (!sheet.w.length) return showNotice("Select at least one person who shared this item.");
 
+  const hasCustomQty = sheet.wq && Object.keys(sheet.wq).some(k => sheet.w.includes(+k) && +sheet.wq[k] > 1);
   const item = {
     n: (sheet.n || "").trim() || "Item",
     p: total,
     q: sheet.q,
     pm: sheet.pm,
-    w: [...sheet.w]
+    w: [...sheet.w],
+    ...(hasCustomQty ? { wq: { ...sheet.wq } } : {})
   };
 
   if (sheet.k < 0) D.items.push(item);
   else D.items[sheet.k] = item;
 
   if (addAnother) {
-    sheet = { t: "item", k: -1, n: "", pm: sheet.pm, pr: "", q: 1, w: [] };
+    sheet = { t: "item", k: -1, n: "", pm: sheet.pm, pr: "", q: 1, w: [], wq: {} };
     window.sheet = sheet;
     render();
     setTimeout(() => {
@@ -1612,7 +1660,175 @@ window.deleteSheetItem = function() {
   render();
 };
 
+/* ---- Photo Bill Scan / Import & Per-Person Qty Assignment ---- */
+window.openPhotoBillSheet = function() {
+  sheet = {
+    t: "photoScan",
+    img: D.receiptData || null,
+    rawText: "",
+    statusMsg: "",
+    draftTitle: D.title || "",
+    draftRecTotal: D.recTotal ? String(D.recTotal) : "",
+    draftItems: (D.items && D.items.length)
+      ? cl(D.items).map(it => ({
+          ...it,
+          wq: it.wq ? { ...it.wq } : Object.fromEntries((it.w || []).map(id => [id, 1]))
+        }))
+      : []
+  };
+  window.sheet = sheet;
+  render();
+};
+
+window.pickScanPhoto = function(inp) {
+  const file = inp.files && inp.files[0];
+  if (!file || !sheet || sheet.t !== "photoScan") return;
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    sheet.img = c.toDataURL("image/jpeg", 0.78);
+    sheet.statusMsg = "Photo attached. Paste/edit receipt lines below and tap Auto-fill from lines (or add rows manually).";
+    render();
+  };
+  img.onerror = () => showNotice("Could not read that image.", "Photo error");
+  img.src = url;
+};
+
+window.parseReceiptTextToDraft = function() {
+  if (!sheet || sheet.t !== "photoScan") return;
+  const lines = String(sheet.rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const parsed = [];
+  for (const line of lines) {
+    const totMatch = line.match(/^(?:RECEIPT\s+TOTAL|TOTAL)\s*[:\-]?\s*([0-9]+(?:\.[0-9]{1,2})?)$/i);
+    if (totMatch) { sheet.draftRecTotal = totMatch[1]; continue; }
+    if (/^(SUBTOTAL|TAX|GST|TENDERED|CHANGE|CURRENCY|ITEM\s*#)/i.test(line)) continue;
+    const m = line.match(/^(.+?)\s+(?:x\s*(\d+)|(\d+))\s+([0-9]+(?:\.[0-9]{1,2})?)$/i);
+    if (m) {
+      const n = m[1].replace(/\s+/g, " ").trim();
+      const q = Math.max(1, +(m[2] || m[3] || 1));
+      const p = +m[4] || 0;
+      if (n && p > 0) parsed.push({ n, q, p, pm: "incl", w: [], wq: {} });
+    }
+  }
+  if (!parsed.length) {
+    sheet.statusMsg = "No item lines matched. Format lines as: Item Name  Qty  ExtPrice (e.g. Black Tea 5 20.00)";
+  } else {
+    sheet.draftItems = parsed;
+    sheet.statusMsg = `Loaded ${parsed.length} item(s) as Extended Price (incl. 8% GST). Select who ordered each and their qty below.`;
+  }
+  render();
+};
+
+window.addDraftItemRow = function() {
+  if (!sheet || sheet.t !== "photoScan") return;
+  sheet.draftItems.push({ n: "", q: 1, p: 0, pm: "incl", w: [], wq: {} });
+  render();
+};
+
+window.toggleDraftPersonQty = function(itemIdx, personId, delta) {
+  const it = sheet && sheet.draftItems && sheet.draftItems[itemIdx];
+  if (!it) return;
+  it.w = it.w || [];
+  it.wq = it.wq || {};
+  const curQ = it.w.includes(personId) ? (+it.wq[personId] || 1) : 0;
+  const nextQ = Math.max(0, curQ + delta);
+  if (nextQ <= 0) {
+    it.w = it.w.filter(id => id !== personId);
+    delete it.wq[personId];
+  } else {
+    if (!it.w.includes(personId)) it.w.push(personId);
+    it.wq[personId] = nextQ;
+  }
+  render();
+};
+
+window.applyPhotoScanToBill = function() {
+  if (!sheet || sheet.t !== "photoScan") return;
+  const validItems = (sheet.draftItems || []).filter(it => (+it.p || 0) > 0);
+  if (!validItems.length) return showNotice("Add at least one item with a price > 0.");
+  if (validItems.some(it => !(it.w && it.w.length))) {
+    return showNotice("Select at least one person for every item before updating the bill.");
+  }
+  if (sheet.draftTitle.trim()) D.title = sheet.draftTitle.trim();
+  if (+sheet.draftRecTotal > 0) D.recTotal = +sheet.draftRecTotal;
+  if (sheet.img) { D.receiptData = sheet.img; D.receiptRemove = false; }
+  D.items = cl(validItems.map(it => ({
+    n: (it.n || "").trim() || "Item",
+    q: Math.max(1, +it.q || 1),
+    p: r2(+it.p || 0),
+    pm: it.pm || "incl",
+    w: [...it.w],
+    wq: { ...(it.wq || {}) }
+  })));
+  sheet = null;
+  window.sheet = null;
+  render();
+};
+
+function photoScanSheet(s) {
+  return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", "Scan / Import Bill Photo", "Attach photo, auto-fill items & assign qty per person")}
+  <div class="sh">1. Bill Photo &amp; Auto-Fill</div>
+  <div class="l">
+    <div class="li"><span>Bill / Place title</span><input value="${esc(s.draftTitle)}" placeholder="Optional" oninput="sheet.draftTitle=this.value"></div>
+    <div class="li"><span>Receipt total</span><input type="number" inputmode="decimal" step="any" value="${esc(s.draftRecTotal)}" placeholder="e.g. 238.00" oninput="sheet.draftRecTotal=this.value"></div>
+    <div class="li col">
+      ${s.img
+        ? `<img alt="Scanned bill" src="${s.img}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;display:block;margin-bottom:8px">
+           <div style="display:flex;gap:8px"><label class="pill" style="margin:0">Change photo<input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickScanPhoto(this)"></label><button type="button" class="pill r" onclick="sheet.img=null;render()">Remove</button></div>`
+        : `<label class="btn sec" style="margin:0">📷 Take or attach bill photo<input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickScanPhoto(this)"></label>`}
+      <textarea rows="4" placeholder="Paste receipt lines to auto-parse (e.g. Black Tea 5 20.00)" style="width:100%;margin-top:10px;background:var(--bg);border-radius:12px;padding:10px;border:0;color:var(--tx);font:inherit;font-size:14px;resize:vertical" oninput="sheet.rawText=this.value">${esc(s.rawText)}</textarea>
+      <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <button type="button" class="pill solid" onclick="parseReceiptTextToDraft()">Auto-fill from lines</button>
+        <button type="button" class="pill" onclick="addDraftItemRow()">+ Manual row</button>
+      </div>
+      ${s.statusMsg ? `<small class="mu" style="display:block;margin-top:8px">${esc(s.statusMsg)}</small>` : ""}
+    </div>
+  </div>
+
+  <div class="sh">2. Who Ordered What &amp; In Which Qty (${s.draftItems.length})</div>
+  ${s.draftItems.length === 0 ? `<div class="l"><div class="li mu">Attach a bill photo and paste lines above (or tap + Manual row) to assign items.</div></div>` : ""}
+  ${s.draftItems.map((it, idx) => {
+    const assignedQ = sum((it.w || []).map(pid => Math.max(0, +(it.wq && it.wq[pid]) || 1)));
+    return `<div class="l" style="margin-bottom:10px">
+      <div class="li" style="gap:8px">
+        <input value="${esc(it.n)}" placeholder="Item name" style="text-align:left;flex:2" oninput="sheet.draftItems[${idx}].n=this.value">
+        <input type="number" inputmode="decimal" step="any" value="${it.p || ""}" placeholder="Ext. price" style="width:94px;flex:none" oninput="sheet.draftItems[${idx}].p=+this.value">
+      </div>
+      <div class="li">
+        <span>Bill Qty: <b>${it.q || 1}</b> · Assigned: <b class="${assignedQ === (it.q || 1) ? "pos" : "neg"}">${assignedQ}</b></span>
+        <span style="display:flex;gap:6px">
+          <button type="button" class="pill" onclick="sheet.draftItems[${idx}].q=Math.max(1,(sheet.draftItems[${idx}].q||1)-1);render()">−</button>
+          <button type="button" class="pill" onclick="sheet.draftItems[${idx}].q=(sheet.draftItems[${idx}].q||1)+1;render()">+</button>
+        </span>
+      </div>
+      <div class="li col">
+        <div class="mu" style="margin-bottom:6px">Tap a person to add 1, or use + / − for quantity ordered:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${S.people.map(p => {
+            const on = (it.w || []).includes(p.id);
+            const pq = on ? Math.max(1, +(it.wq && it.wq[p.id]) || 1) : 0;
+            return `<div style="display:inline-flex;align-items:center;gap:4px;background:${on ? "var(--ac2)" : "var(--bg)"};border:1px solid ${on ? "var(--ac)" : "var(--bd)"};border-radius:99px;padding:4px 8px;font-size:13px">
+              <button type="button" style="background:none;border:0;color:var(--tx);font:inherit;font-weight:700;padding:0 2px;cursor:pointer" onclick="toggleDraftPersonQty(${idx},${p.id},${on ? -pq : 1})">${esc(p.name)}${on ? ` ×${pq}` : ""}</button>
+              ${on ? `<button type="button" style="background:none;border:0;color:var(--mu);font-weight:700;cursor:pointer" onclick="toggleDraftPersonQty(${idx},${p.id},-1)">−</button><button type="button" style="background:none;border:0;color:var(--ac);font-weight:700;cursor:pointer" onclick="toggleDraftPersonQty(${idx},${p.id},1)">+</button>` : ""}
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>`;
+  }).join("")}
+
+  <div style="margin-top:16px">
+    <button type="button" class="btn" onclick="applyPhotoScanToBill()">Update Bill with These Items</button>
+  </div>`;
+}
+
 function renderSheetHtml() {
+  if (sheet && sheet.t === "photoScan") return `<div class="fp"><div class="w">${photoScanSheet(sheet)}</div></div>`;
   if (sheet && sheet.t === "pay") return `<div class="fp"><div class="w">${paySheet(sheet)}</div></div>`;
   if (sheet && sheet.t === "receipt") return `<div class="fp"><div class="w">${receiptSheet(sheet)}</div></div>`;
   if (sheet && sheet.t === "review") return `<div class="fp"><div class="w">${reviewSheet(sheet)}</div></div>`;
@@ -1622,9 +1838,9 @@ function renderSheetHtml() {
   const { der, shares } = itemSheetLiveText();
 
   return `<div class="fp"><div class="w">
-    ${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", s.k < 0 ? "Add Item" : "Edit Item", "Enter price and select who shared it")}
+    ${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", s.k < 0 ? "Add Item" : "Edit Item", "Enter unit price or extended price and select who shared it")}
     <div class="sh">Price Mode</div>
-    ${seg([["unit", "Unit × Qty"], ["incl", "Incl. GST"]], s.pm, "((v)=>{sheet.pm=v;render()})")}
+    ${seg([["unit", "Unit × Qty"], ["incl", "Ext. Price (incl. GST)"]], s.pm, "switchSheetPriceMode")}
     <div style="position:relative;margin-top:10px">
       <div class="l vis">
         <div class="li"><span>Item name</span><input id="isn" autocomplete="off" placeholder="e.g. Grilled Fish, Coffee" value="${esc(s.n)}" oninput="sheet.n=this.value;updateItemSuggestions()"></div>
@@ -1633,7 +1849,7 @@ function renderSheetHtml() {
     </div>
 
     <div class="l" style="margin-top:10px">
-      <div class="li"><span>${s.pm === "incl" ? "Unit price incl. GST" : "Unit price"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
+      <div class="li"><span>${s.pm === "incl" ? "Extended price (incl. 8% GST)" : "Unit price (before GST)"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
       <div class="li"><span>Quantity</span><span class="step"><button type="button" class="pill" onclick="sheet.q=Math.max(1,sheet.q-1);render()">−</button><b>${s.q}</b><button type="button" class="pill" onclick="sheet.q++;render()">+</button></span></div>
       <div class="li"><span class="mu" id="itd">${der}</span></div>
     </div>
@@ -2179,10 +2395,15 @@ function userShare(b, uid) {
   const r = calcBill(b).rows.find(x => x.personId === uid);
   if (!r || r.tot <= 0) return null;
   const its = (b.items || []).filter(it => (it.w || []).includes(uid) && +it.p > 0);
-  const sh = alloc(its.map(it => itemBase(it) / it.w.length), r.sub);
-  const gRaw = its.map((it, i) => it.pm === "incl" ? r2((+it.p || 0) - itemBase(it)) / it.w.length : (b.gstEnabled ? sh[i] * GST_RATE / 100 : 0));
+  const wf = it => {
+    const qMap = it.wq || {};
+    const tq = sum((it.w || []).map(id => Math.max(0, +qMap[id] || 1)));
+    return tq > 0 ? (Math.max(0, +qMap[uid] || 1) / tq) : (1 / it.w.length);
+  };
+  const sh = alloc(its.map(it => itemBase(it) * wf(it)), r.sub);
+  const gRaw = its.map((it, i) => it.pm === "incl" ? r2((+it.p || 0) - itemBase(it)) * wf(it) : (b.gstEnabled ? sh[i] * GST_RATE / 100 : 0));
   const gA = alloc(gRaw, r.gst);
-  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) / it.w.length, shared: it.w.length, amt: sh[i], gst: gA[i], tot: r2(sh[i] + gA[i]), unit: itemBase(it) / (+it.q || 1), inc: it.pm === "incl" }));
+  const lines = its.map((it, i) => ({ n: it.n || "Item", q: (+it.q || 1) * wf(it), shared: it.w.length, amt: sh[i], gst: gA[i], tot: r2(sh[i] + gA[i]), unit: itemBase(it) / (+it.q || 1), inc: it.pm === "incl" }));
   return { lines, qty: r2(sum(lines.map(l => l.q))), sub: r.sub, gst: r.gst, extra: r.extra, tot: r.tot, gstOn: !!b.gstEnabled };
 }
 const shLn = (l, v, bold) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:2px 0;${bold ? "font-weight:700;border-top:.5px solid var(--bd);margin-top:4px;padding-top:6px" : ""}"><span>${l}</span><span>${v}</span></div>`;
