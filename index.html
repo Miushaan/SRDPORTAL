@@ -1249,7 +1249,8 @@ function pastItems() {
   const seen = {}, out = [];
   liveBills().forEach(b => (b.items || []).forEach(it => {
     const n = (it.n || "").trim(), k = n.toLowerCase();
-    if (n && !seen[k]) { seen[k] = 1; out.push({ n, p: +it.p || 0, pm: it.pm === "incl" ? "incl" : "bill" }); }
+    if (n && !seen[k]) { seen[k] = 1; const q = +it.q || 1, incl = it.pm === "incl", p = +it.p || 0;
+      out.push({ n, unit: r2((incl ? p / (1 + GST_RATE / 100) : p) / q), unitIncl: r2((incl ? p : p * (1 + GST_RATE / 100)) / q) }); }
   }));
   return out;
 }
@@ -1491,7 +1492,7 @@ window.saveCurrentBill = async function() {
 
 window.openItemSheet = function(idx) {
   const it = idx >= 0 ? D.items[idx] : null;
-  const pm = it && it.pm ? it.pm : "bill";
+  const pm = it && it.pm === "incl" ? "incl" : "unit";
   const q = it ? (it.q || 1) : 1;
   const defaultSharers = it ? [...it.w] : [];
 
@@ -1500,7 +1501,7 @@ window.openItemSheet = function(idx) {
     k: idx,
     n: it ? it.n : "",
     pm,
-    pr: it ? String(r2(pm === "unit" ? (+it.p || 0) / q : (+it.p || 0))) : "",
+    pr: it ? String(r2((+it.p || 0) / q)) : "",
     q,
     w: defaultSharers
   };
@@ -1514,22 +1515,21 @@ window.openItemSheet = function(idx) {
   }
 };
 
-const sheetItemTotal = () => r2((+sheet.pr || 0) * (sheet.pm === "unit" ? sheet.q : 1));
+const sheetItemTotal = () => r2((+sheet.pr || 0) * sheet.q);
 
 window.updateItemSuggestions = function() {
   const q = (sheet.n || "").trim().toLowerCase(), box = document.getElementById("its");
   if (!box) return;
   itMatches = q ? pastItems().filter(x => x.n.toLowerCase().includes(q) && x.n.toLowerCase() !== q).slice(0, 20) : [];
   box.style.display = itMatches.length ? "block" : "none";
-  box.innerHTML = itMatches.map((x, i) => `<div class="li" onclick="pickPastItem(${i})" style="cursor:pointer;min-height:44px"><span>${esc(x.n)}</span><span class="mu">${mh(x.p)}</span></div>`).join("");
+  box.innerHTML = itMatches.map((x, i) => `<div class="li" onclick="pickPastItem(${i})" style="cursor:pointer;min-height:44px"><span>${esc(x.n)}</span><span class="mu">${mh(sheet.pm === "incl" ? x.unitIncl : x.unit)}</span></div>`).join("");
 };
 
 window.pickPastItem = function(i) {
   const x = itMatches[i];
   if (!x) return;
   sheet.n = x.n;
-  sheet.pm = x.pm || "bill";
-  sheet.pr = String(x.p);
+  sheet.pr = String(sheet.pm === "incl" ? x.unitIncl : x.unit);
   sheet.q = 1;
   render();
 };
@@ -1548,11 +1548,9 @@ function itemSheetLiveText() {
   const base = incl ? r2(tot / (1 + GST_RATE / 100)) : tot;
   const gstT = incl ? r2(tot - base) : (gstOn ? r2(tot * GST_RATE / 100) : 0);
   const showGst = incl || gstOn;
-  const der = sheet.pm === "unit"
-    ? (tot > 0 ? `Bill price: <b>${mh(tot)}</b>` : "Bill price = unit price × quantity")
-    : incl
-    ? (tot > 0 ? `Price <b>${mh(tot)}</b> = ${mh(base)} + ${GST_RATE}% GST <b>${mh(gstT)}</b> (already included, not added again)${q > 1 ? ` · ${mh(tot / q)} each` : ""}` : `Enter the price including ${GST_RATE}% GST, as printed on the receipt`)
-    : (q > 1 && tot > 0 ? `Unit price: <b>${mh(tot / q)}</b>` : "Enter total item price from receipt");
+  const der = incl
+    ? (tot > 0 ? `Total <b>${mh(tot)}</b>${q > 1 ? ` (${mh(tot / q)} × ${q})` : ""} = ${mh(base)} + ${GST_RATE}% GST <b>${mh(gstT)}</b> (already included, not added again)` : `Enter the unit price including ${GST_RATE}% GST`)
+    : (tot > 0 ? `Total: <b>${mh(tot)}</b>${q > 1 ? ` (${mh(tot / q)} × ${q})` : ""}${gstOn ? ` + ${GST_RATE}% GST` : ""}` : "Total = unit price × quantity");
 
   const n = sheet.w.length;
   const gRawT = incl ? r2(tot - base) : (gstOn ? base * GST_RATE / 100 : 0);
@@ -1619,23 +1617,23 @@ function renderSheetHtml() {
   if (sheet && sheet.t === "receipt") return `<div class="fp"><div class="w">${receiptSheet(sheet)}</div></div>`;
   if (sheet && sheet.t === "review") return `<div class="fp"><div class="w">${reviewSheet(sheet)}</div></div>`;
   if (!sheet || sheet.t !== "item") return "";
-  const s = sheet, unit = s.pm === "unit";
+  const s = sheet;
   const lastItem = s.k < 0 && D.items.length ? D.items[D.items.length - 1] : null;
   const { der, shares } = itemSheetLiveText();
 
   return `<div class="fp"><div class="w">
     ${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Cancel", s.k < 0 ? "Add Item" : "Edit Item", "Enter price and select who shared it")}
-    <div style="position:relative">
+    <div class="sh">Price Mode</div>
+    ${seg([["unit", "Unit × Qty"], ["incl", "Incl. GST"]], s.pm, "((v)=>{sheet.pm=v;render()})")}
+    <div style="position:relative;margin-top:10px">
       <div class="l vis">
         <div class="li"><span>Item name</span><input id="isn" autocomplete="off" placeholder="e.g. Grilled Fish, Coffee" value="${esc(s.n)}" oninput="sheet.n=this.value;updateItemSuggestions()"></div>
       </div>
       <div id="its" class="dd"></div>
     </div>
 
-    <div class="sh">Price Mode</div>
-    ${seg([["bill", "Bill Price"], ["unit", "Unit × Qty"], ["incl", "Incl. GST"]], s.pm, "((v)=>{sheet.pm=v;render()})")}
     <div class="l" style="margin-top:10px">
-      <div class="li"><span>${unit ? "Unit price" : s.pm === "incl" ? "Price incl. GST" : "Bill price"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
+      <div class="li"><span>${s.pm === "incl" ? "Unit price incl. GST" : "Unit price"}</span><input type="number" inputmode="decimal" step="any" placeholder="0.00" value="${esc(s.pr)}" oninput="sheet.pr=this.value;updateItemSheetPreview()"></div>
       <div class="li"><span>Quantity</span><span class="step"><button type="button" class="pill" onclick="sheet.q=Math.max(1,sheet.q-1);render()">−</button><b>${s.q}</b><button type="button" class="pill" onclick="sheet.q++;render()">+</button></span></div>
       <div class="li"><span class="mu" id="itd">${der}</span></div>
     </div>
