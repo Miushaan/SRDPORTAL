@@ -1082,9 +1082,13 @@ function blankBill() {
     recTotal: 0,
     recGst: 0,
     items: [],
+    treat: {},
     settled: {}
   };
 }
+
+/* Treat: the payer covers these people's share (no debt, not in their spending) */
+const isTreat = (b, id) => !!(b && b.treat && b.treat[id] && id !== b.payerId);
 
 /* An item in "incl" (Extended Price) mode is entered WITH 8% GST already inside the line total */
 const itemBase = it => it.pm === "incl" ? r2((+it.p || 0) / (1 + GST_RATE / 100)) : (+it.p || 0);
@@ -1177,7 +1181,7 @@ function getBillDues(bill) {
   const c = calcBill(bill);
   const settled = bill.settled || {};
   return c.rows
-    .filter(r => r.personId !== bill.payerId && r2(r.tot) >= 0.01)
+    .filter(r => r.personId !== bill.payerId && !isTreat(bill, r.personId) && r2(r.tot) >= 0.01)
     .map(r => ({
       bill,
       fromId: r.personId,
@@ -1241,6 +1245,28 @@ function personPicker(selectedIds, toggleExpr) {
         ${!on ? `<span class="sdot" style="--c:${p.color}"></span>` : ""}<span>${esc(p.name)}</span>
       </button>`;
     }).join("")}
+  </div>`;
+}
+
+window.toggleTreat = function(id, on) {
+  D.treat = D.treat || {};
+  if (on) D.treat[id] = true; else delete D.treat[id];
+  render();
+};
+function treatPickerHtml() {
+  if (!D.payerId || !(currentUserId == D.payerId || isAdmin())) return "";
+  const sh = new Set();
+  (D.items || []).forEach(i => (i.w || []).forEach(x => sh.add(x)));
+  const ppl = S.people.filter(p => p.id !== D.payerId && sh.has(p.id));
+  const pn = esc(getPerson(D.payerId).name);
+  if (!ppl.length) return `<div class="li col" style="align-items:stretch;gap:4px"><div class="mu">Mark as treat</div><small class="mu">Add items and choose who shared them, then you can mark people as a treat (${pn} pays their share).</small></div>`;
+  return `<div class="li col" style="align-items:stretch;gap:6px">
+    <div class="mu">Mark as treat <small>(${pn} pays their share)</small></div>
+    ${ppl.map(p => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0">
+      <span style="display:flex;gap:8px;align-items:center"><span class="dot" style="--c:${p.color}">${esc(initials(p.name))}</span><b>${esc(p.name)}</b>${D.treat && D.treat[p.id] ? '<span class="bd sm ok">Treat</span>' : ""}</span>
+      ${sw(!!(D.treat && D.treat[p.id]), `toggleTreat(${p.id},this.checked)`)}
+    </div>`).join("")}
+    <small class="mu">Treated people owe nothing and the amount is not counted in their spending heat map. It counts as ${pn}'s spending.</small>
   </div>`;
 }
 
@@ -1625,6 +1651,7 @@ window.saveCurrentBill = async function() {
     recTotal: +D.recTotal || 0,
     recGst: +D.recGst || 0,
     items: cl(D.items),
+    treat: (() => { const t = {}, sh = new Set(); D.items.forEach(i => (i.w || []).forEach(x => sh.add(x))); Object.keys(D.treat || {}).forEach(k => { if (D.treat[k] && +k !== D.payerId && sh.has(+k)) t[k] = true; }); return t; })(),
     settled: D.settled ? cl(D.settled) : {}
   };
   const oldB = editId ? S.bills.find(b => b.id === editId) : null;
@@ -1979,7 +2006,7 @@ function viewBillDetail(id) {
       <span style="display:flex;gap:10px;align-items:center">
         <span class="dot" style="--c:${r.person.color}">${esc(initials(r.person.name))}</span>
         <span>
-          <b>${esc(r.person.name)}</b>${r.personId === b.payerId ? '<span class="cp">paid bill</span>' : ""}<br>
+          <b>${esc(r.person.name)}</b>${r.personId === b.payerId ? '<span class="cp">paid bill</span>' : ""}${isTreat(b, r.personId) ? '<span class="cp">treat 🎁</span>' : ""}<br>
           <small>Items ${f(r.sub)}${(b.gstEnabled || r.gst > 0.004) ? ` + 8% GST ${f(r.gst)}` : ""}${Math.abs(r.extra) > 0.004 ? ` + Extra ${f(r.extra)}` : ""}</small>
         </span>
       </span>
@@ -2001,12 +2028,16 @@ function viewBillDetail(id) {
       }
       else if (pend) act = `<button class="pill" onclick="openPayment(${pend.id})">${me === b.payerId ? "Review &amp; confirm" : "Awaiting confirmation"}</button>`;
       else if (me === d.fromId) act = `<button class="pill solid" onclick="openPay(${b.payerId},${b.id})">Pay &amp; attach slip</button>`;
-      else if (me === b.payerId) act = `<button class="pill" onclick="markReceived(${b.id},${d.fromId})">Mark received</button>`;
+      else if (me === b.payerId) act = `<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><button class="pill" onclick="markReceived(${b.id},${d.fromId})">Mark received</button><button class="pill" onclick="markTreat(${b.id},${d.fromId})">Mark as treat 🎁</button></span>`;
       else act = `<span class="bd no">Unpaid</span>`;
       return `<div class="li"><span><b>${esc(p.name)}</b>${d.fromId === me ? '<span class="cp">you</span>' : ""}<br><small>${mh(d.amount)}</small>${rej ? '<br><small class="neg">Previous payment was rejected</small>' : ""}</span>${act}</div>`;
     }).join("")}</div>`;
   }
 
+  const treated = c.rows.filter(r => isTreat(b, r.personId) && r.tot > 0.004);
+  if (treated.length) {
+    h += `<div class="sh">Treated by ${esc(payer.name)} 🎁</div><div class="l">${treated.map(r => `<div class="li"><span><b>${esc(r.person.name)}</b>${r.personId === currentUserId ? '<span class="cp">you</span>' : ""}<br><small>${mh(r.tot)} · nothing owed</small></span>${currentUserId === b.payerId ? `<button class="pill" onclick="undoTreat(${b.id},${r.personId})">Undo treat</button>` : '<span class="bd ok">Treat</span>'}</div>`).join("")}</div>`;
+  }
   if (b.editReq) h += `<div class="l" style="margin-top:10px"><div class="li"><span>⏳ <b>Edit waiting for admin approval</b><br><small>This bill keeps its current values until approved.</small></span></div></div>`;
   const remDues = dues.filter(d => !d.isSettled);
   if (currentUserId === b.payerId && remDues.length) {
@@ -2652,6 +2683,27 @@ window.markReceived = async function(billId, fromId) {
   saveState(); render();
   pushNotify([fromId], "Marked as received ✓", `${getPerson(currentUserId).name} marked your Rf ${f(d.amount)} for "${b.title}" as received.`, "bill-" + b.id);
 };
+window.markTreat = async function(billId, fromId) {
+  const b = S.bills.find(x => x.id === billId);
+  if (!b || b.payerId !== currentUserId) return;
+  const d = getBillDues(b).find(x => x.fromId === fromId);
+  if (!d) return;
+  if (payOf(billId, fromId)) return showNotice("This person already sent a payment for this bill. Review it first.", "Payment pending");
+  if (!(await showConfirm(`Treat ${getPerson(fromId).name} to ${f(d.amount)} for "${b.title}"? They will owe nothing and it will not count in their spending. It becomes your expense.`, "Mark as treat", "Mark as treat"))) return;
+  b.treat = b.treat || {}; b.treat[fromId] = true;
+  if (b.settled) delete b.settled[fromId];
+  logAct(`Treated ${getPerson(fromId).name} to Rf ${f(d.amount)} for "${b.title}"`);
+  saveState(); render();
+  pushNotify([fromId], "You were treated 🎁", `${getPerson(currentUserId).name} treated you for "${b.title}". You owe nothing.`, "bill-" + b.id);
+};
+window.undoTreat = async function(billId, fromId) {
+  const b = S.bills.find(x => x.id === billId);
+  if (!b || b.payerId !== currentUserId) return;
+  if (!(await showConfirm(`Remove the treat for ${getPerson(fromId).name} on "${b.title}"? They will owe their share again.`, "Undo treat", "Undo treat", true))) return;
+  if (b.treat) delete b.treat[fromId];
+  logAct(`Removed treat for ${getPerson(fromId).name} on "${b.title}"`);
+  saveState(); render();
+};
 window.undoSettled = async function(billId, fromId) {
   const b = S.bills.find(x => x.id === billId);
   if (!b || b.payerId !== currentUserId) return;
@@ -2956,7 +3008,11 @@ window.setSpendDay = k => { spendDay = spendDay === k ? null : k; render(); };
 function spendHtml(uid) {
   const byDay = {}, byMonth = {}, dayBills = {};
   liveBills().filter(b => tripFilter === "All" || (b.trip || "") === tripFilter).forEach(b => {
-    const r = calcBill(b).rows.find(x => x.personId === uid), t = r ? r.tot : 0;
+    const rows = calcBill(b).rows;
+    const r = rows.find(x => x.personId === uid);
+    let t = r ? r.tot : 0;
+    if (isTreat(b, uid)) t = 0; /* treated: not my expense */
+    if (uid === b.payerId) rows.forEach(x => { if (isTreat(b, x.personId)) t = r2(t + x.tot); }); /* payer bears treats */
     if (!(t > 0) || !b.date) return;
     byDay[b.date] = r2((byDay[b.date] || 0) + t);
     byMonth[mKey(b.date)] = r2((byMonth[mKey(b.date)] || 0) + t);
