@@ -468,7 +468,7 @@ let currentUserId = (() => {
   try { const v = Number(localStorage.getItem("splitmate_user")); return v > 0 ? v : null; }
   catch (e) { return null; }
 })();
-let selectedAuthUserId = FIXED_USERS[0].id;
+let selectedAuthUserId = null; /* nobody is pre-selected on the login page */
 let authPinInput = "";
 let authError = "";
 let lastRenderedAuthUserId = null;
@@ -626,7 +626,14 @@ function logAct(text) {
   S.log.unshift({ at: now, by: currentUserId, text, k: "l" + now.toString(36) + Math.random().toString(36).slice(2, 6) });
   if (S.log.length > 400) S.log.length = 400;
 }
-const liveBills = () => S.bills.filter(b => !b.delReq);
+/* A bill is relevant to a user if they paid it, added it, or share any of its items. The admin sees every bill. */
+const billRelevant = b => {
+  const me = currentUserId;
+  if (me === null || me === ADMIN_ID) return true;
+  if (b.payerId === me || b.by === me) return true;
+  return (b.items || []).some(it => (it.w || []).includes(me));
+};
+const liveBills = () => S.bills.filter(b => !b.delReq && billRelevant(b));
 const toArr = v => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
 const stateRef = ref(db, "splitmate/state");
 const readMap = v => (Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []))
@@ -679,6 +686,8 @@ onValue(stateRef, (snap) => {
     synced = { bills: {}, payments: {}, log: {}, people: [], settings: {} };
     saveState();
   }
+  { const meP = S.people.find(p => p.id === currentUserId);
+    if (dlg && dlg.type === "forcepin" && !(meP && meP.mustChange)) { dlg = null; const ov = document.getElementById("dlgov"); if (ov) ov.innerHTML = ""; } }
   render({ fromRemote: true });
   hideBoot();
 });
@@ -741,6 +750,13 @@ function scrollTopMain() {
 /* ==========================================================================
    5. AUTH SCREEN & PIN HANDLERS
    ========================================================================== */
+window.authBack = function() {
+  selectedAuthUserId = null;
+  authPinInput = "";
+  authError = "";
+  lastRenderedAuthUserId = null;
+  renderAuth();
+};
 window.selectAuthUser = function(id) {
   selectedAuthUserId = id;
   authPinInput = "";
@@ -790,6 +806,7 @@ window.logoutUser = async function() {
   if (!(await showConfirm("Are you sure you want to sign out?", "Sign out", "Sign out", true))) return;
   pushUnregisterCurrent();
   currentUserId = null;
+  selectedAuthUserId = null; authPinInput = ""; authError = "";
   resetSession();
   try { localStorage.removeItem("splitmate_user"); } catch (e) {}
   authPinInput = "";
@@ -797,6 +814,16 @@ window.logoutUser = async function() {
   lastRenderedAuthUserId = null;
   render();
 };
+
+/* Write a PIN straight to its own database slot and wait for the server, so it can never be lost
+   or flagged for change again after the app is closed. */
+async function persistPin(person, pin) {
+  const remoteIdx = (synced.people || []).findIndex(x => x && (Number(x.id) === person.id || String(x.name || "").toLowerCase() === String(person.name).toLowerCase()));
+  const idx = remoteIdx >= 0 ? remoteIdx : S.people.findIndex(x => x.id === person.id);
+  const base = "people/" + idx + "/";
+  await update(stateRef, { [base + "id"]: person.id, [base + "name"]: person.name, [base + "pin"]: pin, [base + "mustChange"]: null });
+  if (synced.people && synced.people[idx]) { synced.people[idx].pin = pin; delete synced.people[idx].mustChange; }
+}
 
 window.promptForcePin = function() {
   dlg = { type: "forcepin", title: "Set a new PIN", nw: "", cf: "", err: "", res: () => {} };
@@ -811,10 +838,17 @@ window.submitForcePin = function() {
   if (nw !== d.cf.trim()) return bad("The PINs don't match.");
   if (weakPin(nw)) return bad("That PIN is too easy to guess. Choose a different one.");
   if (nw === normalizePin(me.pin, "1234")) return bad("Choose a PIN different from the one you were given.");
-  me.pin = nw; delete me.mustChange;
-  logAct("Set a new PIN");
-  saveState(); closeDlg(true); render();
-  showNotice("Your new PIN is saved.", "PIN updated");
+  if (d.busy) return;
+  d.busy = true;
+  persistPin(me, nw).then(() => {
+    me.pin = nw; delete me.mustChange;
+    logAct("Set a new PIN");
+    saveState(); closeDlg(true); render();
+    showNotice("Your new PIN is saved.", "PIN updated");
+  }).catch(err => {
+    d.busy = false;
+    bad("Could not save your PIN: " + (err && err.message ? err.message : "check your connection and try again."));
+  });
 };
 window.forceSignOut = function() { closeDlg(null); logoutUser(); };
 function forcePinBody(d) {
@@ -840,11 +874,19 @@ window.submitPinChange = function() {
   if (!/^\d{4,6}$/.test(d.nw.trim())) return bad("New PIN must be 4 to 6 digits.");
   if (d.nw.trim() !== d.cf.trim()) return bad("The new PINs don't match.");
   if (weakPin(d.nw.trim())) return bad("That PIN is too easy to guess. Choose a different one.");
-  me.pin = d.nw.trim();
-  saveState();
-  closeDlg(true);
-  showNotice("Your PIN was updated.", "PIN Saved");
-  render();
+  if (d.busy) return;
+  d.busy = true;
+  const np = d.nw.trim();
+  persistPin(me, np).then(() => {
+    me.pin = np; delete me.mustChange;
+    saveState();
+    closeDlg(true);
+    showNotice("Your PIN was updated.", "PIN Saved");
+    render();
+  }).catch(err => {
+    d.busy = false;
+    bad("Could not save your PIN: " + (err && err.message ? err.message : "check your connection and try again."));
+  });
 };
 
 function pinBody(d) {
@@ -952,12 +994,13 @@ function renderAuth() {
     return;
   }
   el.style.display = "flex";
-  const selUser = S.people.find(p => p.id === selectedAuthUserId) || S.people[0];
-  if (selUser) selectedAuthUserId = selUser.id;
+  const selUser = S.people.find(p => p.id === selectedAuthUserId) || null;
+  if (!selUser) selectedAuthUserId = null;
+  const selKey = selUser ? selUser.id : 0;
 
-  const sig = JSON.stringify([selectedAuthUserId, S.people.map(p => [p.id, p.name, p.color])]);
-  if (lastRenderedAuthUserId === selectedAuthUserId && el.dataset.sig === sig && el.firstChild) { updPinUi(); return; }
-  lastRenderedAuthUserId = selectedAuthUserId;
+  const sig = JSON.stringify([selKey, S.people.map(p => [p.id, p.name, p.color])]);
+  if (lastRenderedAuthUserId === selKey && el.dataset.sig === sig && el.firstChild) { updPinUi(); return; }
+  lastRenderedAuthUserId = selKey;
   const prevGrid = el.querySelector(".user-grid"), gridTop = prevGrid ? prevGrid.scrollTop : 0, outerTop = el.scrollTop;
   el.dataset.sig = sig;
 
@@ -968,10 +1011,11 @@ function renderAuth() {
       <div class="sub">Split bills with friends. Pick your name and enter your PIN. You stay signed in until you log out.</div>
     </div>
 
-    <div class="sh" style="margin:0 4px 8px">Who are you?</div>
-    <div class="user-grid" role="listbox" aria-label="Select user">${S.people.map(u => `<button type="button" role="option" aria-selected="${u.id === selectedAuthUserId}" class="user-tile ${u.id === selectedAuthUserId ? "sel" : ""}" onclick="selectAuthUser(${u.id})"><span class="dot" style="--c:${u.color}">${esc(initials(u.name))}</span><span class="un">${esc(u.name)}</span></button>`).join("")}</div>
+    ${selUser ? "" : `<div class="sh" style="margin:0 4px 8px">Who are you?</div>
+    <div class="user-grid" role="listbox" aria-label="Select user">${S.people.map(u => `<button type="button" role="option" aria-selected="${u.id === selectedAuthUserId}" class="user-tile ${u.id === selectedAuthUserId ? "sel" : ""}" onclick="selectAuthUser(${u.id})"><span class="dot" style="--c:${u.color}">${esc(initials(u.name))}</span><span class="un">${esc(u.name)}</span></button>`).join("")}</div>${S.people.length ? "" : `<div class="l" style="margin-top:14px"><div class="li mu">No users yet.</div></div>`}`}
 
-    ${selUser ? `<div class="pin-card">
+    ${selUser ? `<button type="button" class="btn sec" style="margin:0 0 12px" onclick="authBack()">‹ All users</button>
+    <div class="pin-card">
       <div class="pin-who">
         <span class="dot lg" style="--c:${selUser.color}">${esc(initials(selUser.name))}</span>
         <div>
@@ -983,7 +1027,7 @@ function renderAuth() {
       <div id="pin-err" class="pin-err" role="alert">${esc(authError)}</div>
       <div class="kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" onclick="pinKey('${n}')">${n}</button>`).join("")}<button type="button" class="ph" tabindex="-1"></button><button type="button" onclick="pinKey('0')">0</button><button type="button" class="dl" aria-label="Delete" onclick="pinDel()">⌫</button></div>
       <button type="button" class="btn" style="margin-top:20px" onclick="submitPinLogin()">Unlock as ${esc(selUser.name)}</button>
-    </div>` : `<div class="l" style="margin-top:14px"><div class="li mu">No users yet.</div></div>`}
+    </div>` : ""}
   </div>`;
   const g = el.querySelector(".user-grid");
   if (g) g.scrollTop = gridTop;
@@ -1041,7 +1085,7 @@ window.closeDlg = function(val) {
   setTimeout(() => {
     if (dlg || currentUserId === null) return;
     const meP = S.people.find(p => p.id === currentUserId);
-    if (meP && meP.mustChange) promptForcePin();
+    if (loaded && meP && meP.mustChange) promptForcePin();
   }, 0);
 };
 
@@ -2749,7 +2793,7 @@ window.render = function(opts) {
   if (tab === "admin" && !isAdmin()) tab = "people";
   sweepSlips();
   if (tripFilter !== "All" && !liveBills().some(b => (b.trip || "") === tripFilter)) tripFilter = "All"; /* trip no longer exists */
-  { const meP = getPerson(currentUserId); if (meP && meP.mustChange && !dlg) promptForcePin(); }
+  { const meP = getPerson(currentUserId); if (loaded && meP && meP.mustChange && !dlg) promptForcePin(); }
   nav.style.display = tab === "new" ? "none" : "flex";
 
   const scrollPos = v ? v.scrollTop : 0;
