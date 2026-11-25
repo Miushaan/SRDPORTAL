@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>SplitMate — Cloud Sync</title>
 <meta name="apple-mobile-web-app-title" content="SplitMate">
@@ -184,10 +184,10 @@ button:active,.btn:active{opacity:.65}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ================= MODERN UI THEME (visual layer only) ================= */
-:root{--bg:#f4f5fb;--card:#fff;--tx:#14142b;--mu:#7a7a92;--ac:#5b5bf0;--ac2:#ececff;--bd:#e8e8f2;--red:#f0436a;--grn:#12b886;--bar:rgba(255,255,255,.8);--glass-bg:rgba(255,255,255,.78);--glass-bd:rgba(255,255,255,.7);--glass-sh:0 12px 36px rgba(60,60,140,.18),inset 0 .5px 0 rgba(255,255,255,.8);--glass-pill:rgba(91,91,240,.14);--sh1:0 1px 2px rgba(30,30,80,.05),0 4px 14px rgba(30,30,80,.06);--sh2:0 8px 28px rgba(91,91,240,.28);--grad:linear-gradient(135deg,#6a6af7,#8b5cf6);--r:20px}
+:root{--ac-rgb:91,91,240;--ac2-rgb:139,92,246;--bg:#f4f5fb;--card:#fff;--tx:#14142b;--mu:#7a7a92;--ac:#5b5bf0;--ac2:#ececff;--bd:#e8e8f2;--red:#f0436a;--grn:#12b886;--bar:rgba(255,255,255,.8);--glass-bg:rgba(255,255,255,.78);--glass-bd:rgba(255,255,255,.7);--glass-sh:0 12px 36px rgba(60,60,140,.18),inset 0 .5px 0 rgba(255,255,255,.8);--glass-pill:rgba(91,91,240,.14);--sh1:0 1px 2px rgba(30,30,80,.05),0 4px 14px rgba(30,30,80,.06);--sh2:0 8px 28px rgba(91,91,240,.28);--grad:linear-gradient(135deg,#6a6af7,#8b5cf6);--r:20px}
 @media (prefers-color-scheme:dark){:root{--bg:#0b0b12;--card:#16161f;--tx:#f3f3fb;--mu:#9a9ab2;--ac:#8484ff;--ac2:#232345;--bd:#262634;--red:#ff5c7f;--grn:#2bd9a0;--bar:rgba(22,22,31,.8);--glass-bg:rgba(24,24,34,.74);--glass-bd:rgba(255,255,255,.1);--glass-sh:0 14px 36px rgba(0,0,0,.55),inset 0 .5px 0 rgba(255,255,255,.12);--glass-pill:rgba(132,132,255,.2);--sh1:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);--sh2:0 8px 28px rgba(132,132,255,.25)}}
 body{font-family:ui-rounded,"SF Pro Rounded","SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;background:var(--bg);letter-spacing:-.005em}
-body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(520px 320px at 85% -5%,rgba(139,92,246,.16),transparent 70%),radial-gradient(460px 300px at -10% 8%,rgba(91,91,240,.12),transparent 70%);z-index:-1}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(520px 320px at 85% -5%,rgba(var(--ac2-rgb),.16),transparent 70%),radial-gradient(460px 300px at -10% 8%,rgba(var(--ac-rgb),.12),transparent 70%);z-index:-1}
 h1{font-weight:800;letter-spacing:-.8px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;width:fit-content;max-width:100%}
 .sub{font-size:14px;color:var(--mu);font-weight:500}
 .sh{font-size:12px;font-weight:700;letter-spacing:.8px;color:var(--mu);margin:24px 16px 8px}
@@ -206,7 +206,7 @@ h1{font-weight:800;letter-spacing:-.8px;background:var(--grad);-webkit-backgroun
 .btn.sec{background:var(--ac2);color:var(--ac);box-shadow:none}
 .btn.red{background:var(--red);box-shadow:0 8px 24px rgba(240,67,106,.28)}
 .pill{border-radius:99px;font-weight:700;padding:7px 15px}
-.pill.solid,.pill.g{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(91,91,240,.28)}
+.pill.solid,.pill.g{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(var(--ac-rgb),.28)}
 .pill.g{background:var(--grn);box-shadow:0 4px 14px rgba(18,184,134,.28)}
 .pill.paid-on{background:var(--grn)}
 .x{opacity:.85}
@@ -331,7 +331,7 @@ input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--mu) 70%,t
 .w{scroll-padding-top:90px}
 /* ---------- login ---------- */
 #auth-screen{background:var(--bg);align-items:center}
-#auth-screen::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(520px 360px at 90% -5%,rgba(139,92,246,.18),transparent 70%),radial-gradient(480px 320px at -10% 10%,rgba(91,91,240,.14),transparent 70%)}
+#auth-screen::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(520px 360px at 90% -5%,rgba(var(--ac2-rgb),.18),transparent 70%),radial-gradient(480px 320px at -10% 10%,rgba(var(--ac-rgb),.14),transparent 70%)}
 .auth-wrap{position:relative;margin:auto;padding:8px 0 16px}
 .auth-brand{text-align:center;margin:6px 0 22px}
 .auth-brand img{display:block;margin:0 auto 12px;border-radius:20px;box-shadow:0 10px 28px rgba(60,60,140,.28)}
@@ -373,7 +373,7 @@ input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--mu) 70%,t
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 /* ==========================================================================
    1. FIREBASE INITIALIZATION
@@ -422,6 +422,8 @@ function normalizePin(val, fallback) {
   return /^\d{4,6}$/.test(s) ? s : fallback;
 }
 
+const weakPin = p => /^(\d)\1+$/.test(p) || ["1234", "12345", "123456", "4321", "54321", "654321", "123123", "121212", "112233"].includes(p);
+
 const ADMIN_ID = 1; // Miu is the admin
 const isAdmin = () => currentUserId === ADMIN_ID;
 /* Edit / delete a bill: admin, or the user who added it (older bills without an owner fall back to the payer) */
@@ -458,7 +460,8 @@ function buildCanonicalPeople(existingPeople) {
       ...(p.mustChange ? { mustChange: true } : {})
     });
   });
-  return fixed.concat(extras);
+  /* anyone still on the shared default PIN must choose their own at next sign-in */
+  return fixed.concat(extras).map(p => (p.pin === "1234" && !p.mustChange) ? { ...p, mustChange: true } : p);
 }
 
 let currentUserId = (() => {
@@ -507,17 +510,111 @@ window.setZoom = function(z) {
   render();
 };
 
-function applyTheme() {
-  document.documentElement.removeAttribute("data-theme");
+/* ---- appearance: color theme + light/dark, chosen per device ---- */
+const ACCENTS = {
+  violet:   { name: "Violet",   sw: "#6a6af7", g: ["#6a6af7", "#8b5cf6"], l: { ac: "#5b5bf0", ac2: "#ececff", rgb: "91,91,240",  rgb2: "139,92,246" }, d: { ac: "#8484ff", ac2: "#232345", rgb: "132,132,255" } },
+  ocean:    { name: "Ocean",    sw: "#0ea5e9", g: ["#0ea5e9", "#2563eb"], l: { ac: "#0b7fd4", ac2: "#e3f2fd", rgb: "11,127,212", rgb2: "37,99,235" },  d: { ac: "#4db3ff", ac2: "#0f2a40", rgb: "77,179,255" } },
+  emerald:  { name: "Emerald",  sw: "#10b981", g: ["#10b981", "#0d9488"], l: { ac: "#0b8a68", ac2: "#dff5ec", rgb: "11,138,104", rgb2: "13,148,136" }, d: { ac: "#34d3a0", ac2: "#0f2e26", rgb: "52,211,160" } },
+  sunset:   { name: "Sunset",   sw: "#ea580c", g: ["#ea580c", "#e11d48"], l: { ac: "#e0560c", ac2: "#ffeadb", rgb: "224,86,12",  rgb2: "225,29,72" },  d: { ac: "#ff9a5c", ac2: "#3a2112", rgb: "255,154,92" } },
+  graphite: { name: "Graphite", sw: "#4b5563", g: ["#5b6677", "#374151"], l: { ac: "#3f4a5a", ac2: "#e9ecf1", rgb: "63,74,90",   rgb2: "31,41,55" },   d: { ac: "#aab4c5", ac2: "#252a33", rgb: "170,180,197" } }
+};
+const THEME_BASE = {
+  l: { bg: "#f4f5fb", card: "#fff", tx: "#14142b", mu: "#7a7a92", bd: "#e8e8f2", red: "#f0436a", grn: "#12b886", bar: "rgba(255,255,255,.8)", gbg: "rgba(255,255,255,.78)", gbd: "rgba(255,255,255,.7)", gsh: "0 12px 36px rgba(60,60,140,.18),inset 0 .5px 0 rgba(255,255,255,.8)", sh1: "0 1px 2px rgba(30,30,80,.05),0 4px 14px rgba(30,30,80,.06)", gp: .14 },
+  d: { bg: "#0b0b12", card: "#16161f", tx: "#f3f3fb", mu: "#9a9ab2", bd: "#262634", red: "#ff5c7f", grn: "#2bd9a0", bar: "rgba(22,22,31,.8)", gbg: "rgba(24,24,34,.74)", gbd: "rgba(255,255,255,.1)", gsh: "0 14px 36px rgba(0,0,0,.55),inset 0 .5px 0 rgba(255,255,255,.12)", sh1: "0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3)", gp: .2 }
+};
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+let accentLv = (() => { const v = lsGet("splitmate_accent"); return ACCENTS[v] ? v : "violet"; })();
+let modeLv = (() => { const v = lsGet("splitmate_mode"); return ["auto", "light", "dark"].includes(v) ? v : "auto"; })();
+const darkMq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
+
+function applyAppearance() {
+  const dark = modeLv === "dark" || (modeLv === "auto" && !!(darkMq && darkMq.matches));
+  const B = THEME_BASE[dark ? "d" : "l"], A = ACCENTS[accentLv] || ACCENTS.violet, M = dark ? A.d : A.l;
+  const rgb = M.rgb, rgb2 = A.l.rgb2;
+  const vars = {
+    "--bg": B.bg, "--card": B.card, "--tx": B.tx, "--mu": B.mu, "--bd": B.bd, "--red": B.red, "--grn": B.grn, "--bar": B.bar,
+    "--glass-bg": B.gbg, "--glass-bd": B.gbd, "--glass-sh": B.gsh, "--sh1": B.sh1,
+    "--ac": M.ac, "--ac2": M.ac2, "--ac-rgb": rgb, "--ac2-rgb": rgb2,
+    "--grad": `linear-gradient(135deg,${A.g[0]},${A.g[1]})`,
+    "--glass-pill": `rgba(${rgb},${B.gp})`,
+    "--sh2": `0 8px 28px rgba(${rgb},${dark ? .25 : .28})`
+  };
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  root.style.colorScheme = dark ? "dark" : "light";
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute("content", B.bg));
+}
+function applyTheme() { applyAppearance(); }
+if (darkMq && darkMq.addEventListener) darkMq.addEventListener("change", () => { if (modeLv === "auto") applyAppearance(); });
+applyAppearance();
+window.setAccent = function(k) {
+  if (!ACCENTS[k]) return;
+  accentLv = k; lsSet("splitmate_accent", k); applyAppearance(); render();
+};
+window.setMode = function(m) {
+  if (!["auto", "light", "dark"].includes(m)) return;
+  modeLv = m; lsSet("splitmate_mode", m); applyAppearance(); render();
+};
+function themeRows() {
+  return `<div class="li col">
+      <div class="mu" style="margin-bottom:6px">Appearance <small>(this device only)</small></div>
+      ${seg([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]], modeLv, "setMode")}
+    </div>
+    <div class="li col">
+      <div class="mu">Color theme <small>(this device only)</small></div>
+      <div class="pk-dyn">${Object.entries(ACCENTS).map(([k, a]) => `<button type="button" class="nb ${accentLv === k ? "on" : ""}" style="--c:${a.sw}" onclick="setAccent('${k}')" aria-pressed="${accentLv === k}">${accentLv === k ? "✓ " : `<span class="sdot" style="--c:${a.sw}"></span>`}<span>${a.name}</span></button>`).join("")}</div>
+    </div>`;
 }
 
 let loaded = false;
 const hideBoot = () => { const b = document.getElementById("boot"); if (b) b.remove(); };
 
+/* ---- sync: write only what changed (per bill / payment / field) so simultaneous edits don't overwrite each other ---- */
+let synced = { bills: {}, payments: {}, log: {}, people: [], settings: {} };
+const isObj = x => !!x && typeof x === "object" && !Array.isArray(x);
+const stable = v => JSON.stringify(v, (k, x) => {
+  if (x === null || x === undefined) return undefined;
+  if (Array.isArray(x)) return x.length ? x : undefined;
+  if (typeof x === "object") {
+    const ks = Object.keys(x).sort();
+    return ks.length ? ks.reduce((o, k2) => { o[k2] = x[k2]; return o; }, {}) : undefined;
+  }
+  return x;
+});
+const byKey = (arr, kf) => { const m = {}; (arr || []).forEach(x => { m[kf(x)] = x; }); return m; };
+const logKey = e => e.k;
+function diffInto(u, path, a, b, depth) {
+  if (depth > 0 && isObj(a) && isObj(b)) {
+    new Set([...Object.keys(a), ...Object.keys(b)]).forEach(k => diffInto(u, path + "/" + k, a[k], b[k], depth - 1));
+    return;
+  }
+  if (stable(a) !== stable(b)) u[path] = a === undefined ? null : JSON.parse(JSON.stringify(a));
+}
+function buildUpdates(cur, base) {
+  const u = {};
+  [["bills", 2], ["payments", 1], ["log", 0]].forEach(([key, depth]) => {
+    const c = cur[key] || {}, b = base[key] || {};
+    new Set([...Object.keys(c), ...Object.keys(b)]).forEach(k => diffInto(u, key + "/" + k, c[k], b[k], depth));
+  });
+  (cur.people || []).forEach((p, i) => diffInto(u, "people/" + i, p, (base.people || [])[i], 1));
+  diffInto(u, "settings", cur.settings, base.settings, 1);
+  return u;
+}
+function snapshotOfS() {
+  return cl({ bills: byKey(S.bills, b => b.id), payments: byKey(S.payments, p => p.id), log: byKey(S.log, logKey), people: S.people, settings: S.settings });
+}
 function saveState() {
   if (!loaded) { showNotice("Still connecting to the server. Please try again in a moment.", "Not connected"); return; }
   S.people = buildCanonicalPeople(S.people);
-  set(ref(db, "splitmate/state"), S).catch(err => {
+  S.log = (S.log || []).map(e => e.k ? e : { ...e, k: "l" + (e.at || 0) + "x" });
+  const cur = snapshotOfS();
+  const u = buildUpdates(cur, synced);
+  if (!Object.keys(u).length) return;
+  const prev = synced;
+  synced = cur;
+  update(stateRef, u).catch(err => {
+    synced = prev; /* so the next save retries these changes */
     console.error("Firebase sync error:", err);
     showNotice("Could not sync changes to Firebase: " + err.message, "Sync Error");
   });
@@ -525,12 +622,27 @@ function saveState() {
 
 function logAct(text) {
   S.log = S.log || [];
-  S.log.unshift({ at: Date.now(), by: currentUserId, text });
+  const now = Date.now();
+  S.log.unshift({ at: now, by: currentUserId, text, k: "l" + now.toString(36) + Math.random().toString(36).slice(2, 6) });
   if (S.log.length > 400) S.log.length = 400;
 }
 const liveBills = () => S.bills.filter(b => !b.delReq);
 const toArr = v => Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []);
 const stateRef = ref(db, "splitmate/state");
+const readMap = v => (Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v) : []))
+  .filter(x => x && typeof x === "object").sort((a, b) => (b.id || 0) - (a.id || 0));
+function readLog(v) {
+  const out = [], used = new Set();
+  const add = (x, key) => {
+    if (!x || typeof x !== "object") return;
+    let k = x.k || key || ("l" + (x.at || 0));
+    while (used.has(k)) k += "_";
+    used.add(k); out.push({ ...x, k });
+  };
+  if (Array.isArray(v)) v.forEach(x => add(x, null));
+  else if (v && typeof v === "object") Object.entries(v).forEach(([key, x]) => add(x, key));
+  return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+}
 onValue(stateRef, (snap) => {
   const val = snap.val();
   loaded = true;
@@ -539,16 +651,24 @@ onValue(stateRef, (snap) => {
     const canonical = buildCanonicalPeople(incomingPeople);
     const needsSeed = incomingPeople.length !== canonical.length ||
       canonical.some((u, i) => !incomingPeople[i] || incomingPeople[i].name !== u.name || !/^\d{4,6}$/.test(String(incomingPeople[i].pin || "")));
+    const legacy = Array.isArray(val.bills) || Array.isArray(val.payments) || Array.isArray(val.log);
 
     S.people = canonical;
-    S.bills = toArr(val.bills);
-    S.payments = toArr(val.payments);
-    S.log = toArr(val.log);
+    S.bills = readMap(val.bills);
+    S.payments = readMap(val.payments);
+    S.log = readLog(val.log);
     S.settings = Object.assign({ defaultGst: true, theme: "auto" }, val.settings || {});
+    synced = cl({ bills: byKey(S.bills, b => b.id), payments: byKey(S.payments, p => p.id), log: byKey(S.log, logKey), people: incomingPeople.map(p => p || null), settings: val.settings || {} });
+    if (legacy) {
+      /* one-time migration: older versions stored bills/payments/log as arrays; store them keyed by id */
+      const m = { bills: byKey(S.bills, b => b.id), payments: byKey(S.payments, p => p.id), log: byKey(S.log, logKey) };
+      update(stateRef, cl(m)).catch(err => console.error("Migration error:", err));
+    }
     applyTheme();
     if (currentUserId !== null && !S.people.some(p => p.id === currentUserId)) {
       currentUserId = null;
       try { localStorage.removeItem("splitmate_user"); } catch (e) {}
+      resetSession();
     }
     if (!D) D = blankBill();
     if (needsSeed) {
@@ -556,6 +676,7 @@ onValue(stateRef, (snap) => {
     }
   } else {
     S.people = buildCanonicalPeople([]);
+    synced = { bills: {}, payments: {}, log: {}, people: [], settings: {} };
     saveState();
   }
   render({ fromRemote: true });
@@ -565,7 +686,9 @@ onValue(stateRef, (snap) => {
 /* ==========================================================================
    4. UTILITIES & FORMATTING
    ========================================================================== */
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* only accept real image data-URLs from the database before putting them in src="" */
+const safeImg = s => (typeof s === "string" && /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(s)) ? s : "";
 const f = n => {
   n = Math.abs(n) < 0.005 ? 0 : +n;
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -624,59 +747,41 @@ window.selectAuthUser = function(id) {
   authError = "";
   lastRenderedAuthUserId = null;
   renderAuth();
-  setTimeout(() => {
-    const inp = document.getElementById("auth-pin-inp");
-    if (inp) inp.focus();
-  }, 50);
 };
 
+/* client-side brute-force slow-down: 5 wrong PINs in a row locks sign-in for a while */
+const lockState = () => {
+  try { const v = JSON.parse(localStorage.getItem("splitmate_lock") || "null"); return { n: +(v && v.n) || 0, until: +(v && v.until) || 0 }; }
+  catch (e) { return { n: 0, until: 0 }; }
+};
+const saveLock = v => { try { localStorage.setItem("splitmate_lock", JSON.stringify(v)); } catch (e) {} };
+function resetSession() {
+  tab = "dash"; sheet = null; openBillId = null; billFrom = null; tripFilter = "All"; histQuery = "";
+  spendMonth = null; spendDay = null; D = blankBill(); dSnap = "";
+}
+
 window.submitPinLogin = function() {
-  const inpEl = document.getElementById("auth-pin-inp");
-  const liveVal = inpEl ? inpEl.value : authPinInput;
   const user = S.people.find(p => p.id === selectedAuthUserId);
-  if (!user) {
-    authError = "Please select a user.";
-    lastRenderedAuthUserId = null;
-    renderAuth();
-    return;
+  const fail = msg => { authError = msg; authPinInput = ""; lastRenderedAuthUserId = null; renderAuth(); };
+  if (!user) return fail("Please select a user.");
+  const lk = lockState();
+  if (lk.until > Date.now()) return fail(`Too many attempts. Try again in ${Math.ceil((lk.until - Date.now()) / 1000)}s.`);
+  const entered = String(authPinInput || "").trim();
+  if (!entered) { authError = "Enter your PIN to continue."; lastRenderedAuthUserId = null; renderAuth(); return; }
+  if (entered !== normalizePin(user.pin, "1234")) {
+    lk.n++;
+    if (lk.n % 5 === 0) lk.until = Date.now() + Math.min(15 * 60000, 30000 * Math.pow(2, lk.n / 5 - 1));
+    saveLock(lk);
+    return fail(lk.until > Date.now() ? "Too many attempts. Please wait and try again." : "Incorrect PIN. Try again.");
   }
-  const entered = String(liveVal || "").trim();
-  const expected = normalizePin(user.pin, "1234");
-  if (!entered) {
-    authError = "Enter your PIN to continue.";
-    lastRenderedAuthUserId = null;
-    renderAuth();
-    return;
-  }
-  if (entered !== expected && entered !== "1234" && user.pin === undefined) {
-    authError = "Incorrect PIN. Try again.";
-    authPinInput = "";
-    lastRenderedAuthUserId = null;
-    renderAuth();
-    setTimeout(() => {
-      const inp = document.getElementById("auth-pin-inp");
-      if (inp) inp.focus();
-    }, 50);
-    return;
-  }
-  if (entered !== expected) {
-    authError = "Incorrect PIN. Try again.";
-    authPinInput = "";
-    lastRenderedAuthUserId = null;
-    renderAuth();
-    setTimeout(() => {
-      const inp = document.getElementById("auth-pin-inp");
-      if (inp) inp.focus();
-    }, 50);
-    return;
-  }
+  saveLock({ n: 0, until: 0 });
   currentUserId = user.id;
   try { localStorage.setItem("splitmate_user", String(user.id)); } catch (e) {}
   setTimeout(() => { if (pushState === "on") pushRegister().catch(() => {}); }, 300);
   authPinInput = "";
   authError = "";
   lastRenderedAuthUserId = null;
-  if (!D) D = blankBill();
+  resetSession();
   D.payerId = user.id;
   render();
 };
@@ -685,6 +790,7 @@ window.logoutUser = async function() {
   if (!(await showConfirm("Are you sure you want to sign out?", "Sign out", "Sign out", true))) return;
   pushUnregisterCurrent();
   currentUserId = null;
+  resetSession();
   try { localStorage.removeItem("splitmate_user"); } catch (e) {}
   authPinInput = "";
   authError = "";
@@ -703,6 +809,7 @@ window.submitForcePin = function() {
   const nw = d.nw.trim();
   if (!/^\d{4,6}$/.test(nw)) return bad("PIN must be 4 to 6 digits.");
   if (nw !== d.cf.trim()) return bad("The PINs don't match.");
+  if (weakPin(nw)) return bad("That PIN is too easy to guess. Choose a different one.");
   if (nw === normalizePin(me.pin, "1234")) return bad("Choose a PIN different from the one you were given.");
   me.pin = nw; delete me.mustChange;
   logAct("Set a new PIN");
@@ -732,6 +839,7 @@ window.submitPinChange = function() {
   if (d.cur.trim() !== normalizePin(me.pin, "1234")) return bad("Current PIN is incorrect.");
   if (!/^\d{4,6}$/.test(d.nw.trim())) return bad("New PIN must be 4 to 6 digits.");
   if (d.nw.trim() !== d.cf.trim()) return bad("The new PINs don't match.");
+  if (weakPin(d.nw.trim())) return bad("That PIN is too easy to guess. Choose a different one.");
   me.pin = d.nw.trim();
   saveState();
   closeDlg(true);
@@ -847,11 +955,11 @@ function renderAuth() {
   const selUser = S.people.find(p => p.id === selectedAuthUserId) || S.people[0];
   if (selUser) selectedAuthUserId = selUser.id;
 
-  const existingInp = document.getElementById("auth-pin-inp");
-  if (existingInp && document.activeElement === existingInp && lastRenderedAuthUserId === selectedAuthUserId) {
-    return;
-  }
+  const sig = JSON.stringify([selectedAuthUserId, S.people.map(p => [p.id, p.name, p.color])]);
+  if (lastRenderedAuthUserId === selectedAuthUserId && el.dataset.sig === sig && el.firstChild) { updPinUi(); return; }
   lastRenderedAuthUserId = selectedAuthUserId;
+  const prevGrid = el.querySelector(".user-grid"), gridTop = prevGrid ? prevGrid.scrollTop : 0, outerTop = el.scrollTop;
+  el.dataset.sig = sig;
 
   el.innerHTML = `<div class="auth-wrap">
     <div class="auth-brand">
@@ -877,6 +985,9 @@ function renderAuth() {
       <button type="button" class="btn" style="margin-top:20px" onclick="submitPinLogin()">Unlock as ${esc(selUser.name)}</button>
     </div>` : `<div class="l" style="margin-top:14px"><div class="li mu">No users yet.</div></div>`}
   </div>`;
+  const g = el.querySelector(".user-grid");
+  if (g) g.scrollTop = gridTop;
+  el.scrollTop = outerTop;
 }
 
 /* ==========================================================================
@@ -884,8 +995,16 @@ function renderAuth() {
    ========================================================================== */
 let dlg = null;
 
+function supersedeDlg() {
+  if (!dlg) return;
+  const r = dlg.res, t = dlg.type;
+  dlg = null;
+  try { r && r(t === "confirm" ? false : t === "alert" ? true : null); } catch (e) {}
+}
+
 function showNotice(msg, title) {
   return new Promise(res => {
+    supersedeDlg();
     dlg = { type: "alert", title: title || "Notice", msg: String(msg), res };
     renderDlg();
   });
@@ -893,6 +1012,7 @@ function showNotice(msg, title) {
 
 function showConfirm(msg, title, okLbl, danger, cancelLbl) {
   return new Promise(res => {
+    supersedeDlg();
     dlg = { type: "confirm", title: title || "Please confirm", msg: String(msg), okLbl: okLbl || "Confirm", cancelLbl: cancelLbl || "Cancel", danger: !!danger, res };
     renderDlg();
   });
@@ -900,6 +1020,7 @@ function showConfirm(msg, title, okLbl, danger, cancelLbl) {
 
 function showPrompt(msg, title, ph, defVal) {
   return new Promise(res => {
+    supersedeDlg();
     dlg = { type: "prompt", title: title || "Enter details", msg: String(msg), ph: ph || "", val: defVal || "", res };
     renderDlg();
     setTimeout(() => {
@@ -916,6 +1037,12 @@ window.closeDlg = function(val) {
   const el = document.getElementById("dlgov");
   if (el) el.innerHTML = "";
   if (resolve) resolve(val);
+  /* a required PIN change must come back if another dialog was shown over it */
+  setTimeout(() => {
+    if (dlg || currentUserId === null) return;
+    const meP = S.people.find(p => p.id === currentUserId);
+    if (meP && meP.mustChange) promptForcePin();
+  }, 0);
 };
 
 function renderDlg() {
@@ -1026,11 +1153,23 @@ function calcBill(b) {
 
 /* Round to cents so the parts always add up exactly to the target (largest remainder) */
 function alloc(vals, target) {
+  const n = vals.length;
+  if (!n) return [];
   const c = vals.map(v => Math.floor(v * 100 + 1e-7));
   let rem = Math.round(target * 100) - sum(c);
-  const fr = vals.map((v, i) => [v * 100 - c[i], i]);
-  fr.slice().sort((x, y) => y[0] - x[0]).forEach(([q, i]) => { if (rem > 0 && q > 1e-7) { c[i]++; rem--; } });
-  fr.slice().sort((x, y) => x[0] - y[0]).forEach(([q, i]) => { if (rem < 0 && c[i] > 0) { c[i]--; rem++; } });
+  /* only people who actually owe something may receive extra cents */
+  let elig = vals.map((v, i) => i).filter(i => vals[i] > 0);
+  if (!elig.length) elig = vals.map((v, i) => i);
+  const order = elig.slice().sort((x, y) => (vals[y] * 100 - c[y]) - (vals[x] * 100 - c[x]));
+  let g = 0;
+  while (rem > 0 && g < 100000) { c[order[g % order.length]]++; rem--; g++; }
+  const rev = order.slice().reverse();
+  g = 0;
+  while (rem < 0 && g < 100000) {
+    const i = rev[g % rev.length]; g++;
+    if (c[i] > 0) { c[i]--; rem++; }
+    else if (rev.every(k => c[k] <= 0)) break;
+  }
   return c.map(x => x / 100);
 }
 
@@ -1071,16 +1210,6 @@ function computeAllBalances() {
 
   return { filteredBills, unsettledRows, pairs, totalUnsettled, totalSpend };
 }
-
-window.toggleBillPersonSettled = function(billId, personId) {
-  const b = S.bills.find(x => x.id === billId);
-  if (!b) return;
-  b.settled = b.settled || {};
-  if (b.settled[personId]) delete b.settled[personId];
-  else b.settled[personId] = true;
-  saveState();
-  render();
-};
 
 window.settlePairAll = async function(fromId, toId) {
   if (toId !== currentUserId) return;
@@ -1370,12 +1499,12 @@ function viewNewBill() {
   <div class="l">
     <div class="li"><span>Service charge</span><input type="number" inputmode="decimal" step="any" value="${D.scAmt || ""}" placeholder="0" oninput="D.scAmt=+this.value;renderPreview()"></div>
     <div class="li"><span>Other charges / Tip</span><input type="number" inputmode="decimal" step="any" value="${D.other || ""}" placeholder="0" oninput="D.other=+this.value;renderPreview()"></div>
-    ${(+D.scAmt !== 0 || +D.other !== 0) ? `<div class="li col"><div class="mu" style="margin-bottom:6px">Share extra charges</div>${seg([["ord", "Equally (who ordered)"], ["prop", "Proportional to items"]], D.scMode || "ord", "((m)=>{D.scMode=m;renderPreview()})")}</div>` : ""}
+    <div id="scm">${scModeHtml()}</div>
   </div>`;
 
   h += `<div class="sh">Receipt photo (optional)</div>
   <div class="l"><div class="li col">${D.receiptData
-    ? `<img alt="Receipt" src="${D.receiptData}" style="width:100%;border-radius:10px;display:block"><button type="button" class="pill r" style="margin-top:8px" onclick="D.receiptData=null;render()">Remove photo</button>`
+    ? `<img alt="Receipt" src="${safeImg(D.receiptData)}" style="width:100%;border-radius:10px;display:block"><button type="button" class="pill r" style="margin-top:8px" onclick="D.receiptData=null;render()">Remove photo</button>`
     : (D.hasReceipt && !D.receiptRemove)
       ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Receipt attached ✓</span><span style="display:flex;gap:6px"><label class="pill" style="margin:0">Replace<input type="file" accept="image/*" style="display:none" onchange="pickReceipt(this)"></label><button type="button" class="pill r" onclick="D.receiptRemove=true;render()">Remove</button></span></div>`
       : `<label class="btn sec" style="margin:0">📎 Attach receipt photo<input type="file" accept="image/*" style="display:none" onchange="pickReceipt(this)"></label>`}
@@ -1392,9 +1521,16 @@ function viewNewBill() {
   return h;
 }
 
+function scModeHtml() {
+  if (!D || !(+D.scAmt || +D.other)) return "";
+  return `<div class="li col"><div class="mu" style="margin-bottom:6px">Share extra charges</div>${seg([["ord", "Equally (who ordered)"], ["prop", "Proportional to items"]], D.scMode || "ord", "((m)=>{D.scMode=m;renderPreview()})")}</div>`;
+}
+
 window.renderPreview = function() {
   const pv = document.getElementById("pv");
   if (!pv || !D) return;
+  const scm = document.getElementById("scm");
+  if (scm) scm.innerHTML = scModeHtml();
   const c = calcBill(D);
   const activeRows = c.rows.filter(r => r.tot > 0 || r.sub > 0);
 
@@ -1492,30 +1628,36 @@ window.saveCurrentBill = async function() {
     settled: D.settled ? cl(D.settled) : {}
   };
   const oldB = editId ? S.bills.find(b => b.id === editId) : null;
+  if (editId && !oldB) return showNotice("This bill no longer exists, so it can't be edited.", "Bill not found");
   if (oldB && !canManageBill(oldB)) return showNotice("Only the user who added this bill or the admin can edit it.", "Not allowed");
   if (oldB && oldB.editReq) return showNotice("An edit for this bill is already waiting for admin approval.", "Edit pending");
+  const direct = !!editId && isAdmin(); /* the admin's own edits apply straight away */
   if (oldB) { if (oldB.by != null) bill.by = oldB.by; } else bill.by = currentUserId;
   if (oldB) ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (oldB[k] !== undefined) bill[k] = oldB[k]; });
+  /* for edits, a new receipt waits in a separate slot until the edit is approved, so the original is never lost */
   if (D.receiptData) {
-    try { await set(ref(db, "splitmate/receipts/" + bill.id), D.receiptData); }
+    try { await set(ref(db, "splitmate/receipts/" + bill.id + (editId ? "_pending" : "")), D.receiptData); }
     catch (e) { return showNotice("Could not upload the receipt: " + e.message, "Upload failed"); }
-    bill.hasReceipt = true; delete bill.receiptDoneAt; delete bill.receiptDeleted;
-  } else if (D.receiptRemove && bill.hasReceipt) {
-    set(ref(db, "splitmate/receipts/" + bill.id), null).catch(() => {});
-    bill.hasReceipt = false; delete bill.receiptDoneAt;
+    if (editId) bill.rcPending = "new";
+    else { bill.hasReceipt = true; delete bill.receiptDoneAt; delete bill.receiptDeleted; }
+  } else if (editId && D.receiptRemove && bill.hasReceipt) {
+    bill.rcPending = "remove";
   }
 
   if (editId) {
-    if (!oldB) return;
-    ["hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (bill[k] !== undefined) oldB[k] = bill[k]; else delete oldB[k]; });
-    oldB.editReq = { by: currentUserId, at: Date.now(), data: cl(bill) };
-    logAct(`Requested edit of bill "${bill.title}"`);
+    if (direct) {
+      await applyBillEdit(editId, bill);
+      logAct(`Edited bill "${bill.title}"`);
+    } else {
+      oldB.editReq = { by: currentUserId, at: Date.now(), data: cl(bill) };
+      logAct(`Requested edit of bill "${bill.title}"`);
+    }
   } else {
     S.bills.unshift(bill);
     logAct(`Added bill "${bill.title}" (Rf ${f(calcBill(bill).grandTotal)})`);
   }
   saveState();
-  if (editId) pushNotify([ADMIN_ID], "Bill edit request", `${getPerson(currentUserId).name} edited "${bill.title}" and needs your approval.`, "editreq-" + editId);
+  if (editId && !direct) pushNotify([ADMIN_ID], "Bill edit request", `${getPerson(currentUserId).name} edited "${bill.title}" and needs your approval.`, "editreq-" + editId);
   if (!editId) {
     const payerName = getPerson(bill.payerId).name;
     getBillDues(bill).forEach(d => pushNotify([d.fromId], "New bill: " + bill.title, `You owe Rf ${f(d.amount)} to ${payerName}.`, "bill-" + bill.id));
@@ -1525,7 +1667,8 @@ window.saveCurrentBill = async function() {
   if (editId) {
     tab = "hist";
     openBillId = bill.id;
-    showNotice("Your changes were sent to the admin for approval. The bill stays as it is until then.", "Edit sent");
+    if (direct) showNotice("The bill was updated.", "Bill updated");
+    else showNotice("Your changes were sent to the admin for approval. The bill stays as it is until then.", "Edit sent");
   } else {
     tab = "dash";
   }
@@ -1602,6 +1745,13 @@ window.toggleSheetPerson = function(id) {
   render();
 };
 
+window.bumpWq = function(id, d) {
+  sheet.wq = sheet.wq || {};
+  const cur = Math.max(1, +sheet.wq[id] || 1);
+  sheet.wq[id] = Math.max(1, cur + d);
+  render();
+};
+
 function itemSheetLiveText() {
   const tot = sheetItemTotal(), q = sheet.q;
   const incl = sheet.pm === "incl";
@@ -1651,7 +1801,7 @@ window.saveSheetItem = function(addAnother) {
     q: sheet.q,
     pm: sheet.pm,
     w: [...sheet.w],
-    ...(hasCustomQty ? { wq: { ...sheet.wq } } : {})
+    ...(hasCustomQty ? { wq: Object.fromEntries(sheet.w.map(id => [id, Math.max(1, +sheet.wq[id] || 1)])) } : {})
   };
 
   if (sheet.k < 0) D.items.push(item);
@@ -1709,9 +1859,10 @@ function renderSheetHtml() {
     <div class="chips" style="margin:0 0 6px">
       <button type="button" class="pill" onclick="sheet.w=S.people.map(p=>p.id);render()">Everyone</button>
       ${lastItem ? `<button type="button" class="pill" onclick="sheet.w=[...${JSON.stringify(lastItem.w)}];render()">Same as last</button>` : ""}
-      <button type="button" class="pill r" onclick="sheet.w=[];render()">Clear</button>
+      <button type="button" class="pill r" onclick="sheet.w=[];sheet.wq={};render()">Clear</button>
     </div>
     ${personPicker(s.w, id => `toggleSheetPerson(${id})`)}
+    ${s.w.length > 1 ? `<div class="sh">Quantity per person</div><div class="l">${s.w.map(id => `<div class="li"><span>${esc(getPerson(id).name)}</span><span class="step"><button type="button" class="pill" onclick="bumpWq(${id},-1)">−</button><b>${Math.max(1, +((s.wq || {})[id]) || 1)}</b><button type="button" class="pill" onclick="bumpWq(${id},1)">+</button></span></div>`).join("")}<div class="li mu" style="font-size:13px">Raise this when people had different amounts of the same item. The cost is split by quantity.</div></div>` : ""}
 
     <div class="sh">Split Preview</div>
     <div class="l" id="itp">${shares}</div>
@@ -1732,7 +1883,7 @@ function billStatus(b) {
   return {
     label: `${pending.length} pending`,
     cls: "no",
-    sub: pending.map(x => `${getPerson(x.fromId).name} owes ${mh(x.amount)}`).join(" · ")
+    sub: pending.map(x => `${esc(getPerson(x.fromId).name)} owes ${mh(x.amount)}`).join(" · ")
   };
 }
 
@@ -1935,6 +2086,13 @@ window.deleteSavedBill = async function(id) {
   const b = S.bills.find(x => x.id === id);
   if (!b || !canManageBill(b)) return;
   if (b.delReq) return showNotice("A deletion request for this bill is already waiting for approval.", "Already requested");
+  if (isAdmin()) {
+    if (!(await showConfirm(`Permanently delete "${b.title}" with all its details and slips?`, "Delete bill", "Delete", true))) return;
+    openBillId = null;
+    await purgeBill(id);
+    render();
+    return;
+  }
   if (!(await showConfirm("Send a request to delete this bill? It will be hidden until the admin approves or rejects it on the Admin page.", "Request deletion", "Send request", true))) return;
   b.delReq = { by: currentUserId, at: Date.now() };
   logAct(`Requested deletion of bill "${b.title}"`);
@@ -1950,6 +2108,7 @@ async function purgeBill(id) {
   const dues = getBillDues(b);
   logAct(`Deleted bill "${b.title}"`);
   if (b.hasReceipt) set(ref(db, "splitmate/receipts/" + id), null).catch(() => {});
+  if (b.editReq && b.editReq.data && b.editReq.data.rcPending === "new") set(ref(db, "splitmate/receipts/" + id + "_pending"), null).catch(() => {});
   const gone = [];
   S.payments.forEach(p => {
     if (p.offsets && p.offsets.some(o => o.billId === id)) {
@@ -1961,7 +2120,9 @@ async function purgeBill(id) {
     if (!p.billIds.includes(id)) return;
     const d = dues.find(x => x.fromId === p.fromId);
     p.billIds = p.billIds.filter(x => x !== id);
-    if (!p.billIds.length) gone.push(p); else p.amount = r2(Math.max(0, p.amount - (d ? d.amount : 0))); if (p.gross) p.gross = r2(Math.max(0, p.gross - (d ? d.amount : 0)));
+    if (!p.billIds.length) { gone.push(p); return; }
+    p.amount = r2(Math.max(0, p.amount - (d ? d.amount : 0)));
+    if (p.gross) p.gross = r2(Math.max(0, p.gross - (d ? d.amount : 0)));
   });
   await Promise.all(gone.map(p => p.hasSlip ? set(ref(db, "splitmate/slips/" + p.id), null).catch(() => {}) : null));
   const goneIds = new Set(gone.map(p => p.id));
@@ -1987,13 +2148,53 @@ window.rejectBillDelete = function(id) {
   saveState(); render();
   if (by) pushNotify([by], "Deletion declined", `The admin kept "${b.title}". The bill is restored.`, "delreq-" + id);
 };
+/* Replace a bill with its edited version, and fix anything that depended on the old amounts */
+async function applyBillEdit(id, data) {
+  const b = S.bills.find(x => x.id === id);
+  if (!b) return null;
+  const nb = { ...cl(data), id: b.id, settled: b.settled ? cl(b.settled) : {} };
+  ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (b[k] !== undefined) nb[k] = b[k]; });
+  const rc = nb.rcPending; delete nb.rcPending;
+  try {
+    if (rc === "new") {
+      const snap = await get(ref(db, "splitmate/receipts/" + id + "_pending")), v = snap.val();
+      if (v) { await set(ref(db, "splitmate/receipts/" + id), v); nb.hasReceipt = true; delete nb.receiptDoneAt; delete nb.receiptDeleted; }
+      await set(ref(db, "splitmate/receipts/" + id + "_pending"), null);
+    } else if (rc === "remove") {
+      await set(ref(db, "splitmate/receipts/" + id), null);
+      nb.hasReceipt = false; delete nb.receiptDoneAt;
+    }
+  } catch (e) { showNotice("The bill was updated, but its receipt photo could not be updated: " + e.message, "Receipt"); }
+
+  /* amounts may have changed: undo settlements and reject pending payments that no longer match */
+  const oldAmt = {}, newAmt = {};
+  getBillDues(b).forEach(d => { oldAmt[d.fromId] = d.amount; });
+  getBillDues(nb).forEach(d => { newAmt[d.fromId] = d.amount; });
+  const payerChanged = nb.payerId !== b.payerId;
+  const changed = pid => payerChanged || r2(oldAmt[pid] || 0) !== r2(newAmt[pid] || 0);
+  const affected = new Set();
+  Object.keys(nb.settled).forEach(k => { const pid = +k; if (nb.settled[pid] && changed(pid)) { delete nb.settled[pid]; affected.add(pid); } });
+  S.payments.forEach(p => {
+    if (p.status !== "pending") return;
+    const direct = (p.billIds || []).includes(id) && changed(p.fromId);
+    const viaOffset = (p.offsets || []).some(o => o.billId === id && changed(o.personId));
+    if (direct || viaOffset) {
+      p.status = "rejected"; p.decidedAt = Date.now(); delete p.ack;
+      p.reason = `The bill "${nb.title}" was edited and the amounts changed. Please pay again.`;
+      affected.add(p.fromId);
+    }
+  });
+  S.bills = S.bills.map(x => x.id === id ? nb : x);
+  if (affected.size) pushNotify([...affected], "Bill edited", `"${nb.title}" was edited, so what you owe may have changed.`, "bill-" + id);
+  return nb;
+}
 window.approveBillEdit = async function(id) {
   const b = S.bills.find(x => x.id === id);
   if (!b || !b.editReq || !isAdmin()) return;
   if (!(await showConfirm(`Apply the requested changes to "${b.title}"?`, "Approve edit", "Approve", false))) return;
-  const q = b.editReq, nb = { ...cl(q.data), id: b.id, settled: b.settled ? cl(b.settled) : {} };
-  ["remindSent", "hasReceipt", "receiptDoneAt", "receiptDeleted"].forEach(k => { if (b[k] !== undefined) nb[k] = b[k]; });
-  S.bills = S.bills.map(x => x.id === id ? nb : x);
+  const q = b.editReq;
+  const nb = await applyBillEdit(id, q.data);
+  if (!nb) return;
   logAct(`Approved edit of bill "${nb.title}"`);
   saveState(); render();
   if (q.by) pushNotify([q.by], "Edit approved", `Your changes to "${nb.title}" were approved.`, "editreq-" + id);
@@ -2002,6 +2203,7 @@ window.rejectBillEdit = function(id) {
   const b = S.bills.find(x => x.id === id);
   if (!b || !b.editReq || !isAdmin()) return;
   const by = b.editReq.by;
+  if (b.editReq.data && b.editReq.data.rcPending === "new") set(ref(db, "splitmate/receipts/" + id + "_pending"), null).catch(() => {});
   delete b.editReq;
   logAct(`Rejected edit of bill "${b.title}"`);
   saveState(); render();
@@ -2070,6 +2272,7 @@ function viewPeopleAndData() {
       <div class="mu" style="margin-bottom:6px">Display size <small>(this device only)</small></div>
       ${seg(ZOOMS, zoomLv, "setZoom")}
     </div>
+    ${themeRows()}
   </div>`;
 
   return h;
@@ -2361,7 +2564,7 @@ window.openReceipt = async function(id) {
 function receiptSheet(s) {
   const b = S.bills.find(x => x.id === s.id);
   return `${headB('style="margin-top:6px" onclick="sheet=null;render()"', "‹ Back", "Receipt", b ? esc(b.title) : "")}
-  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading receipt…</div>' : s.img ? `<img alt="Receipt" src="${s.img}" style="width:100%;border-radius:10px;display:block">` : '<div class="mu">Receipt is no longer available.</div>'}</div></div>`;
+  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading receipt…</div>' : safeImg(s.img) ? `<img alt="Receipt" src="${safeImg(s.img)}" style="width:100%;border-radius:10px;display:block">` : '<div class="mu">Receipt is no longer available.</div>'}</div></div>`;
 }
 
 window.openPayment = async function(id) {
@@ -2395,7 +2598,7 @@ function reviewSheet(s) {
   ${p.offsets && p.offsets.length ? `<div class="sh">Set off (your own bills)</div>
   <div class="l">${p.offsets.map(o => { const b = liveBills().find(x => x.id === o.billId); return b ? `<div class="li"><span><b>${esc(b.title)}</b><br><small>${shortDate(b.date)}</small></span><b class="grn">${mh(o.amount)}</b></div>` : ""; }).join("")}</div>` : ""}
   <div class="sh">Payment slip</div>
-  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : s.slip ? `<img alt="Payment slip" src="${s.slip}" style="width:100%;border-radius:10px;display:block">` : p.slipDeleted ? '<div class="mu">Slip was deleted 2 days after the decision.</div>' : '<div class="mu">No slip attached.</div>'}</div></div>
+  <div class="l"><div class="li col">${s.loading ? '<div class="mu">Loading slip…</div>' : safeImg(s.slip) ? `<img alt="Payment slip" src="${safeImg(s.slip)}" style="width:100%;border-radius:10px;display:block">` : p.slipDeleted ? '<div class="mu">Slip was deleted 2 days after the decision.</div>' : '<div class="mu">No slip attached.</div>'}</div></div>
   ${p.status === "pending" && p.toId === currentUserId ? `<div class="row2" style="margin-top:16px"><button class="btn red" onclick="rejectPay(${p.id})">Reject</button><button class="btn" onclick="confirmPay(${p.id})">${p.offsets && p.offsets.length ? "Confirm" : "Confirm received"}</button></div>` : ""}
   ${p.status === "pending" && p.fromId === currentUserId ? `<button class="btn sec" style="margin-top:16px" onclick="cancelPay(${p.id})">Cancel this payment</button>` : ""}`;
 }
@@ -2474,6 +2677,7 @@ window.go = async function(k) {
   scrollTopMain();
 };
 
+let staleView = false;
 window.render = function(opts) {
   renderAuth();
 
@@ -2492,6 +2696,7 @@ window.render = function(opts) {
   }
   if (tab === "admin" && !isAdmin()) tab = "people";
   sweepSlips();
+  if (tripFilter !== "All" && !liveBills().some(b => (b.trip || "") === tripFilter)) tripFilter = "All"; /* trip no longer exists */
   { const meP = getPerson(currentUserId); if (meP && meP.mustChange && !dlg) promptForcePin(); }
   nav.style.display = tab === "new" ? "none" : "flex";
 
@@ -2500,6 +2705,7 @@ window.render = function(opts) {
   setIconBadge(badgeCount);
   const ae = document.activeElement;
   const typing = !!(opts && opts.fromRemote && ae && v.contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName));
+  staleView = typing; /* redraw once the field loses focus */
 
   const tabs = [
     ["dash", `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`, "Overview"],
@@ -2530,7 +2736,8 @@ window.render = function(opts) {
   if (fab) fab.innerHTML = tab === "dash" ? `<button class="btn" onclick="startNewBill()">+ New Bill</button>` : "";
 
   const sheetScroll = (document.querySelector("#ovl .w") || {}).scrollTop || 0;
-  if (!(opts && opts.fromRemote && ovl.contains(ae))) ovl.innerHTML = renderSheetHtml();
+  if (opts && opts.fromRemote && ovl.contains(ae)) staleView = true;
+  else ovl.innerHTML = renderSheetHtml();
   const newSheetEl = document.querySelector("#ovl .w");
   if (newSheetEl) newSheetEl.scrollTop = sheetScroll;
 
@@ -2545,9 +2752,6 @@ window.render = function(opts) {
   v.scrollTop = scrollPos;
 };
 
-["gesturestart", "gesturechange", "gestureend"].forEach(ev =>
-  document.addEventListener(ev, e => e.preventDefault())
-);
 
 window.matchReceipt = function() {
   const rec = +D.recTotal || 0;
@@ -2746,7 +2950,6 @@ let spendMonth = null, spendDay = null;
 const mKey = d => String(d || "").slice(0, 7);
 const p2 = n => String(n).padStart(2, "0");
 const mLabel = k => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleString("en", { month: "short", year: "numeric" });
-window.setSpendMonth = k => { spendMonth = k; spendDay = null; render(); };
 window.stepSpendMonth = n => { const [y, m] = spendMonth.split("-").map(Number), d = new Date(y, m - 1 + n, 1); spendMonth = d.getFullYear() + "-" + p2(d.getMonth() + 1); spendDay = null; render(); };
 window.setSpendDay = k => { spendDay = spendDay === k ? null : k; render(); };
 
@@ -2859,6 +3062,7 @@ function fitScreen() {
     let H = Math.max(innerHeight, lvh);
     const standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
     const kb = window.visualViewport && visualViewport.height < innerHeight - 120;
+    if (kb) H = Math.round(visualViewport.height); /* keep inputs above the on-screen keyboard */
     if (standalone && !kb) {
       const portrait = innerWidth < innerHeight;
       const sh = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
@@ -2889,8 +3093,20 @@ window.addEventListener("resize", fitScreen);
 window.addEventListener("orientationchange", () => setTimeout(fitScreen, 250));
 window.addEventListener("pageshow", fitScreen);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fitScreen(); });
-document.addEventListener("focusin", fitScreen);
-document.addEventListener("focusout", () => setTimeout(fitScreen, 120));
+document.addEventListener("focusin", e => {
+  fitScreen();
+  const t = e.target;
+  if (t && t.scrollIntoView && /INPUT|TEXTAREA|SELECT/.test(t.tagName)) setTimeout(() => { try { t.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (_) {} }, 350);
+});
+document.addEventListener("focusout", () => {
+  setTimeout(fitScreen, 120);
+  setTimeout(() => {
+    if (!staleView || currentUserId === null) return;
+    const ae = document.activeElement;
+    if (ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return;
+    staleView = false; render();
+  }, 400);
+});
 if (window.visualViewport) { visualViewport.addEventListener("resize", fitScreen); visualViewport.addEventListener("scroll", () => window.scrollTo(0, 0)); }
 fitScreen(); setTimeout(fitScreen, 300); setTimeout(fitScreen, 1200);
 
