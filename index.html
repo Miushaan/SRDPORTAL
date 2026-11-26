@@ -1352,10 +1352,18 @@ const ICO = {
   receipt: svgI('<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/>')
 };
 /* ---------- Budget ---------- */
-const budgetOf = uid => +S.settings["budget_" + uid] || 0;
+/* a budget belongs to one specific month: budget_<user>_<YYYY-MM> */
+const budgetOf = (uid, k) => +S.settings["budget_" + uid + "_" + k] || 0;
+let budMonth = null;
+window.budNav = function(d) {
+  const k = budMonth || mKey(today()), dt = new Date(+k.slice(0, 4), +k.slice(5) - 1 + d, 1);
+  budMonth = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0");
+  if (budMonth === mKey(today())) budMonth = null;
+  budEdit = false; render();
+};
 window.saveBudget = function() {
-  const el = document.getElementById("budIn"), v = r2(el ? el.value : 0);
-  if (v > 0) S.settings["budget_" + currentUserId] = v; else delete S.settings["budget_" + currentUserId];
+  const el = document.getElementById("budIn"), v = r2(el ? el.value : 0), key = "budget_" + currentUserId + "_" + (budMonth || mKey(today()));
+  if (v > 0) S.settings[key] = v; else delete S.settings[key];
   saveState(); render();
 };
 window.editBudget = () => { budEdit = true; render(); setTimeout(() => { const e = document.getElementById("budIn"); if (e) e.focus(); }, 30); };
@@ -1373,26 +1381,35 @@ function myExpenses(uid) { /* [{b, t, date}] what this user personally bears (tr
   return out;
 }
 function viewBudget() {
-  const me = getPerson(currentUserId), bud = budgetOf(me.id), ex = myExpenses(me.id);
-  const nowK = mKey(today()), [y, m] = nowK.split("-").map(Number);
-  const dim = new Date(y, m, 0).getDate(), day = Math.min(+today().slice(8, 10) || 1, dim), left = dim - day;
+  const me = getPerson(currentUserId), ex = myExpenses(me.id);
+  const curK = mKey(today()), nowK = budMonth || curK, [y, m] = nowK.split("-").map(Number);
+  const bud = budgetOf(me.id, nowK);
+  const dim = new Date(y, m, 0).getDate();
+  const day = nowK === curK ? Math.min(+today().slice(8, 10) || 1, dim) : nowK < curK ? dim : 0, left = dim - day;
   const byM = {}; ex.forEach(e => { const k = mKey(e.date); byM[k] = r2((byM[k] || 0) + e.t); });
+  const days = {}; ex.filter(e => mKey(e.date) === nowK).forEach(e => days[e.date] = r2((days[e.date] || 0) + e.t));
+  const active = Object.keys(days).length;
   const spent = byM[nowK] || 0, remain = r2(bud - spent), pct = bud ? Math.min(100, spent / bud * 100) : 0;
-  const avg = r2(spent / day), proj = r2(avg * dim);
+  /* daily average counts only days that had spending; blank days are ignored */
+  const avg = active ? r2(spent / active) : 0;
+  const proj = nowK === curK ? r2(spent + avg * (day ? active / day : 0) * left) : spent;
+  const pm = new Date(y, m - 2, 1), prevBud = budgetOf(me.id, pm.getFullYear() + "-" + String(pm.getMonth() + 1).padStart(2, "0"));
   const col = !bud ? "#8e8e93" : spent > bud ? "#ff453a" : spent > bud * 0.8 ? "#ff9f0a" : "#34c759";
   const monthsBack = k => { const d = new Date(y, m - 1 - k, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
   const hist = [5, 4, 3, 2, 1, 0].map(k => ({ k: monthsBack(k), v: byM[monthsBack(k)] || 0 }));
   const prev = hist.slice(0, 5).filter(x => x.v > 0).slice(-3);
+  const nm = new Date(y, m, 1), nextBud = budgetOf(me.id, nm.getFullYear() + "-" + String(nm.getMonth() + 1).padStart(2, "0"));
   const next = prev.length ? r2(prev.reduce((a, x) => a + x.v, 0) / prev.length) : proj;
   const mon = k => new Date(+k.slice(0, 4), +k.slice(5) - 1, 1).toLocaleString("en", { month: "short" });
   const box = (t, v, c) => `<div class="li col" style="flex:1;min-width:0;align-items:flex-start"><small class="mu">${t}</small><b style="font-size:18px;${c ? "color:" + c : ""}">${v}</b></div>`;
-  let h = head("Budget", new Date(y, m - 1, 1).toLocaleString("en", { month: "long", year: "numeric" }));
+  let h = head("Budget", "Set a budget for each month");
+  h += `<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px"><button class="pill" aria-label="Previous month" onclick="budNav(-1)">‹</button><b style="font-size:17px">${new Date(y, m - 1, 1).toLocaleString("en", { month: "long", year: "numeric" })}</b><button class="pill" aria-label="Next month" onclick="budNav(1)">›</button></div>`;
 
   /* set / edit */
   h += (!bud || budEdit)
-    ? `<div class="l"><div class="li" style="gap:8px"><input id="budIn" type="number" inputmode="decimal" min="0" placeholder="Monthly budget" value="${bud || ""}" style="flex:1;min-width:0"><button class="pill" onclick="budEdit=false;saveBudget()">Save</button></div></div>`
-    : `<div class="l"><div class="li"><span><small class="mu">Monthly budget</small><br><b style="font-size:22px">${mh(bud)}</b></span><button class="pill" onclick="editBudget()">Edit</button></div></div>`;
-  if (!bud) return h + `<div class="l" style="margin-top:10px"><div class="li mu">Set a monthly budget to track your spending, remaining balance and forecasts.</div></div>`;
+    ? `<div class="l"><div class="li" style="gap:8px"><input id="budIn" type="number" inputmode="decimal" min="0" placeholder="Budget for this month" value="${bud || prevBud || ""}" style="flex:1;min-width:0"><button class="pill" onclick="budEdit=false;saveBudget()">Save</button></div></div>`
+    : `<div class="l"><div class="li"><span><small class="mu">Budget for ${new Date(y, m - 1, 1).toLocaleString("en", { month: "long" })}</small><br><b style="font-size:22px">${mh(bud)}</b></span><button class="pill" onclick="editBudget()">Edit</button></div></div>`;
+  if (!bud) return h + `<div class="l" style="margin-top:10px"><div class="li mu">Set a budget for this month to track spending, remaining balance and forecasts.${prevBud ? " Last month's budget is filled in for you. Tap Save to use it." : ""}</div></div>`;
 
   /* budget / spent / remaining */
   h += `<div style="height:12px;border-radius:8px;background:rgba(127,127,127,.2);margin:14px 2px 6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${col}"></div></div>
@@ -1401,21 +1418,19 @@ function viewBudget() {
 
   /* forecast */
   h += `<div class="sh">Forecast</div><div class="l">
-    <div class="li"><span>Daily average so far</span><b>${mh(avg)}</b></div>
+    <div class="li"><span>Daily average <small class="mu">(${active} day${active === 1 ? "" : "s"} with spending)</small></span><b>${mh(avg)}</b></div>
     <div class="li"><span>Projected month-end</span><b style="color:${proj > bud ? "#ff453a" : "inherit"}">${mh(proj)}</b></div>
     <div class="li"><span>Safe to spend per day${left ? ` (${left}d left)` : ""}</span><b>${mh(left && remain > 0 ? r2(remain / left) : 0)}</b></div>
     <div class="li"><span>Next month forecast</span><b>${mh(next)}</b></div>
-  </div><small class="mu" style="margin:4px 2px;display:block">Next month is the average of your last ${prev.length || 1} month${prev.length > 1 ? "s" : ""}${next > bud ? ` — above your budget by ${f(r2(next - bud))}` : ""}.</small>`;
+  </div><small class="mu" style="margin:4px 2px;display:block">Next month is the average of your last ${prev.length || 1} month${prev.length > 1 ? "s" : ""}${nextBud && next > nextBud ? ` — above next month's budget by ${f(r2(next - nextBud))}` : ""}.</small>`;
 
   /* analytics */
-  const mx = Math.max(bud, ...hist.map(x => x.v), 1), W = 300, H = 120, bw = 28, gap = (W - 6 * bw) / 7;
-  const bars = hist.map((x, i) => { const bh = Math.round(x.v / mx * H), bx = gap + i * (bw + gap); return `<rect x="${bx}" y="${H - bh}" width="${bw}" height="${bh}" rx="5" fill="${x.v > bud ? "#ff453a" : "#34c759"}" opacity="${i === 5 ? 1 : .6}"/><text x="${bx + bw / 2}" y="${H + 16}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${mon(x.k)}</text>`; }).join("");
-  const ly = H - Math.round(bud / mx * H);
+  const mx = Math.max(...hist.map(x => Math.max(x.v, budgetOf(me.id, x.k))), 1), W = 300, H = 120, bw = 28, gap = (W - 6 * bw) / 7;
+  const bars = hist.map((x, i) => { const bh = Math.round(x.v / mx * H), bx = gap + i * (bw + gap); return `<rect x="${bx}" y="${H - bh}" width="${bw}" height="${bh}" rx="5" fill="${budgetOf(me.id, x.k) && x.v > budgetOf(me.id, x.k) ? "#ff453a" : "#34c759"}" opacity="${i === 5 ? 1 : .6}"/><text x="${bx + bw / 2}" y="${H + 16}" font-size="11" text-anchor="middle" fill="currentColor" opacity=".7">${mon(x.k)}</text>`; }).join("");
   const top = ex.filter(e => mKey(e.date) === nowK).sort((a, b) => b.t - a.t).slice(0, 5);
-  const days = {}; ex.filter(e => mKey(e.date) === nowK).forEach(e => days[e.date] = r2((days[e.date] || 0) + e.t));
   const bigDay = Object.entries(days).sort((a, b) => b[1] - a[1])[0];
-  h += `<div class="sh">Analytics</div><div class="l"><div class="li col" style="align-items:stretch"><small class="mu">Last 6 months vs budget</small>
-    <svg viewBox="0 0 ${W} ${H + 22}" width="100%" role="img" aria-label="Monthly spending chart">${bars}<line x1="0" x2="${W}" y1="${ly}" y2="${ly}" stroke="currentColor" stroke-dasharray="4 4" opacity=".5"/></svg></div>
+  h += `<div class="sh">Analytics</div><div class="l"><div class="li col" style="align-items:stretch"><small class="mu">Last 6 months vs each month's budget (dashed)</small>
+    <svg viewBox="0 0 ${W} ${H + 22}" width="100%" role="img" aria-label="Monthly spending chart">${bars}${hist.map((x, i) => { const b = budgetOf(me.id, x.k); if (!b) return ""; const ly = H - Math.round(b / mx * H), bx = gap + i * (bw + gap); return `<line x1="${bx - 4}" x2="${bx + bw + 4}" y1="${ly}" y2="${ly}" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/>`; }).join("")}</svg></div>
     ${bigDay ? `<div class="li"><span>Biggest spending day</span><b>${bigDay[0].slice(8)}/${bigDay[0].slice(5, 7)} · ${mh(bigDay[1])}</b></div>` : ""}
     <div class="li"><span>Bills this month</span><b>${ex.filter(e => mKey(e.date) === nowK).length}</b></div>
   </div>`;
