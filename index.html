@@ -1461,6 +1461,8 @@ function viewDash() {
     <div class="tile"><small>Owing</small><b class="${myOwe > 0.005 ? "neg" : ""}">${mh(myOwe)}</b></div>
     <div class="tile"><small>Owed</small><b class="${owedTotal > 0.005 ? "pos" : ""}">${mh(owedTotal)}</b></div>
   </div>`;
+  { const mk = mKey(today()), monthSpent = r2(sum(myExpenses(me.id).filter(e => mKey(e.date) === mk).map(e => e.t)));
+    h += `<div class="tile" style="margin-top:10px;width:100%;box-sizing:border-box;cursor:pointer" onclick="go('budget')"><small>Spent in ${new Date().toLocaleString("en", { month: "long" })}</small><b style="font-weight:800;font-size:24px">${mh(monthSpent)}</b></div>`; }
 
   if (trips.length > 0) {
     h += `<div class="l" style="margin-top:12px">
